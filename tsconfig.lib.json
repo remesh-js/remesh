@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./lib",
+    "noEmit": false,
+    "sourceMap": true
+  },
+  "include": ["./components"]
+}
