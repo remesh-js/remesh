@@ -7,7 +7,7 @@ import React, {
   useState,
   useMemo,
 } from 'react';
-import { RemeshEffect } from '.';
+import { RemeshAggregate } from '.';
 
 import { RemeshNode, RemeshStore, RemeshStoreOptions } from './remesh';
 
@@ -94,7 +94,7 @@ export const useRemeshValue = function <T>(Node: RemeshNode<T>) {
   return value;
 };
 
-export const useRemeshEffect = function (Effect: RemeshEffect | null) {
+export const useRemeshEffect = function (Effect: RemeshAggregate | null) {
   const remeshStore = useRemeshStore();
 
   useEffect(() => {
