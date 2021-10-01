@@ -1,64 +1,57 @@
-import { Observable, Subject, Subscription, Observer } from "rxjs"
+import { Observable, Subject, Subscription } from "rxjs"
 
 import { shareReplay } from "rxjs/operators"
 
-export type RemeshEvent<T = unknown> = {
+type RemeshInjectedContext = {
+  get: <T>(State: RemeshState<T> | RemeshQuery<T>) => T
+  fromEvent: <T, U = T>(Event: RemeshEvent<T, U>) => Observable<U>
+  fromAggregate: <T>(Aggregate: RemeshAggregatePayload<T>) => Observable<RemeshAggregateOutput>
+}
+
+export type RemeshEventContext = {
+  get: RemeshInjectedContext['get']
+}
+
+export type RemeshEvent<T = unknown, U = T> = {
   type: "RemeshEvent"
   eventId: number
   eventName: string
-  match(input: any): input is RemeshEventPayload<T>
-  getData: (eventPayload: RemeshEventPayload<T>) => T
-  (data: T): RemeshEventPayload<T>
+  impl?: (arg: T, context: RemeshEventContext) => U
+  (arg: T): RemeshEventPayload<T, U>
 }
 
-export type RemeshEventPayload<T = unknown> = {
+export type RemeshEventPayload<T = unknown, U = T> = {
   type: "RemeshEventPayload"
-  data: T
-  Event: RemeshEvent<T>
+  arg: T
+  Event: RemeshEvent<T, U>
 }
 
-export type RemeshEventOptions = {
+export type RemeshEventOptions<T = unknown, U = T> = {
   name: string
+  impl?: RemeshEvent<T, U>['impl']
 }
 
 let eventUid = 0
 
-export const RemeshEvent = <T = void>(
-  options: RemeshEventOptions
-): RemeshEvent<T> => {
+export const RemeshEvent = <T = void, U = T>(
+  options: RemeshEventOptions<T, U>
+): RemeshEvent<T, U> => {
   const eventId = eventUid++
 
-  const Event = ((data) => {
+  const Event = ((arg) => {
     return {
       type: "RemeshEventPayload",
-      data,
+      arg,
       Event: Event,
     }
-  }) as RemeshEvent<T>
+  }) as RemeshEvent<T, U>
 
   Event.type = 'RemeshEvent'
   Event.eventId = eventId
   Event.eventName = options.name
-
-  Event.match = (input): input is RemeshEventPayload<T> => {
-    return input?.type === 'RemeshEventPayload' && input?.Event === Event
-  }
-
-  Event.getData = (eventPayload) => {
-    return eventPayload.data
-  }
+  Event.impl = options.impl
 
   return Event
-}
-
-export type RemeshStateChangedEventData<T = unknown> = {
-  type: 'RemeshStateChangedEventData',
-  State: RemeshState<T>
-  newState: T
-}
-
-export const isRemeshStateChangedEventData = <T>(input: any): input is RemeshStateChangedEventData<T> => {
-  return input?.type === 'RemeshStateChangedEventData'
 }
 
 export type RemeshState<T> = {
@@ -66,10 +59,13 @@ export type RemeshState<T> = {
   stateId: number
   stateName: string
   default: T
-  events: {
-    StateChanged: RemeshEvent<RemeshStateChangedEventData<T>>
-  }
-  (newState: T): RemeshEventPayload<RemeshStateChangedEventData<T>>
+  (newState: T): RemeshStatePayload<T>
+}
+
+export type RemeshStatePayload<T = unknown> = {
+  type: 'RemeshStatePayload',
+  State: RemeshState<T>
+  newState: T
 }
 
 export type RemeshStateOptions<T> = {
@@ -82,33 +78,20 @@ let stateUid = 0
 export const RemeshState = <T>(options: RemeshStateOptions<T>): RemeshState<T> => {
   const stateId = stateUid++
 
-  const StateChanged = RemeshEvent<RemeshStateChangedEventData<T>>({
-    name: `StateChanged(${options.name})`
-  })
-
   const State = (newState => {
-    return StateChanged({
-      type: 'RemeshStateChangedEventData',
+    return {
+      type: 'RemeshStatePayload',
       State,
       newState
-    })
+    }
   }) as RemeshState<T>
 
   State.type = 'RemeshState'
   State.stateId = stateId
   State.stateName = options.name
   State.default = options.default
-  State.events = {
-    StateChanged
-  }
 
   return State
-}
-
-type RemeshInjectedContext = {
-  get: <T>(State: RemeshState<T> | RemeshQuery<T>) => T
-  fromEvent: <T>(Event: RemeshEvent<T>) => Observable<T>
-  fromAggregate: <T>(Aggregate: RemeshAggregatePayload<T>) => Observable<RemeshCommandPayload<any>>
 }
 
 export type RemeshQueryContext = {
@@ -122,13 +105,12 @@ export type RemeshQuery<T = unknown> = {
   impl: (context: RemeshQueryContext) => T
 }
 
-let queryUid = 0
-
 export type RemeshQueryOptions<T> = {
   name: RemeshQuery<T>["queryName"]
   impl: RemeshQuery<T>["impl"]
 }
 
+let queryUid = 0
 export const RemeshQuery = <T>(options: RemeshQueryOptions<T>): RemeshQuery<T> => {
   const queryId = queryUid++
 
@@ -144,7 +126,11 @@ export type RemeshCommandContext = {
   get: RemeshInjectedContext['get']
 }
 
-export type RemeshCommandOutput = RemeshEventPayload<any> | RemeshCommandOutput[]
+export type RemeshCommandOutput =
+  | RemeshStatePayload<any>
+  | RemeshEventPayload<any>
+  | RemeshCommandPayload<any>
+  | RemeshCommandOutput[]
 
 export type RemeshCommandPayload<T> = {
   type: "RemeshCommandPayload"
@@ -156,7 +142,7 @@ export type RemeshCommand<T = unknown> = {
   type: "RemeshCommand"
   commandId: number
   commandName: string
-  impl: (context: RemeshCommandContext, arg: T) => RemeshCommandOutput
+  impl: (arg: T, context: RemeshCommandContext) => RemeshCommandOutput
   (arg: T): RemeshCommandPayload<T>
 }
 
@@ -193,19 +179,22 @@ export type RemeshAggregateContext = {
   fromAggregate: RemeshInjectedContext['fromAggregate']
 }
 
-let aggregateUid = 0
-
 export type RemeshAggregatePayload<T> = {
   type: "RemeshAggregatePayload"
   arg: T
   Aggregate: RemeshAggregate<T>
 }
 
+export type RemeshAggregateOutput =
+  | RemeshCommandPayload<any>
+  | RemeshEventPayload<any>
+  | RemeshAggregateOutput[]
+
 export type RemeshAggregate<T> = {
   type: "RemeshAggregate"
   aggregateId: number
   aggregateName: string
-  impl: (context: RemeshAggregateContext, arg: T) => Observable<RemeshCommandPayload<any>>
+  impl: (context: RemeshAggregateContext, arg: T) => Observable<RemeshAggregateOutput>
   (arg: T): RemeshAggregatePayload<T>
 }
 
@@ -213,6 +202,7 @@ export type RemeshAggregateOptions<T> = {
   name: RemeshAggregate<T>["aggregateName"]
   impl: RemeshAggregate<T>["impl"]
 }
+let aggregateUid = 0
 
 export const RemeshAggregate = <T = void>(
   options: RemeshAggregateOptions<T>
@@ -250,16 +240,15 @@ type RemeshQueryStorage<T = unknown> = {
   currentValue: T
   upstreamSet: Set<RemeshQueryStorage<any> | RemeshStateStorage<any>>
   downstreamSet: Set<RemeshQueryStorage<any>>,
-  isOutDated: boolean
   subject: Subject<T>
   observable: Observable<T>
 }
 
-type RemeshEventStorage<T = unknown> = {
+type RemeshEventStorage<T = unknown, U = T> = {
   type: "RemeshEventStorage"
-  Event: RemeshEvent<T>
-  subject: Subject<T>
-  observable: Observable<T>
+  Event: RemeshEvent<T, U>
+  subject: Subject<U>
+  observable: Observable<U>
 }
 
 type RemeshStoreInternalStorage = {
@@ -300,14 +289,14 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     return getStateStorage(State)
   }
 
-  const getEventStorage = <T>(Event: RemeshEvent<T>): RemeshEventStorage<T> => {
+  const getEventStorage = <T, U = T>(Event: RemeshEvent<T, U>): RemeshEventStorage<T, U> => {
     const eventStorage = storage.eventMap.get(Event)
 
     if (eventStorage) {
-      return eventStorage as RemeshEventStorage<T>
+      return eventStorage as RemeshEventStorage<T, U>
     }
 
-    const subject = new Subject<T>()
+    const subject = new Subject<U>()
     const observable = subject.asObservable()
 
     storage.eventMap.set(Event, {
@@ -360,7 +349,6 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
       currentValue,
       upstreamSet,
       downstreamSet,
-      isOutDated: false,
       subject,
       observable
     }
@@ -383,10 +371,6 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
   const getCurrentQueryValue = <T>(Query: RemeshQuery<T>): T => {
     const queryStorage = getQueryStorage(Query)
 
-    if (queryStorage.isOutDated) {
-      updateQueryStorage(queryStorage)
-    }
-
     return queryStorage.currentValue
   }
 
@@ -404,10 +388,11 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     },
     fromAggregate: aggregatePayload => {
       const { Aggregate, arg } = aggregatePayload
-      const observable = Aggregate.impl({
+      const aggregateContext = {
         fromAggregate: remeshInjectedContext.fromAggregate,
         fromEvent: remeshInjectedContext.fromEvent
-      }, arg)
+      }
+      const observable = Aggregate.impl(aggregateContext, arg)
 
       return observable
     },
@@ -419,10 +404,6 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
   }
 
   const updateQueryStorage = <T>(queryStorage: RemeshQueryStorage<T>) => {
-    if (!queryStorage.isOutDated) {
-      return
-    }
-
     const { impl } = queryStorage.Query
     const oldValue = queryStorage.currentValue
 
@@ -452,33 +433,43 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     })
 
     queryStorage.currentValue = newValue
-    queryStorage.isOutDated = false
 
     if (oldValue === newValue) {
       return
     }
 
-    queryStorage.subject.next(newValue)
+    storage.dirtySet.add(queryStorage)
 
     for (const downstream of oldDownstreamSet) {
       updateQueryStorage(downstream)
     }
   }
 
-  const markDirty = <T>(queryStorage: RemeshQueryStorage<T>) => {
-    if (queryStorage.isOutDated) {
+  const clearDirtySet = () => {
+    if (storage.dirtySet.size === 0) {
       return
     }
 
-    queryStorage.isOutDated = true
-    storage.dirtySet.add(queryStorage)
+    const queryStorageList = [...storage.dirtySet.values()]
 
-    for (const downstream of queryStorage.downstreamSet) {
-      markDirty(downstream)
+    storage.dirtySet.clear()
+
+    for (const queryStorage of queryStorageList) {
+      if (!storage.dirtySet.has(queryStorage)) {
+        queryStorage.subject.next(queryStorage.currentValue)
+      }
     }
+
+    clearDirtySet()
   }
 
-  const handleStateChangedEventData = (data: RemeshStateChangedEventData) => {
+  let tid: ReturnType<typeof setTimeout>
+  const publish = () => {
+    clearTimeout(tid)
+    tid = setTimeout(clearDirtySet, 0)
+  }
+
+  const handleStatePayload = (data: RemeshStatePayload) => {
     const { State, newState } = data
     const stateStorage = getStateStorage(State)
     const oldState = stateStorage.currentState
@@ -490,23 +481,26 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     stateStorage.currentState = newState
 
     for (const downstream of stateStorage.downstreamSet) {
-      markDirty(downstream)
-    }
-
-    for (const downstream of stateStorage.downstreamSet) {
       updateQueryStorage(downstream)
     }
+
+    publish()
   }
 
-  const handleEventPayload = <T>(eventPayload: RemeshEventPayload<T>) => {
-    const { Event, data } = eventPayload
+  const handleEventPayload = <T, U = T>(eventPayload: RemeshEventPayload<T, U>) => {
+    const { Event, arg } = eventPayload
     const eventStorage = getEventStorage(Event)
 
-    if (isRemeshStateChangedEventData(data)) {
-      handleStateChangedEventData(data)
+    const eventContext = {
+      get: remeshInjectedContext.get
     }
 
-    eventStorage.subject.next(data)
+    if (Event.impl) {
+      const data = Event.impl(arg, eventContext)
+      eventStorage.subject.next(data)
+    } else {
+      eventStorage.subject.next(arg as unknown as U)
+    }
   }
 
   const handleCommandOutput = (commandOutput: RemeshCommandOutput) => {
@@ -517,44 +511,96 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
       return
     }
 
-    handleEventPayload(commandOutput)
+    if (commandOutput.type === 'RemeshCommandPayload') {
+      handleCommandPayload(commandOutput)
+    } else if (commandOutput.type === 'RemeshEventPayload') {
+      handleEventPayload(commandOutput)
+    } else if (commandOutput.type === 'RemeshStatePayload') {
+      handleStatePayload(commandOutput)
+    }
+
+    throw new Error(`Unknown command output of ${commandOutput}`)
   }
 
-  const handleAggregatePayload = <T>(aggregatePayload: RemeshAggregatePayload<T>) => {
-    const commandPayload$ = remeshInjectedContext.fromAggregate(aggregatePayload)
-    const subscription = commandPayload$.subscribe({
-      next: commandPayload => {
-        const { Command, arg } = commandPayload
-        const commandOutput = Command.impl({
-          get: remeshInjectedContext.get
-        }, arg)
-
-        handleCommandOutput(commandOutput)
-      }
+  const handleCommandPayload = <T>(commandPayload: RemeshCommandPayload<T>) => {
+    const { Command, arg } = commandPayload
+    const commandOutput = Command.impl(arg, {
+      get: remeshInjectedContext.get
     })
 
+    handleCommandOutput(commandOutput)
+  }
+
+  const handleSubscription = (subscription: Subscription) => {
     storage.subscriptionSet.add(subscription)
 
     subscription.add(() => {
       storage.subscriptionSet.delete(subscription)
     })
-
-    return () => {
-      subscription.unsubscribe()
-    }
   }
 
-  const fromQuery = <T>(Query: RemeshQuery<T>): Observable<T> => {
+  const handleAggregateOutput = (aggregateOutput: RemeshAggregateOutput) => {
+    if (Array.isArray(aggregateOutput)) {
+      for (const item of aggregateOutput) {
+        handleAggregateOutput(item)
+      }
+      return
+    }
+
+    if (aggregateOutput.type === 'RemeshCommandPayload') {
+      handleCommandOutput(aggregateOutput)
+    } else if (aggregateOutput.type === 'RemeshEventPayload') {
+      handleEventPayload(aggregateOutput)
+    }
+
+    throw new Error(`Unknown aggregate output of ${aggregateOutput}`)
+  }
+
+  const handleAggregatePayload = <T>(aggregatePayload: RemeshAggregatePayload<T>) => {
+    const aggregateOutput$ = remeshInjectedContext.fromAggregate(aggregatePayload)
+    const subscription = aggregateOutput$.subscribe(handleAggregateOutput)
+
+    handleSubscription(subscription)
+
+    return subscription
+  }
+
+  const subscribeQuery = <T>(Query: RemeshQuery<T>, subscriber: (data: T) => unknown): Subscription => {
     const queryStorage = getQueryStorage(Query)
-    return queryStorage.observable
+    const subscription = queryStorage.observable.subscribe(subscriber)
+
+    handleSubscription(subscription)
+
+    return subscription
+  }
+
+  const subscribeEvent = <T>(Event: RemeshEvent<T>, subscriber: (event: T) => unknown) => {
+    const eventStorage = getEventStorage(Event)
+    const subscription = eventStorage.observable.subscribe(subscriber)
+
+    handleSubscription(subscription)
+
+    return subscription
+  }
+
+  const destroy = () => {
+    for (const subscription of storage.subscriptionSet) {
+      subscription.unsubscribe()
+    }
+    storage.subscriptionSet.clear()
+    storage.stateMap.clear()
+    storage.queryMap.clear()
+    storage.eventMap.clear()
+    storage.dirtySet.clear()
   }
 
   return {
     name: options.name,
     emit: handleEventPayload,
-    fromQuery,
-    fromEvent: remeshInjectedContext.fromEvent,
     useAggregate: handleAggregatePayload,
+    destroy,
+    subscribeQuery,
+    subscribeEvent,
   }
 }
 
