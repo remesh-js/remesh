@@ -6,118 +6,135 @@ import React, {
   ReactNode,
   useState,
   useMemo,
-} from 'react';
-import { RemeshAggregate } from '.';
+} from "react"
+import { RemeshAggregatePayload, RemeshQuery } from "."
 
-import { RemeshNode, RemeshStore, RemeshStoreOptions } from './remesh';
+import {
+  RemeshEvent,
+  RemeshStore,
+  RemeshStoreOptions,
+} from "./remesh"
 
 export type RemeshReactContext = {
-  remeshStore: RemeshStore;
-};
+  remeshStore: RemeshStore
+}
 
-export const RemeshReactContext = createContext<RemeshReactContext | null>(
-  null
-);
+export const RemeshReactContext = createContext<RemeshReactContext | null>(null)
 
 export const useRemeshReactContext = () => {
-  const context = useContext(RemeshReactContext);
+  const context = useContext(RemeshReactContext)
 
   if (context === null) {
-    throw new Error(`You may forgot to add <RemeshRoot />`);
+    throw new Error(`You may forgot to add <RemeshRoot />`)
   }
 
-  return context;
-};
+  return context
+}
 
 export const useRemeshStore = () => {
-  const context = useRemeshReactContext();
-  return context.remeshStore;
-};
+  const context = useRemeshReactContext()
+  return context.remeshStore
+}
 
-export type RemeshRootProps = {
-  children: ReactNode;
-  options?: RemeshStoreOptions;
-};
+export type RemeshRootProps =
+  | {
+      children: ReactNode
+      options?: RemeshStoreOptions
+      store?: undefined
+    }
+  | {
+      children: ReactNode
+      store: RemeshStore
+    }
 
 export const RemeshRoot = (props: RemeshRootProps) => {
-  const taskContextRef = useRef<RemeshReactContext | null>(null);
+  const taskContextRef = useRef<RemeshReactContext | null>(null)
 
   if (taskContextRef.current === null) {
-    taskContextRef.current = {
-      remeshStore: RemeshStore(props.options),
-    };
+    if (props.store) {
+      taskContextRef.current = {
+        remeshStore: props.store,
+      }
+    } else {
+      taskContextRef.current = {
+        remeshStore: RemeshStore({
+          name: "RemeshStore",
+          ...props.options,
+        }),
+      }
+    }
   }
 
   useEffect(() => {
     return () => {
-      taskContextRef.current?.remeshStore.clear();
-    };
-  }, []);
+      taskContextRef.current?.remeshStore.destroy()
+    }
+  }, [])
 
   return (
     <RemeshReactContext.Provider value={taskContextRef.current}>
       {props.children}
     </RemeshReactContext.Provider>
-  );
-};
+  )
+}
 
-export const useRemeshValueCallback = function <T>(
-  Node: RemeshNode<T>,
-  valueHandler: (value: T) => unknown
-) {
-  const remeshStore = useRemeshStore();
+export const useRemeshQuery = function <T>(Query: RemeshQuery<T>): T {
+  const remeshStore = useRemeshStore()
 
-  const valueHandlerRef = useRef(valueHandler);
+  const [state, setState] = useState(() => remeshStore.query(Query))
 
   useEffect(() => {
-    valueHandlerRef.current = valueHandler;
-  });
-
-  useEffect(() => {
-    const subscription = remeshStore.subscribe(Node, {
-      next: (newValue) => {
-        valueHandlerRef.current(newValue);
-      },
-    });
+    const subscription = remeshStore.subscribeQuery(Query, setState)
     return () => {
-      subscription.unsubscribe();
-    };
-  }, [Node, remeshStore]);
-};
-
-export const useRemeshValue = function <T>(Node: RemeshNode<T>) {
-  const remeshStore = useRemeshStore();
-  const [value, setValue] = useState(() => remeshStore.get(Node));
-
-  useRemeshValueCallback(Node, setValue);
-
-  return value;
-};
-
-export const useRemeshEffect = function (Effect: RemeshAggregate | null) {
-  const remeshStore = useRemeshStore();
-
-  useEffect(() => {
-    if (!Effect) {
-      return;
+      subscription.unsubscribe()
     }
+  }, [Query, remeshStore])
 
-    const subscription = remeshStore.performEffect(Effect);
+  return state
+}
 
+export const useRemeshEvent = function <T, U = T>(
+  Event: RemeshEvent<T, U>,
+  callback: (data: U) => unknown
+) {
+  const remeshStore = useRemeshStore()
+  const callbackRef = useRef<typeof callback>(callback)
+
+  useEffect(() => {
+    callbackRef.current = callback
+  })
+
+  useEffect(() => {
+    const subscription = remeshStore.subscribeEvent(Event, (data) => {
+      callbackRef.current(data)
+    })
     return () => {
-      subscription.unsubscribe();
-    };
-  }, [remeshStore, Effect]);
-};
+      subscription.unsubscribe()
+    }
+  }, [Event, remeshStore])
+}
 
-export const useRemeshEmitter = function () {
-  const remeshStore = useRemeshStore();
+export const useRemeshEmit = function () {
+  const remeshStore = useRemeshStore()
+  return remeshStore.emit
+}
 
-  const emitter = useMemo(() => {
-    return {
-      emit: remeshStore.emit,
-    };
-  }, [remeshStore]);
+export const useRemeshAggregate = function <T>(
+  callback: () => RemeshAggregatePayload<T>,
+  deps: unknown[] = []
+) {
+  const remeshStore = useRemeshStore()
 
-  return emitter;
-};
+  const callbackRef = useRef(callback)
+
+  useEffect(() => {
+    callbackRef.current = callback
+  })
+
+  useEffect(() => {
+    const subscription = remeshStore.subscribeAggregate(callbackRef.current())
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, deps)
+}

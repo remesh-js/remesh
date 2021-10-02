@@ -1,9 +1,10 @@
 import { Remesh } from '../../../remesh'
+
 import { TodoFilterState } from '../state/todoFilter'
 import { TodoInputState } from '../state/todoInput'
 import { Todo, TodoListState } from '../state/todos'
 
-const TodoSortedListQuery = Remesh.query({
+export const TodoSortedListQuery = Remesh.query({
     name: 'TodoSortedListQuery',
     impl: ({ get }) => {
         const todoList = get(TodoListState)
@@ -25,7 +26,7 @@ const TodoSortedListQuery = Remesh.query({
     }
 })
 
-const TodoFilteredListQuery = Remesh.query({
+export const TodoFilteredListQuery = Remesh.query({
     name: 'TodoFilteredListQuery',
     impl: ({ get }) => {
         const todoList = get(TodoListState)
@@ -44,7 +45,7 @@ const TodoFilteredListQuery = Remesh.query({
     }
 })
 
-const TodoMatchedListQuery = Remesh.query({
+export const TodoMatchedListQuery = Remesh.query({
     name: 'TodoMatchedListQuery',
     impl: ({ get }) => {
         const todoFilteredList = get(TodoFilteredListQuery)
@@ -61,3 +62,14 @@ const TodoMatchedListQuery = Remesh.query({
         return todoMatchedList
     }
 })
+
+
+export const IsAllCompletedQuery = Remesh.query({
+    name: 'IsAllCompletedQuery',
+    impl: ({ get }) => {
+        const { activeTodoList, completedTodoList } = get(TodoSortedListQuery)
+
+        return activeTodoList.length === 0 && completedTodoList.length > 0
+    }
+})
+

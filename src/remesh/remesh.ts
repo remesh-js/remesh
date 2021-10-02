@@ -318,10 +318,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
     const subject = new Subject<T>()
 
-    const observable = subject.pipe(shareReplay({
-      refCount: true,
-      bufferSize: 1,
-    }))
+    const observable = subject.asObservable()
 
     const upstreamSet: RemeshQueryStorage<T>['upstreamSet'] = new Set()
     const downstreamSet: RemeshQueryStorage<T>['downstreamSet'] = new Set()
@@ -331,17 +328,15 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     const currentValue = impl({
       get: (input) => {
         if (input.type === 'RemeshQuery') {
-          const queryStorage = getQueryStorage(input)
-          upstreamSet.add(queryStorage)
+          const upstreamQueryStorage = getQueryStorage(input)
+          upstreamSet.add(upstreamQueryStorage)
         } else if (input.type === 'RemeshState') {
-          const stateStorage = getStateStorage(input)
-          upstreamSet.add(stateStorage)
+          const upstreamStateStorage = getStateStorage(input)
+          upstreamSet.add(upstreamStateStorage)
         }
         return remeshInjectedContext.get(input)
       }
     })
-
-    subject.next(currentValue)
 
     const currentQueryStorage: RemeshQueryStorage<T> = {
       type: 'RemeshQueryStorage',
@@ -393,7 +388,6 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
         fromEvent: remeshInjectedContext.fromEvent
       }
       const observable = Aggregate.impl(aggregateContext, arg)
-
       return observable
     },
     fromEvent: Event => {
@@ -405,42 +399,41 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
   const updateQueryStorage = <T>(queryStorage: RemeshQueryStorage<T>) => {
     const { impl } = queryStorage.Query
-    const oldValue = queryStorage.currentValue
 
-    const oldUpstreamSet = queryStorage.upstreamSet
-    const oldDownstreamSet = queryStorage.downstreamSet
-
-    queryStorage.downstreamSet = new Set()
-    queryStorage.upstreamSet = new Set()
-
-    for (const upstream of oldUpstreamSet) {
+    for (const upstream of queryStorage.upstreamSet) {
       upstream.downstreamSet.delete(queryStorage)
     }
+
+    queryStorage.upstreamSet.clear()
 
     const newValue = impl({
       get: (input) => {
         if (input.type === 'RemeshQuery') {
-          const targetQueryStorage = getQueryStorage(input)
-          queryStorage.upstreamSet.add(targetQueryStorage)
-          targetQueryStorage.downstreamSet.add(queryStorage)
+          const upstreamQueryStorage = getQueryStorage(input)
+          queryStorage.upstreamSet.add(upstreamQueryStorage)
+          upstreamQueryStorage.downstreamSet.add(queryStorage)
         } else if (input.type === 'RemeshState') {
-          const targetStateStorage = getStateStorage(input)
-          queryStorage.upstreamSet.add(targetStateStorage)
-          targetStateStorage.downstreamSet.add(queryStorage)
+          const upstreamStateStorage = getStateStorage(input)
+          queryStorage.upstreamSet.add(upstreamStateStorage)
+          upstreamStateStorage.downstreamSet.add(queryStorage)
         }
         return remeshInjectedContext.get(input)
       }
     })
 
-    queryStorage.currentValue = newValue
-
-    if (oldValue === newValue) {
+    if (queryStorage.currentValue === newValue) {
       return
     }
 
+    queryStorage.currentValue = newValue
+
     storage.dirtySet.add(queryStorage)
 
-    for (const downstream of oldDownstreamSet) {
+    /**
+     * updateQueryStorage may update upstream.downstreamSet
+     * so it should be converted to an array for avoiding infinite loop
+     */
+    for (const downstream of [...queryStorage.downstreamSet]) {
       updateQueryStorage(downstream)
     }
   }
@@ -450,7 +443,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
       return
     }
 
-    const queryStorageList = [...storage.dirtySet.values()]
+    const queryStorageList = [...storage.dirtySet]
 
     storage.dirtySet.clear()
 
@@ -465,22 +458,22 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
   let tid: ReturnType<typeof setTimeout>
   const publish = () => {
+    console.log('publish')
     clearTimeout(tid)
-    tid = setTimeout(clearDirtySet, 0)
+    setTimeout(clearDirtySet, 0)
   }
 
   const handleStatePayload = (data: RemeshStatePayload) => {
     const { State, newState } = data
     const stateStorage = getStateStorage(State)
-    const oldState = stateStorage.currentState
 
-    if (oldState === newState) {
+    if (stateStorage.currentState === newState) {
       return
     }
 
     stateStorage.currentState = newState
 
-    for (const downstream of stateStorage.downstreamSet) {
+    for (const downstream of [...stateStorage.downstreamSet]) {
       updateQueryStorage(downstream)
     }
 
@@ -513,10 +506,13 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
     if (commandOutput.type === 'RemeshCommandPayload') {
       handleCommandPayload(commandOutput)
+      return
     } else if (commandOutput.type === 'RemeshEventPayload') {
       handleEventPayload(commandOutput)
+      return
     } else if (commandOutput.type === 'RemeshStatePayload') {
       handleStatePayload(commandOutput)
+      return
     }
 
     throw new Error(`Unknown command output of ${commandOutput}`)
@@ -549,8 +545,10 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
     if (aggregateOutput.type === 'RemeshCommandPayload') {
       handleCommandOutput(aggregateOutput)
+      return
     } else if (aggregateOutput.type === 'RemeshEventPayload') {
       handleEventPayload(aggregateOutput)
+      return
     }
 
     throw new Error(`Unknown aggregate output of ${aggregateOutput}`)
@@ -574,7 +572,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     return subscription
   }
 
-  const subscribeEvent = <T>(Event: RemeshEvent<T>, subscriber: (event: T) => unknown) => {
+  const subscribeEvent = <T, U = T>(Event: RemeshEvent<T, U>, subscriber: (event: U) => unknown) => {
     const eventStorage = getEventStorage(Event)
     const subscription = eventStorage.observable.subscribe(subscriber)
 
@@ -596,9 +594,10 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
   return {
     name: options.name,
+    query: getCurrentQueryValue,
     emit: handleEventPayload,
-    useAggregate: handleAggregatePayload,
     destroy,
+    subscribeAggregate: handleAggregatePayload,
     subscribeQuery,
     subscribeEvent,
   }
