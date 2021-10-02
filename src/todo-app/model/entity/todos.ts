@@ -1,5 +1,4 @@
 import { Remesh } from '../../../remesh'
-import { IsAllCompletedQuery } from '../query'
 
 export type Todo = {
     id: number
@@ -121,5 +120,37 @@ export const toggleAllTodos = Remesh.command({
         })
 
         return TodoListState(newTodoList)
+    }
+})
+
+
+export const TodoSortedListQuery = Remesh.query({
+    name: 'TodoSortedListQuery',
+    impl: ({ get }) => {
+        const todoList = get(TodoListState)
+        const activeTodoList: Todo[] = []
+        const completedTodoList: Todo[] = []
+
+        for (const todo of todoList) {
+            if (todo.completed) {
+                completedTodoList.push(todo)
+            } else {
+                activeTodoList.push(todo)
+            }
+        }
+
+        return {
+            activeTodoList,
+            completedTodoList
+        }
+    }
+})
+
+export const IsAllCompletedQuery = Remesh.query({
+    name: 'IsAllCompletedQuery',
+    impl: ({ get }) => {
+        const { activeTodoList, completedTodoList } = get(TodoSortedListQuery)
+
+        return activeTodoList.length === 0 && completedTodoList.length > 0
     }
 })
