@@ -1,7 +1,5 @@
 import { Observable, Subject, Subscription } from "rxjs"
 
-import { shareReplay } from "rxjs/operators"
-
 type RemeshInjectedContext = {
   get: <T>(State: RemeshState<T> | RemeshQuery<T>) => T
   fromEvent: <T, U = T>(Event: RemeshEvent<T, U>) => Observable<U>
@@ -16,7 +14,7 @@ export type RemeshEvent<T = unknown, U = T> = {
   type: "RemeshEvent"
   eventId: number
   eventName: string
-  impl?: (arg: T, context: RemeshEventContext) => U
+  impl?: (context: RemeshEventContext, arg: T) => U
   (arg: T): RemeshEventPayload<T, U>
 }
 
@@ -142,7 +140,7 @@ export type RemeshCommand<T = unknown> = {
   type: "RemeshCommand"
   commandId: number
   commandName: string
-  impl: (arg: T, context: RemeshCommandContext) => RemeshCommandOutput
+  impl: (context: RemeshCommandContext, arg: T) => RemeshCommandOutput
   (arg: T): RemeshCommandPayload<T>
 }
 
@@ -488,7 +486,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     }
 
     if (Event.impl) {
-      const data = Event.impl(arg, eventContext)
+      const data = Event.impl(eventContext, arg)
       eventStorage.subject.next(data)
     } else {
       eventStorage.subject.next(arg as unknown as U)
@@ -519,9 +517,10 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
   const handleCommandPayload = <T>(commandPayload: RemeshCommandPayload<T>) => {
     const { Command, arg } = commandPayload
-    const commandOutput = Command.impl(arg, {
+    const commandContext = {
       get: remeshInjectedContext.get
-    })
+    }
+    const commandOutput = Command.impl(commandContext, arg)
 
     handleCommandOutput(commandOutput)
   }
