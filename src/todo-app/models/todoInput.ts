@@ -1,4 +1,4 @@
-import { Remesh } from '../../../remesh'
+import { Remesh } from '../../remesh'
 
 export const TodoInputState = Remesh.state<string>({
     name: 'TodoInputState',

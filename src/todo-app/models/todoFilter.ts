@@ -1,4 +1,4 @@
-import { Remesh } from '../../../remesh'
+import { Remesh } from '../../remesh'
 
 export type TodoFilter = 'all' | 'completed' | 'active'
 

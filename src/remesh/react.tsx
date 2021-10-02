@@ -5,11 +5,11 @@ import React, {
   createContext,
   ReactNode,
   useState,
-  useMemo,
 } from "react"
-import { RemeshAggregatePayload, RemeshQuery } from "."
 
 import {
+  RemeshEffectPayload,
+  RemeshQuery,
   RemeshEvent,
   RemeshStore,
   RemeshStoreOptions,
@@ -119,8 +119,8 @@ export const useRemeshEmit = function () {
   return remeshStore.emit
 }
 
-export const useRemeshAggregate = function <T>(
-  callback: () => RemeshAggregatePayload<T>,
+export const useRemeshEffect = function <T>(
+  callback: () => RemeshEffectPayload<T>,
   deps: unknown[] = []
 ) {
   const remeshStore = useRemeshStore()
@@ -132,7 +132,7 @@ export const useRemeshAggregate = function <T>(
   })
 
   useEffect(() => {
-    const subscription = remeshStore.subscribeAggregate(callbackRef.current())
+    const subscription = remeshStore.subscribeEffect(callbackRef.current())
     return () => {
       subscription.unsubscribe()
     }
