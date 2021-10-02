@@ -1,8 +1,12 @@
 import { merge } from "rxjs"
 import { map } from "rxjs/operators"
 import { Remesh } from "../../../remesh"
-import { UserChangeTodoFilterEvent } from "../event"
-import { changeTodoFilter } from "../state/todoFilter"
+
+import { changeTodoFilter, TodoFilter } from "../entity/todoFilter"
+
+export const UserChangeTodoFilterEvent = Remesh.event<TodoFilter>({
+    name: 'UserChangeTodoFilterEvent'
+})
 
 export const TodoFooterAggregate = Remesh.aggregate({
     name: 'TodoFooterAggregate',
