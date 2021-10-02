@@ -1,4 +1,5 @@
 import { Remesh } from '../../../remesh'
+import { IsAllCompletedQuery } from '../query'
 
 export type Todo = {
     id: number
@@ -74,7 +75,7 @@ export const updateTodo = Remesh.command({
     name: 'updateTodo',
     impl: (payload: UpdateTodoPayload, { get }) => {
         const todoList = get(TodoListState)
-        const newTodoList = todoList.filter(todo => {
+        const newTodoList = todoList.map(todo => {
             if (todo.id !== payload.todoId) {
                 return todo
             }
@@ -92,13 +93,30 @@ export const toggleTodo = Remesh.command({
     name: 'toggleTodo',
     impl: (todoId: number, { get }) => {
         const todoList = get(TodoListState)
-        const newTodoList = todoList.filter(todo => {
+        const newTodoList = todoList.map(todo => {
             if (todo.id !== todoId) {
                 return todo
             }
             return {
                 ...todo,
                 completed: !todo.completed
+            }
+        })
+
+        return TodoListState(newTodoList)
+    }
+})
+
+export const toggleAllTodos = Remesh.command({
+    name: 'toggleAllTodos',
+    impl: (_: void, { get }) => {
+        const todoList = get(TodoListState)
+        const isAllCompleted = get(IsAllCompletedQuery)
+
+        const newTodoList = todoList.map(todo => {
+            return {
+                ...todo,
+                completed: !isAllCompleted
             }
         })
 

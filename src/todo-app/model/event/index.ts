@@ -25,3 +25,7 @@ export const UserRemoveTodoEvent = Remesh.event<number>({
 export const UserChangeTodoFilterEvent = Remesh.event<TodoFilter>({
     name: 'UserChangeTodoFilterEvent'
 })
+
+export const UserToggleAllTodosEvent = Remesh.event({
+    name: 'UserToggleAllTodosEvent'
+})
