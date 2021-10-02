@@ -7,7 +7,7 @@ export const TodoInputState = Remesh.state<string>({
 
 export const updateTodoInput = Remesh.command({
     name: 'updateTodoInput',
-    impl: (newTodoInput: string) => {
+    impl: (_, newTodoInput: string) => {
         return TodoInputState(newTodoInput)
     }
 })

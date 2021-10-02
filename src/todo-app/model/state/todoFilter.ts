@@ -9,7 +9,7 @@ export const TodoFilterState = Remesh.state<TodoFilter>({
 
 export const changeTodoFilter = Remesh.command({
     name: 'changeTodoFilter',
-    impl: (newTodoFilter: TodoFilter) => {
+    impl: (_, newTodoFilter: TodoFilter) => {
         return TodoFilterState(newTodoFilter)
     }
 })

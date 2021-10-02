@@ -32,7 +32,7 @@ let todoUid = 0
 
 export const addTodo = Remesh.command({
     name: 'addTodo',
-    impl: (todoContent: string, { get }) => {
+    impl: ({ get }, todoContent: string) => {
         const todoList = get(TodoListState)
 
         if (todoContent.length === 0) {
@@ -58,7 +58,7 @@ export const addTodo = Remesh.command({
 
 export const removeTodo = Remesh.command({
     name: 'removeTodo',
-    impl: (todoId: number, { get }) => {
+    impl: ({ get }, todoId: number) => {
         const todoList = get(TodoListState)
         const newTodoList = todoList.filter(todo => todo.id !== todoId)
 
@@ -73,7 +73,7 @@ export type UpdateTodoPayload = {
 
 export const updateTodo = Remesh.command({
     name: 'updateTodo',
-    impl: (payload: UpdateTodoPayload, { get }) => {
+    impl: ({ get }, payload: UpdateTodoPayload) => {
         const todoList = get(TodoListState)
         const newTodoList = todoList.map(todo => {
             if (todo.id !== payload.todoId) {
@@ -91,7 +91,7 @@ export const updateTodo = Remesh.command({
 
 export const toggleTodo = Remesh.command({
     name: 'toggleTodo',
-    impl: (todoId: number, { get }) => {
+    impl: ({ get }, todoId: number) => {
         const todoList = get(TodoListState)
         const newTodoList = todoList.map(todo => {
             if (todo.id !== todoId) {
@@ -109,7 +109,7 @@ export const toggleTodo = Remesh.command({
 
 export const toggleAllTodos = Remesh.command({
     name: 'toggleAllTodos',
-    impl: (_: void, { get }) => {
+    impl: ({ get }) => {
         const todoList = get(TodoListState)
         const isAllCompleted = get(IsAllCompletedQuery)
 
