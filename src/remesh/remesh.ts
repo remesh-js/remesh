@@ -457,10 +457,9 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
   }
 
   let tid: ReturnType<typeof setTimeout>
-  const publish = () => {
-    console.log('publish')
+  const notify = () => {
     clearTimeout(tid)
-    setTimeout(clearDirtySet, 0)
+    tid = setTimeout(clearDirtySet, 0)
   }
 
   const handleStatePayload = (data: RemeshStatePayload) => {
@@ -477,7 +476,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
       updateQueryStorage(downstream)
     }
 
-    publish()
+    notify()
   }
 
   const handleEventPayload = <T, U = T>(eventPayload: RemeshEventPayload<T, U>) => {
@@ -582,6 +581,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
   }
 
   const destroy = () => {
+    clearTimeout(tid)
     for (const subscription of storage.subscriptionSet) {
       subscription.unsubscribe()
     }
