@@ -1,9 +1,9 @@
 import { merge } from "rxjs"
 import { map } from "rxjs/operators"
-import { Remesh } from "../../../remesh"
+import { Remesh } from "../../remesh"
 
-import { updateTodoInput } from "../entity/todoInput"
-import { addTodo, AddTodoSuccessEvent, toggleAllTodos } from "../entity/todos"
+import { updateTodoInput } from "../models/todoInput"
+import { addTodo, AddTodoSuccessEvent, toggleAllTodos } from "../models/todosList"
 
 export const UserAddTodoEvent = Remesh.event<string>({
     name: 'UserAddTodoEvent'
@@ -17,8 +17,8 @@ export const UserToggleAllTodosEvent = Remesh.event({
     name: 'UserToggleAllTodosEvent'
 })
 
-export const TodoHeaderAggregate = Remesh.aggregate({
-    name: 'TodoHeaderAggregate',
+export const TodoHeaderEffect = Remesh.effect({
+    name: 'TodoHeaderEffect',
     impl: ({ fromEvent }) => {
         const addTodo$ = fromEvent(UserAddTodoEvent).pipe(
             map(todoContent => addTodo(todoContent))

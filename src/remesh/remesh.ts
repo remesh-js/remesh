@@ -3,7 +3,7 @@ import { Observable, Subject, Subscription } from "rxjs"
 type RemeshInjectedContext = {
   get: <T>(State: RemeshState<T> | RemeshQuery<T>) => T
   fromEvent: <T, U = T>(Event: RemeshEvent<T, U>) => Observable<U>
-  fromAggregate: <T>(Aggregate: RemeshAggregatePayload<T>) => Observable<RemeshAggregateOutput>
+  fromEffect: <T>(Effect: RemeshEffectPayload<T>) => Observable<RemeshEffectOutput>
 }
 
 export type RemeshEventContext = {
@@ -172,55 +172,55 @@ export const RemeshCommand = <T = void>(
   return Command
 }
 
-export type RemeshAggregateContext = {
+export type RemeshEffectContext = {
   fromEvent: RemeshInjectedContext['fromEvent']
-  fromAggregate: RemeshInjectedContext['fromAggregate']
+  fromEffect: RemeshInjectedContext['fromEffect']
 }
 
-export type RemeshAggregatePayload<T> = {
-  type: "RemeshAggregatePayload"
+export type RemeshEffectPayload<T> = {
+  type: "RemeshEffectPayload"
   arg: T
-  Aggregate: RemeshAggregate<T>
+  Effect: RemeshEffect<T>
 }
 
-export type RemeshAggregateOutput =
+export type RemeshEffectOutput =
   | RemeshCommandPayload<any>
   | RemeshEventPayload<any>
-  | RemeshAggregateOutput[]
+  | RemeshEffectOutput[]
 
-export type RemeshAggregate<T> = {
-  type: "RemeshAggregate"
-  aggregateId: number
-  aggregateName: string
-  impl: (context: RemeshAggregateContext, arg: T) => Observable<RemeshAggregateOutput>
-  (arg: T): RemeshAggregatePayload<T>
+export type RemeshEffect<T> = {
+  type: "RemeshEffect"
+  effectId: number
+  effectName: string
+  impl: (context: RemeshEffectContext, arg: T) => Observable<RemeshEffectOutput>
+  (arg: T): RemeshEffectPayload<T>
 }
 
-export type RemeshAggregateOptions<T> = {
-  name: RemeshAggregate<T>["aggregateName"]
-  impl: RemeshAggregate<T>["impl"]
+export type RemeshEffectOptions<T> = {
+  name: RemeshEffect<T>["effectName"]
+  impl: RemeshEffect<T>["impl"]
 }
-let aggregateUid = 0
+let effectUid = 0
 
-export const RemeshAggregate = <T = void>(
-  options: RemeshAggregateOptions<T>
-): RemeshAggregate<T> => {
-  const aggregateId = aggregateUid++
+export const RemeshEffect = <T = void>(
+  options: RemeshEffectOptions<T>
+): RemeshEffect<T> => {
+  const effectId = effectUid++
 
-  const Aggregate = ((arg) => {
+  const Effect = ((arg) => {
     return {
-      type: "RemeshAggregatePayload",
+      type: "RemeshEffectPayload",
       arg,
-      Aggregate: Aggregate,
+      Effect: Effect,
     }
-  }) as RemeshAggregate<T>
+  }) as RemeshEffect<T>
 
-  Aggregate.type = 'RemeshAggregate'
-  Aggregate.aggregateId = aggregateId
-  Aggregate.aggregateName = options.name
-  Aggregate.impl = options.impl
+  Effect.type = 'RemeshEffect'
+  Effect.effectId = effectId
+  Effect.effectName = options.name
+  Effect.impl = options.impl
 
-  return Aggregate
+  return Effect
 }
 
 export type RemeshStore = ReturnType<typeof RemeshStore>
@@ -379,13 +379,13 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
       throw new Error(`Unknown input in queryContext.get(..): ${input}`)
     },
-    fromAggregate: aggregatePayload => {
-      const { Aggregate, arg } = aggregatePayload
-      const aggregateContext = {
-        fromAggregate: remeshInjectedContext.fromAggregate,
+    fromEffect: effectPayload => {
+      const { Effect, arg } = effectPayload
+      const effectContext: RemeshEffectContext = {
+        fromEffect: remeshInjectedContext.fromEffect,
         fromEvent: remeshInjectedContext.fromEvent
       }
-      const observable = Aggregate.impl(aggregateContext, arg)
+      const observable = Effect.impl(effectContext, arg)
       return observable
     },
     fromEvent: Event => {
@@ -533,28 +533,28 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     })
   }
 
-  const handleAggregateOutput = (aggregateOutput: RemeshAggregateOutput) => {
-    if (Array.isArray(aggregateOutput)) {
-      for (const item of aggregateOutput) {
-        handleAggregateOutput(item)
+  const handleEffectOutput = (effectOutput: RemeshEffectOutput) => {
+    if (Array.isArray(effectOutput)) {
+      for (const item of effectOutput) {
+        handleEffectOutput(item)
       }
       return
     }
 
-    if (aggregateOutput.type === 'RemeshCommandPayload') {
-      handleCommandOutput(aggregateOutput)
+    if (effectOutput.type === 'RemeshCommandPayload') {
+      handleCommandOutput(effectOutput)
       return
-    } else if (aggregateOutput.type === 'RemeshEventPayload') {
-      handleEventPayload(aggregateOutput)
+    } else if (effectOutput.type === 'RemeshEventPayload') {
+      handleEventPayload(effectOutput)
       return
     }
 
-    throw new Error(`Unknown aggregate output of ${aggregateOutput}`)
+    throw new Error(`Unknown effect output of ${effectOutput}`)
   }
 
-  const handleAggregatePayload = <T>(aggregatePayload: RemeshAggregatePayload<T>) => {
-    const aggregateOutput$ = remeshInjectedContext.fromAggregate(aggregatePayload)
-    const subscription = aggregateOutput$.subscribe(handleAggregateOutput)
+  const handleEffectPayload = <T>(effectPayload: RemeshEffectPayload<T>) => {
+    const effectOutput$ = remeshInjectedContext.fromEffect(effectPayload)
+    const subscription = effectOutput$.subscribe(handleEffectOutput)
 
     handleSubscription(subscription)
 
@@ -596,7 +596,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     query: getCurrentQueryValue,
     emit: handleEventPayload,
     destroy,
-    subscribeAggregate: handleAggregatePayload,
+    subscribeEffect: handleEffectPayload,
     subscribeQuery,
     subscribeEvent,
   }
@@ -608,6 +608,6 @@ export const Remesh = {
   query: RemeshQuery,
   command: RemeshCommand,
   event: RemeshEvent,
-  aggregate: RemeshAggregate,
+  effect: RemeshEffect,
   store: RemeshStore
 }

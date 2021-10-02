@@ -1,41 +1,44 @@
 import React, { useState } from "react"
 
 import { Remesh } from "../remesh"
+
 import {
-  useRemeshAggregate,
+  useRemeshEffect,
   useRemeshEmit,
   useRemeshEvent,
   useRemeshQuery,
 } from "../remesh/react"
 
-import { TodoInputState } from "./model/entity/todoInput"
+import { TodoInputState } from "./models/todoInput"
+
 import {
-  TodoMatchedListQuery,
   UserRemoveTodoEvent,
   UserToggleTodoEvent,
   UserUpdateTodoEvent,
-  TodoListAggregate,
-} from "./model/aggregate/TodoList"
+  TodoListEffect,
+} from "./effects/TodoList"
 
 import {
   UserAddTodoEvent,
   UserInputTodoEvent,
   UserToggleAllTodosEvent,
-  TodoHeaderAggregate,
-} from "./model/aggregate/TodoHeader"
+  TodoHeaderEffect,
+} from "./effects/TodoHeader"
 
 import {
   UserChangeTodoFilterEvent,
-  TodoFooterAggregate,
-} from "./model/aggregate/TodoFooter"
+  TodoFooterEffect,
+} from "./effects/TodoFooter"
 
 import {
   AddTodoFailedEvent,
   IsAllCompletedQuery,
+  TodoMatchedListQuery,
   Todo,
   TodoSortedListQuery,
-} from "./model/entity/todos"
-import { TodoFilterState } from "./model/entity/todoFilter"
+} from "./models/todosList"
+
+import { TodoFilterState } from "./models/todoFilter"
 
 const TodoHeaderQuery = Remesh.query({
   name: "TodoHeaderQuery",
@@ -71,7 +74,7 @@ export const TodoHeader = () => {
     alert(event.message)
   })
 
-  useRemeshAggregate(TodoHeaderAggregate)
+  useRemeshEffect(TodoHeaderEffect)
 
   return (
     <div>
@@ -95,7 +98,7 @@ export const TodoHeader = () => {
 const TodoList = () => {
   const matchedTodoList = useRemeshQuery(TodoMatchedListQuery)
 
-  useRemeshAggregate(TodoListAggregate)
+  useRemeshEffect(TodoListEffect)
 
   return (
     <div>
@@ -186,7 +189,7 @@ const TodoFooter = () => {
   const emit = useRemeshEmit()
   const { itemLeft, todoFilter } = useRemeshQuery(TodoFooterQuery)
 
-  useRemeshAggregate(TodoFooterAggregate)
+  useRemeshEffect(TodoFooterEffect)
 
   return (
     <div>

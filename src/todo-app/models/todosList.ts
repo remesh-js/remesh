@@ -1,4 +1,6 @@
-import { Remesh } from '../../../remesh'
+import { Remesh } from '../../remesh'
+import { TodoFilterState } from './todoFilter'
+import { TodoInputState } from './todoInput'
 
 export type Todo = {
     id: number
@@ -152,5 +154,43 @@ export const IsAllCompletedQuery = Remesh.query({
         const { activeTodoList, completedTodoList } = get(TodoSortedListQuery)
 
         return activeTodoList.length === 0 && completedTodoList.length > 0
+    }
+})
+
+
+export const TodoFilteredListQuery = Remesh.query({
+    name: 'TodoFilteredListQuery',
+    impl: ({ get }) => {
+        const todoList = get(TodoListState)
+        const todoSortedList = get(TodoSortedListQuery)
+        const todoFilter = get(TodoFilterState)
+
+        if (todoFilter === 'active') {
+            return todoSortedList.activeTodoList
+        }
+
+        if (todoFilter === 'completed') {
+            return todoSortedList.completedTodoList
+        }
+
+        return todoList
+    }
+})
+
+export const TodoMatchedListQuery = Remesh.query({
+    name: 'TodoMatchedListQuery',
+    impl: ({ get }) => {
+        const todoFilteredList = get(TodoFilteredListQuery)
+        const todoInput = get(TodoInputState)
+
+        if (todoInput.length === 0) {
+            return todoFilteredList
+        }
+
+        const todoMatchedList = todoFilteredList.filter(todo => {
+            return todo.content.includes(todoInput)
+        })
+
+        return todoMatchedList
     }
 })
