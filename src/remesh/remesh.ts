@@ -241,9 +241,6 @@ export type RemeshDomainContext = {
 
 export type RemeshDomainOutput = {
   autorun: RemeshEffect<void>[]
-  state: {
-    [key: string]: RemeshState<any> | RemeshDomainOutput['state']
-  }
   event: {
     [key: string]: RemeshEvent<any> | RemeshDomainOutput['event']
   },
@@ -620,6 +617,10 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
     stateStorage.currentState = newState
 
+    /**
+     * updateQueryStorage may update upstream.downstreamSet
+     * so it should be converted to an array for avoiding infinite loop
+     */
     for (const downstream of [...stateStorage.downstreamSet]) {
       updateQueryStorage(downstream)
     }
@@ -737,7 +738,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     return domainStorage.domain
   }
 
-  const clearDomainResourceIfNeeded = <T extends RemeshDomainDefinition>(Domain: RemeshDomain<T>) => {
+  const clearDomainResourcesIfNeeded = <T extends RemeshDomainDefinition>(Domain: RemeshDomain<T>) => {
     const domainStorage = getDomainStorage(Domain)
 
     if (domainStorage.refCount !== 0) {
@@ -748,13 +749,13 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
       return
     }
 
-    for (const upstreamDomainStorage of domainStorage.upstreamSet) {
-      upstreamDomainStorage.downstreamSet.delete(domainStorage)
-      clearDomainResourceIfNeeded(upstreamDomainStorage.Domain)
-    }
-
     for (const subscription of domainStorage.subscriptionSet) {
       subscription.unsubscribe()
+    }
+
+    for (const upstreamDomainStorage of domainStorage.upstreamSet) {
+      upstreamDomainStorage.downstreamSet.delete(domainStorage)
+      clearDomainResourcesIfNeeded(upstreamDomainStorage.Domain)
     }
 
     domainStorage.upstreamSet.clear()
@@ -776,14 +777,15 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
     subscription.add(() => {
       domainStorage.refCount -= 1
-      clearDomainResourceIfNeeded(Domain)
       domainSubscriptionSet.delete(subscription)
+      clearDomainResourcesIfNeeded(Domain)
+
     })
 
     if (domainStorage.refCount === 1) {
-      for (const subdomainStorage of domainStorage.downstreamSet) {
-        const subdomainSubscription = subscribeDomain(subdomainStorage.Domain)
-        domainStorage.subscriptionSet.add(subdomainSubscription)
+      for (const upstreamDomainStorage of domainStorage.upstreamSet) {
+        const upstreamDomainSubscription = subscribeDomain(upstreamDomainStorage.Domain)
+        domainStorage.subscriptionSet.add(upstreamDomainSubscription)
       }
 
       for (const Effect of domainStorage.domain.autorun ?? []) {
@@ -799,7 +801,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     for (const subscription of domainSubscriptionSet) {
       subscription.unsubscribe()
     }
-    clearDomainResourceIfNeeded(DefaultDomain)
+    clearDomainResourcesIfNeeded(DefaultDomain)
     domainSubscriptionSet.clear()
     domainStorageMap.clear()
     dirtySet.clear()
