@@ -1,80 +1,40 @@
 import React, { useState } from "react"
 
-import { Remesh } from "../remesh"
-
 import {
-  useRemeshEffect,
   useRemeshEmit,
   useRemeshEvent,
   useRemeshQuery,
+  useRemeshDomain,
 } from "../remesh/react"
 
-import { TodoInputState } from "./models/todoInput"
-
-import {
-  UserRemoveTodoEvent,
-  UserToggleTodoEvent,
-  UserUpdateTodoEvent,
-  TodoListEffect,
-} from "./effects/TodoList"
-
-import {
-  UserAddTodoEvent,
-  UserInputTodoEvent,
-  UserToggleAllTodosEvent,
-  TodoHeaderEffect,
-} from "./effects/TodoHeader"
-
-import {
-  UserChangeTodoFilterEvent,
-  TodoFooterEffect,
-} from "./effects/TodoFooter"
-
-import {
-  AddTodoFailedEvent,
-  IsAllCompletedQuery,
-  TodoMatchedListQuery,
-  Todo,
-  TodoSortedListQuery,
-} from "./models/todosList"
-
-import { TodoFilterState } from "./models/todoFilter"
-
-const TodoHeaderQuery = Remesh.query({
-  name: "TodoHeaderQuery",
-  impl: ({ get }) => {
-    const isAllCompleted = get(IsAllCompletedQuery)
-    const todoInput = get(TodoInputState)
-
-    return {
-      isAllCompleted,
-      todoInput,
-    }
-  },
-})
+import { TodoFilterDomain } from "../todo-app/domains/todoFilter"
+import { TodoInputDomain } from "../todo-app/domains/todoInput"
+import { Todo, TodoListDomain } from "../todo-app/domains/todoList"
 
 export const TodoHeader = () => {
   const emit = useRemeshEmit()
-
-  const { isAllCompleted, todoInput } = useRemeshQuery(TodoHeaderQuery)
+  const todoInputDomain = useRemeshDomain(TodoInputDomain)
+  const todoListDomain = useRemeshDomain(TodoListDomain)
+  const todoInput = useRemeshQuery(todoInputDomain.query.TodoInputQuery)
+  const isAllCompleted = useRemeshQuery(
+    todoListDomain.query.IsAllCompletedQuery
+  )
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    emit(UserInputTodoEvent(event.target.value))
+    emit(todoInputDomain.event.TodoInputEvent(event.target.value))
   }
 
   const handleAdd = () => {
-    emit(UserAddTodoEvent(todoInput))
+    emit(todoListDomain.event.AddTodoEvent(todoInput))
   }
 
   const handleToggleAllTodos = () => {
-    emit(UserToggleAllTodosEvent())
+    emit(todoListDomain.event.ToggleAllTodosEvent())
   }
 
-  useRemeshEvent(AddTodoFailedEvent, (event) => {
+  useRemeshEvent(todoListDomain.event.AddTodoFailedEvent, (event) => {
     alert(event.message)
   })
-
-  useRemeshEffect(TodoHeaderEffect)
 
   return (
     <div>
@@ -96,9 +56,10 @@ export const TodoHeader = () => {
 }
 
 const TodoList = () => {
-  const matchedTodoList = useRemeshQuery(TodoMatchedListQuery)
-
-  useRemeshEffect(TodoListEffect)
+  const todoListDomain = useRemeshDomain(TodoListDomain)
+  const matchedTodoList = useRemeshQuery(
+    todoListDomain.query.TodoMatchedListQuery
+  )
 
   return (
     <div>
@@ -114,6 +75,7 @@ type TodoItemProps = {
 }
 
 const TodoItem = (props: TodoItemProps) => {
+  const todoListDomain = useRemeshDomain(TodoListDomain)
   const emit = useRemeshEmit()
 
   const [text, setText] = useState("")
@@ -128,7 +90,7 @@ const TodoItem = (props: TodoItemProps) => {
       setEdit(false)
     } else {
       emit(
-        UserUpdateTodoEvent({
+        todoListDomain.event.UpdateTodoEvent({
           todoId: props.todo.id,
           content: text,
         })
@@ -144,11 +106,11 @@ const TodoItem = (props: TodoItemProps) => {
   }
 
   const handleRemove = () => {
-    emit(UserRemoveTodoEvent(props.todo.id))
+    emit(todoListDomain.event.RemoveTodoEvent(props.todo.id))
   }
 
   const handleToggle = () => {
-    emit(UserToggleTodoEvent(props.todo.id))
+    emit(todoListDomain.event.ToggleTodoEvent(props.todo.id))
   }
 
   return (
@@ -172,24 +134,16 @@ const TodoItem = (props: TodoItemProps) => {
   )
 }
 
-const TodoFooterQuery = Remesh.query({
-  name: "TodoFooterQuery",
-  impl: ({ get }) => {
-    const { activeTodoList } = get(TodoSortedListQuery)
-    const todoFilter = get(TodoFilterState)
-
-    return {
-      todoFilter,
-      itemLeft: activeTodoList.length,
-    }
-  },
-})
-
 const TodoFooter = () => {
   const emit = useRemeshEmit()
-  const { itemLeft, todoFilter } = useRemeshQuery(TodoFooterQuery)
+  const todoFilterDomain = useRemeshDomain(TodoFilterDomain)
+  const todoListDomain = useRemeshDomain(TodoListDomain)
+  const { activeTodoList } = useRemeshQuery(
+    todoListDomain.query.TodoSortedListQuery
+  )
+  const todoFilter = useRemeshQuery(todoFilterDomain.query.TodoFilterQuery)
 
-  useRemeshEffect(TodoFooterEffect)
+  const itemLeft = activeTodoList.length
 
   return (
     <div>
@@ -202,7 +156,7 @@ const TodoFooter = () => {
           color: todoFilter === "all" ? "red" : "",
         }}
         onClick={() => {
-          emit(UserChangeTodoFilterEvent("all"))
+          emit(todoFilterDomain.event.ChangeTodoFilterEvent("all"))
         }}
       >
         All
@@ -212,7 +166,7 @@ const TodoFooter = () => {
           color: todoFilter === "active" ? "red" : "",
         }}
         onClick={() => {
-          emit(UserChangeTodoFilterEvent("active"))
+          emit(todoFilterDomain.event.ChangeTodoFilterEvent("active"))
         }}
       >
         Active
@@ -222,7 +176,7 @@ const TodoFooter = () => {
           color: todoFilter === "completed" ? "red" : "",
         }}
         onClick={() => {
-          emit(UserChangeTodoFilterEvent("completed"))
+          emit(todoFilterDomain.event.ChangeTodoFilterEvent("completed"))
         }}
       >
         Completed

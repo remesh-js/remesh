@@ -6,6 +6,7 @@ import React, {
   ReactNode,
   useState,
 } from "react"
+import { RemeshDomainDefinition } from "."
 
 import {
   RemeshEffectPayload,
@@ -13,6 +14,7 @@ import {
   RemeshEvent,
   RemeshStore,
   RemeshStoreOptions,
+  RemeshDomain,
 } from "./remesh"
 
 export type RemeshReactContext = {
@@ -137,4 +139,20 @@ export const useRemeshEffect = function <T>(
       subscription.unsubscribe()
     }
   }, deps)
+}
+
+export const useRemeshDomain = function <T extends RemeshDomainDefinition>(
+  Domain: RemeshDomain<T>
+): T {
+  const store = useRemeshStore()
+  const domain = store.getDomain(Domain)
+
+  useEffect(() => {
+    const subscription = store.subscribeDomain(Domain)
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [store, Domain])
+
+  return domain
 }
