@@ -228,9 +228,10 @@ export const RemeshEffect = <T = void>(
   return Effect
 }
 
+export type RemeshDomainExtract<T extends RemeshDomainDefinition> = Pick<T, 'query' | 'event' | 'command' | 'effect'>
 
 export type RemeshDomainContext = {
-  useDomain: <T>(Domain: RemeshDomain<T>) => T
+  get: <T extends RemeshDomainDefinition>(Domain: RemeshDomain<T>) => RemeshDomainExtract<T>
   state: typeof RemeshState
   event: typeof RemeshEvent
   query: typeof RemeshQuery
@@ -239,7 +240,7 @@ export type RemeshDomainContext = {
 }
 
 export type RemeshDomainOutput = {
-  autorun: Set<RemeshEffect<void>>
+  autorun: RemeshEffect<void>[]
   state: {
     [key: string]: RemeshState<any> | RemeshDomainOutput['state']
   }
@@ -321,11 +322,6 @@ type RemeshDomainStorage<T extends RemeshDomainDefinition> = {
   eventMap: Map<RemeshEvent<any>, RemeshEventStorage<any>>
   subscriptionSet: Set<Subscription>
   refCount: number
-}
-
-type RemeshStoreInternalStorage = {
-  domainMap: Map<RemeshDomain<any>, RemeshDomainStorage<any>>
-  dirtySet: Set<RemeshQueryStorage<any>>
 }
 
 export type RemeshStoreOptions = {
@@ -467,10 +463,18 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
         Effect.Domain = Domain
         return Effect
       },
-      useDomain: (UpstreamDomain) => {
+      get: (UpstreamDomain) => {
         const upstreamDomainStorage = getDomainStorage(UpstreamDomain)
+        const domain = getDomain(UpstreamDomain)
+
         upstreamSet.add(upstreamDomainStorage)
-        return getDomain(UpstreamDomain)
+
+        return {
+          query: domain.query,
+          command: domain.command,
+          event: domain.event,
+          effect: domain.effect
+        }
       }
     }
 
@@ -805,6 +809,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     name: options.name,
     query: getCurrentQueryValue,
     emit: handleEventPayload,
+    getDomain,
     destroy,
     subscribeEffect: handleEffectPayload,
     subscribeQuery,
@@ -813,13 +818,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
   }
 }
 
-
 export const Remesh = {
   domain: RemeshDomain,
-  state: RemeshState,
-  query: RemeshQuery,
-  command: RemeshCommand,
-  event: RemeshEvent,
-  effect: RemeshEffect,
   store: RemeshStore
 }
