@@ -7,7 +7,6 @@ import {
   useRemeshDomain,
 } from "../remesh/react"
 
-
 import {
   Todo,
   TodoAppHeaderDomain,
@@ -92,7 +91,7 @@ const TodoItem = (props: TodoItemProps) => {
   }
 
   const handleBlur = () => {
-    if (text.length === 0 || text === props.todo.content) {
+    if (text === props.todo.content) {
       setEdit(false)
     } else {
       emit(

@@ -25,14 +25,10 @@ export const TodoFilterDomain = Remesh.domain({
             }
         })
 
-        const ChangeTodoFilterEvent = domain.event<TodoFilter>({
-            name: 'ChangeTodoFilterEvent'
-        })
-
         const TodoFooterTask = domain.task({
             name: 'TodoFooterTask',
             impl: ({ fromEvent }) => {
-                const changeTodoFilter$ = fromEvent(ChangeTodoFilterEvent).pipe(
+                const changeTodoFilter$ = fromEvent(updateTodoFilter.Event).pipe(
                     map(newTodoFilter => updateTodoFilter(newTodoFilter))
                 )
                 return changeTodoFilter$
@@ -43,7 +39,7 @@ export const TodoFilterDomain = Remesh.domain({
 
         return {
             event: {
-                ChangeTodoFilterEvent
+                ChangeTodoFilterEvent: updateTodoFilter.Event
             },
             query: {
                 TodoFilterQuery

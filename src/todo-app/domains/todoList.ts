@@ -81,6 +81,10 @@ export const TodoListDomain = Remesh.domain({
         const updateTodo = domain.command({
             name: 'updateTodo',
             impl: ({ get }, payload: UpdateTodoPayload) => {
+                if (payload.content.length === 0) {
+                    return removeTodo(payload.todoId)
+                }
+
                 const todoList = get(TodoListState)
                 const newTodoList = todoList.map(todo => {
                     if (todo.id !== payload.todoId) {
@@ -177,50 +181,26 @@ export const TodoListDomain = Remesh.domain({
             }
         })
 
-        const AddTodoEvent = domain.event<string>({
-            name: 'AddTodoEvent'
-        })
-
-        const InputTodoEvent = domain.event<string>({
-            name: 'InputTodoEvent'
-        })
-
-        const ToggleAllTodosEvent = domain.event({
-            name: 'ToggleAllTodosEvent'
-        })
-
-        const ToggleTodoEvent = domain.event<number>({
-            name: 'ToggleTodoEvent'
-        })
-
-        const UpdateTodoEvent = domain.event<UpdateTodoPayload>({
-            name: 'UpdateTodoEvent'
-        })
-
-        const RemoveTodoEvent = domain.event<number>({
-            name: 'RemoveTodoEvent'
-        })
-
         const TodoListAutorunTask = domain.task({
             name: 'TodoListAutorunTask',
             impl: ({ fromEvent }) => {
-                const addTodo$ = fromEvent(AddTodoEvent).pipe(
+                const addTodo$ = fromEvent(addTodo.Event).pipe(
                     map(todoContent => addTodo(todoContent))
                 )
 
-                const toggleAllTodos$ = fromEvent(ToggleAllTodosEvent).pipe(
+                const toggleAllTodos$ = fromEvent(toggleAllTodos.Event).pipe(
                     map(() => toggleAllTodos())
                 )
 
-                const toggleTodo$ = fromEvent(ToggleTodoEvent).pipe(
+                const toggleTodo$ = fromEvent(toggleTodo.Event).pipe(
                     map(todoId => toggleTodo(todoId))
                 )
 
-                const updateTodo$ = fromEvent(UpdateTodoEvent).pipe(
+                const updateTodo$ = fromEvent(updateTodo.Event).pipe(
                     map(updateTodoPayload => updateTodo(updateTodoPayload))
                 )
 
-                const removeTodo$ = fromEvent(RemoveTodoEvent).pipe(
+                const removeTodo$ = fromEvent(removeTodo.Event).pipe(
                     map(todoId => removeTodo(todoId))
                 )
 
@@ -240,12 +220,11 @@ export const TodoListDomain = Remesh.domain({
             event: {
                 AddTodoFailedEvent,
                 AddTodoSuccessEvent,
-                AddTodoEvent,
-                InputTodoEvent,
-                ToggleAllTodosEvent,
-                UpdateTodoEvent,
-                RemoveTodoEvent,
-                ToggleTodoEvent
+                AddTodoEvent: addTodo.Event,
+                ToggleAllTodosEvent: toggleAllTodos.Event,
+                UpdateTodoEvent: updateTodo.Event,
+                RemoveTodoEvent: removeTodo.Event,
+                ToggleTodoEvent: toggleTodo.Event
             },
             query: {
                 TodoListQuery,
