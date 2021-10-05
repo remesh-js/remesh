@@ -24,14 +24,10 @@ export const TodoInputDomain = Remesh.domain({
             }
         })
 
-        const TodoInputEvent = domain.event<string>({
-            name: 'TodoInputEvent'
-        })
-
         const TodoInputTask = domain.task({
             name: 'TodoInputTask',
             impl: ({ fromEvent }) => {
-                return fromEvent(TodoInputEvent).pipe(
+                return fromEvent(updateTodoInput.Event).pipe(
                     map(newTodoInput => updateTodoInput(newTodoInput))
                 )
             }
@@ -44,7 +40,7 @@ export const TodoInputDomain = Remesh.domain({
                 TodoInputQuery
             },
             event: {
-                TodoInputEvent,
+                TodoInputEvent: updateTodoInput.Event,
             }
         }
     }

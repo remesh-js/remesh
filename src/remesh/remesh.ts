@@ -145,6 +145,7 @@ export type RemeshCommand<T = unknown> = {
   commandName: string
   impl: (context: RemeshCommandContext, arg: T) => RemeshCommandOutput
   (arg: T): RemeshCommandPayload<T>
+  Event: RemeshEvent<T>
   Domain?: RemeshDomain<any>
 }
 
@@ -172,6 +173,9 @@ export const RemeshCommand = <T = void>(
   Command.commandId = commandId
   Command.commandName = options.name
   Command.impl = options.impl
+  Command.Event = RemeshEvent<T>({
+    name: `Event(${options.name})`
+  })
 
   return Command
 }
@@ -228,7 +232,9 @@ export const RemeshTask = <T = void>(
   return Task
 }
 
-export type RemeshDomainExtract<T extends RemeshDomainDefinition> = Pick<T, ('query' | 'event' | 'command' | 'task') & keyof T>
+export type RemeshDomainExtract<T extends RemeshDomainDefinition> = Pick<T, ('query' | 'event') & keyof T>
+
+export type RemeshDomainWidgetExtract<T extends RemeshDomainWidgetDefinition> = Pick<T, ('query' | 'event' | 'command' | 'task') & keyof T>
 
 export type RemeshDomainContext = {
   // definitions
@@ -239,7 +245,7 @@ export type RemeshDomainContext = {
   task: typeof RemeshTask
   // methods
   get: <T extends RemeshDomainDefinition>(Domain: RemeshDomain<T>) => RemeshDomainExtract<T>
-  use: <T extends RemeshDomainDefinition, U>(payload: RemeshDomainWidgetPayload<T, U>) => RemeshDomainExtract<T>
+  use: <T extends RemeshDomainWidgetDefinition, U>(payload: RemeshDomainWidgetPayload<T, U>) => RemeshDomainWidgetExtract<T>
   autorun: (Task: RemeshTask<void>) => void
 }
 
@@ -249,16 +255,60 @@ export type RemeshDomainOutput = {
   },
   query: {
     [key: string]: RemeshQuery<any> | RemeshDomainOutput['query']
+  }
+}
+
+export type RemeshDomainWidgetOutput = {
+  event: {
+    [key: string]: RemeshEvent<any> | RemeshDomainWidgetOutput['event']
+  },
+  query: {
+    [key: string]: RemeshQuery<any> | RemeshDomainWidgetOutput['query']
   },
   command: {
-    [key: string]: RemeshCommand<any> | RemeshDomainOutput['command']
+    [key: string]: RemeshCommand<any> | RemeshDomainWidgetOutput['command']
   },
   task: {
-    [key: string]: RemeshTask<any> | RemeshDomainOutput['task']
+    [key: string]: RemeshTask<any> | RemeshDomainWidgetOutput['task']
   }
 }
 
 export type RemeshDomainDefinition = Partial<RemeshDomainOutput>
+
+export type RemeshDomainWidgetDefinition = Partial<RemeshDomainWidgetOutput>
+
+const extractDomain = <T extends RemeshDomainDefinition>(domainOutput: T): RemeshDomainExtract<T> => {
+  const result = {} as RemeshDomainExtract<T>
+
+  if (domainOutput.query) {
+    result.query = domainOutput.query
+  }
+  if (domainOutput.event) {
+    result.event = domainOutput.event
+  }
+
+  return result
+}
+
+const extractDomainWidget = <T extends RemeshDomainWidgetDefinition>(domainOutput: T): RemeshDomainWidgetExtract<T> => {
+  const result = {} as RemeshDomainWidgetExtract<T>
+
+  if (domainOutput.query) {
+    result.query = domainOutput.query
+  }
+  if (domainOutput.event) {
+    result.event = domainOutput.event
+  }
+  if (domainOutput.command) {
+    result.command = domainOutput.command
+  }
+  if (domainOutput.task) {
+    result.task = domainOutput.task
+  }
+
+  return result
+}
+
 
 export type RemeshDomain<T extends RemeshDomainDefinition> = {
   type: 'RemeshDomain'
@@ -285,19 +335,19 @@ export const RemeshDomain = <T extends RemeshDomainDefinition>(options: RemeshDo
   return Domain
 }
 
-export type RemeshDomainWidgetPayload<T extends RemeshDomainDefinition, U> = {
+export type RemeshDomainWidgetPayload<T extends RemeshDomainWidgetDefinition, U> = {
   type: 'RemeshDomainWidgetPayload'
   Widget: RemeshDomainWidget<T, U>
   arg: U
 }
 
-export type RemeshDomainWidget<T extends RemeshDomainDefinition, U> = {
+export type RemeshDomainWidget<T extends RemeshDomainWidgetDefinition, U> = {
   type: 'RemeshDomainWidget',
   impl: (context: RemeshDomainContext, arg: U) => T
   (arg: U): RemeshDomainWidgetPayload<T, U>
 }
 
-export const RemeshDomainWidget = <T extends RemeshDomainDefinition, U = void>(impl: RemeshDomainWidget<T, U>['impl']): RemeshDomainWidget<T, U> => {
+export const RemeshDomainWidget = <T extends RemeshDomainWidgetDefinition, U = void>(impl: RemeshDomainWidget<T, U>['impl']): RemeshDomainWidget<T, U> => {
   const Widget = (arg => {
     return {
       type: 'RemeshDomainWidgetPayload',
@@ -470,25 +520,6 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
       }
     }
 
-    const extract = <T extends RemeshDomainDefinition>(domainOutput: T): RemeshDomainExtract<T> => {
-      const result = {} as RemeshDomainExtract<T>
-
-      if (domainOutput.query) {
-        result.query = domainOutput.query
-      }
-      if (domainOutput.event) {
-        result.event = domainOutput.event
-      }
-      if (domainOutput.command) {
-        result.command = domainOutput.command
-      }
-      if (domainOutput.task) {
-        result.task = domainOutput.task
-      }
-
-      return result
-    }
-
     const upstreamSet: RemeshDomainStorage<T>['upstreamSet'] = new Set()
     const autorunTaskSet: RemeshDomainStorage<T>['autorunTaskSet'] = new Set()
 
@@ -515,6 +546,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
         throwIfIsInit()
         const Command = RemeshCommand(options)
         Command.Domain = Domain
+        Command.Event.Domain = Domain
         return Command
       },
       task: options => {
@@ -529,14 +561,14 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
         upstreamSet.add(upstreamDomainStorage)
 
-        return extract(domain)
+        return extractDomain(domain)
       },
       use: widgetPayload => {
         throwIfIsInit()
         const { Widget, arg } = widgetPayload
         const widget = Widget.impl(domainContext, arg)
 
-        return extract(widget)
+        return extractDomainWidget(widget)
       },
       autorun: (Task) => {
         throwIfIsInit()
