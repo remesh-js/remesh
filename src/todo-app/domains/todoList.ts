@@ -1,8 +1,6 @@
 import { map } from 'rxjs/operators'
 import { Remesh } from '../../remesh'
 
-import { TodoInputDomain } from './todoInput'
-import { TodoFilterDomain } from './todoFilter'
 import { merge } from 'rxjs'
 
 export type Todo = {
@@ -28,9 +26,6 @@ export type UpdateTodoPayload = {
 export const TodoListDomain = Remesh.domain({
     name: 'TodoListDomain',
     impl: domain => {
-        const todoInputDomain = domain.get(TodoInputDomain)
-        const todoFilterDomain = domain.get(TodoFilterDomain)
-
         const TodoListState = domain.state<Todo[]>({
             name: 'TodoListState',
             default: []
@@ -136,6 +131,13 @@ export const TodoListDomain = Remesh.domain({
             }
         })
 
+        const TodoListQuery = domain.query({
+            name: 'TodoListQuery',
+            impl: ({ get }) => {
+                return get(TodoListState)
+            }
+        })
+
         const TodoSortedListQuery = domain.query({
             name: 'TodoSortedListQuery',
             impl: ({ get }) => {
@@ -167,44 +169,13 @@ export const TodoListDomain = Remesh.domain({
             }
         })
 
-
-        const TodoFilteredListQuery = domain.query({
-            name: 'TodoFilteredListQuery',
+        const TodoItemLeftCountQuery = domain.query({
+            name: 'TodoItemLeftCountQuery',
             impl: ({ get }) => {
-                const todoList = get(TodoListState)
-                const todoSortedList = get(TodoSortedListQuery)
-                const todoFilter = get(todoFilterDomain.query.TodoFilterQuery)
-
-                if (todoFilter === 'active') {
-                    return todoSortedList.activeTodoList
-                }
-
-                if (todoFilter === 'completed') {
-                    return todoSortedList.completedTodoList
-                }
-
-                return todoList
+                const { activeTodoList } = get(TodoSortedListQuery)
+                return activeTodoList.length
             }
         })
-
-        const TodoMatchedListQuery = domain.query({
-            name: 'TodoMatchedListQuery',
-            impl: ({ get }) => {
-                const todoFilteredList = get(TodoFilteredListQuery)
-                const todoInput = get(todoInputDomain.query.TodoInputQuery)
-
-                if (todoInput.length === 0) {
-                    return todoFilteredList
-                }
-
-                const todoMatchedList = todoFilteredList.filter(todo => {
-                    return todo.content.includes(todoInput)
-                })
-
-                return todoMatchedList
-            }
-        })
-
 
         const AddTodoEvent = domain.event<string>({
             name: 'AddTodoEvent'
@@ -237,14 +208,6 @@ export const TodoListDomain = Remesh.domain({
                     map(todoContent => addTodo(todoContent))
                 )
 
-                const changeTodoInput$ = fromEvent(InputTodoEvent).pipe(
-                    map(todoInput => todoInputDomain.command.updateTodoInput(todoInput))
-                )
-
-                const clearTodoInput$ = fromEvent(AddTodoSuccessEvent).pipe(
-                    map(() => todoInputDomain.command.updateTodoInput(''))
-                )
-
                 const toggleAllTodos$ = fromEvent(ToggleAllTodosEvent).pipe(
                     map(() => toggleAllTodos())
                 )
@@ -263,19 +226,17 @@ export const TodoListDomain = Remesh.domain({
 
                 return merge(
                     addTodo$,
-                    changeTodoInput$,
-                    clearTodoInput$,
+                    updateTodo$,
+                    removeTodo$,
                     toggleAllTodos$,
                     toggleTodo$,
-                    updateTodo$,
-                    removeTodo$
                 )
             }
         })
 
+        domain.autorun(TodoListAutorunTask)
 
         return {
-            autorun: [TodoListAutorunTask],
             event: {
                 AddTodoFailedEvent,
                 AddTodoSuccessEvent,
@@ -287,17 +248,10 @@ export const TodoListDomain = Remesh.domain({
                 ToggleTodoEvent
             },
             query: {
+                TodoListQuery,
                 IsAllCompletedQuery,
                 TodoSortedListQuery,
-                TodoMatchedListQuery,
-                TodoFilteredListQuery,
-            },
-            command: {
-                addTodo,
-                updateTodo,
-                removeTodo,
-                toggleTodo,
-                toggleAllTodos
+                TodoItemLeftCountQuery,
             }
         }
     }
