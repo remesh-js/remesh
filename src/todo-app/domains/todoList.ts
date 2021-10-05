@@ -230,8 +230,8 @@ export const TodoListDomain = Remesh.domain({
             name: 'RemoveTodoEvent'
         })
 
-        const TodoListAutorunEffect = domain.effect({
-            name: 'TodoListAutorunEffect',
+        const TodoListAutorunTask = domain.task({
+            name: 'TodoListAutorunTask',
             impl: ({ fromEvent }) => {
                 const addTodo$ = fromEvent(AddTodoEvent).pipe(
                     map(todoContent => addTodo(todoContent))
@@ -275,7 +275,7 @@ export const TodoListDomain = Remesh.domain({
 
 
         return {
-            autorun: [TodoListAutorunEffect],
+            autorun: [TodoListAutorunTask],
             event: {
                 AddTodoFailedEvent,
                 AddTodoSuccessEvent,

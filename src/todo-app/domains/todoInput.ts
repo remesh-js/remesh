@@ -28,8 +28,8 @@ export const TodoInputDomain = Remesh.domain({
             name: 'TodoInputEvent'
         })
 
-        const TodoInputEffect = domain.effect({
-            name: 'TodoInputEffect',
+        const TodoInputTask = domain.task({
+            name: 'TodoInputTask',
             impl: ({ fromEvent }) => {
                 return fromEvent(TodoInputEvent).pipe(
                     map(newTodoInput => updateTodoInput(newTodoInput))
@@ -38,7 +38,7 @@ export const TodoInputDomain = Remesh.domain({
         })
 
         return {
-            autorun: [TodoInputEffect],
+            autorun: [TodoInputTask],
             query: {
                 TodoInputQuery
             },
