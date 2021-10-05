@@ -3,7 +3,7 @@ import { Observable, Subject, Subscription } from "rxjs"
 type RemeshInjectedContext = {
   get: <T>(State: RemeshState<T> | RemeshQuery<T>) => T
   fromEvent: <T, U = T>(Event: RemeshEvent<T, U>) => Observable<U>
-  fromEffect: <T>(Effect: RemeshEffectPayload<T>) => Observable<RemeshEffectOutput>
+  fromTask: <T>(Task: RemeshTaskPayload<T>) => Observable<RemeshTaskOutput>
 }
 
 export type RemeshEventContext = {
@@ -176,59 +176,59 @@ export const RemeshCommand = <T = void>(
   return Command
 }
 
-export type RemeshEffectContext = {
+export type RemeshTaskContext = {
   fromEvent: RemeshInjectedContext['fromEvent']
-  fromEffect: RemeshInjectedContext['fromEffect']
+  fromTask: RemeshInjectedContext['fromTask']
 }
 
-export type RemeshEffectPayload<T> = {
-  type: "RemeshEffectPayload"
+export type RemeshTaskPayload<T> = {
+  type: "RemeshTaskPayload"
   arg: T
-  Effect: RemeshEffect<T>
+  Task: RemeshTask<T>
 }
 
-export type RemeshEffectOutput =
+export type RemeshTaskOutput =
   | RemeshCommandPayload<any>
   | RemeshEventPayload<any>
-  | RemeshEffectOutput[]
+  | RemeshTaskOutput[]
 
-export type RemeshEffect<T> = {
-  type: "RemeshEffect"
-  effectId: number
-  effectName: string
-  impl: (context: RemeshEffectContext, arg: T) => Observable<RemeshEffectOutput>
-  (arg: T): RemeshEffectPayload<T>
+export type RemeshTask<T> = {
+  type: "RemeshTask"
+  taskId: number
+  taskName: string
+  impl: (context: RemeshTaskContext, arg: T) => Observable<RemeshTaskOutput>
+  (arg: T): RemeshTaskPayload<T>
   Domain?: RemeshDomain<any>
 }
 
-export type RemeshEffectOptions<T> = {
-  name: RemeshEffect<T>["effectName"]
-  impl: RemeshEffect<T>["impl"]
+export type RemeshTaskOptions<T> = {
+  name: RemeshTask<T>["taskName"]
+  impl: RemeshTask<T>["impl"]
 }
-let effectUid = 0
+let taskUid = 0
 
-export const RemeshEffect = <T = void>(
-  options: RemeshEffectOptions<T>
-): RemeshEffect<T> => {
-  const effectId = effectUid++
+export const RemeshTask = <T = void>(
+  options: RemeshTaskOptions<T>
+): RemeshTask<T> => {
+  const taskId = taskUid++
 
-  const Effect = ((arg) => {
+  const Task = ((arg) => {
     return {
-      type: "RemeshEffectPayload",
+      type: "RemeshTaskPayload",
       arg,
-      Effect: Effect,
+      Task: Task,
     }
-  }) as RemeshEffect<T>
+  }) as RemeshTask<T>
 
-  Effect.type = 'RemeshEffect'
-  Effect.effectId = effectId
-  Effect.effectName = options.name
-  Effect.impl = options.impl
+  Task.type = 'RemeshTask'
+  Task.taskId = taskId
+  Task.taskName = options.name
+  Task.impl = options.impl
 
-  return Effect
+  return Task
 }
 
-export type RemeshDomainExtract<T extends RemeshDomainDefinition> = Pick<T, 'query' | 'event' | 'command' | 'effect'>
+export type RemeshDomainExtract<T extends RemeshDomainDefinition> = Pick<T, 'query' | 'event' | 'command' | 'task'>
 
 export type RemeshDomainContext = {
   get: <T extends RemeshDomainDefinition>(Domain: RemeshDomain<T>) => RemeshDomainExtract<T>
@@ -236,11 +236,11 @@ export type RemeshDomainContext = {
   event: typeof RemeshEvent
   query: typeof RemeshQuery
   command: typeof RemeshCommand
-  effect: typeof RemeshEffect
+  task: typeof RemeshTask
 }
 
 export type RemeshDomainOutput = {
-  autorun: RemeshEffect<void>[]
+  autorun: RemeshTask<void>[]
   event: {
     [key: string]: RemeshEvent<any> | RemeshDomainOutput['event']
   },
@@ -250,8 +250,8 @@ export type RemeshDomainOutput = {
   command: {
     [key: string]: RemeshCommand<any> | RemeshDomainOutput['command']
   },
-  effect: {
-    [key: string]: RemeshEffect<any> | RemeshDomainOutput['effect']
+  task: {
+    [key: string]: RemeshTask<any> | RemeshDomainOutput['task']
   }
 }
 
@@ -455,10 +455,10 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
         Command.Domain = Domain
         return Command
       },
-      effect: options => {
-        const Effect = RemeshEffect(options)
-        Effect.Domain = Domain
-        return Effect
+      task: options => {
+        const Task = RemeshTask(options)
+        Task.Domain = Domain
+        return Task
       },
       get: (UpstreamDomain) => {
         const upstreamDomainStorage = getDomainStorage(UpstreamDomain)
@@ -470,7 +470,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
           query: domain.query,
           command: domain.command,
           event: domain.event,
-          effect: domain.effect
+          task: domain.task
         }
       }
     }
@@ -523,13 +523,13 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
       throw new Error(`Unknown input in queryContext.get(..): ${input}`)
     },
-    fromEffect: effectPayload => {
-      const { Effect, arg } = effectPayload
-      const effectContext: RemeshEffectContext = {
-        fromEffect: remeshInjectedContext.fromEffect,
+    fromTask: taskPayload => {
+      const { Task, arg } = taskPayload
+      const taskContext: RemeshTaskContext = {
+        fromTask: remeshInjectedContext.fromTask,
         fromEvent: remeshInjectedContext.fromEvent
       }
-      const observable = Effect.impl(effectContext, arg)
+      const observable = Task.impl(taskContext, arg)
       return observable
     },
     fromEvent: Event => {
@@ -683,30 +683,30 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     })
   }
 
-  const handleEffectOutput = (effectOutput: RemeshEffectOutput) => {
-    if (Array.isArray(effectOutput)) {
-      for (const item of effectOutput) {
-        handleEffectOutput(item)
+  const handleTaskOutput = (taskOutput: RemeshTaskOutput) => {
+    if (Array.isArray(taskOutput)) {
+      for (const item of taskOutput) {
+        handleTaskOutput(item)
       }
       return
     }
 
-    if (effectOutput.type === 'RemeshCommandPayload') {
-      handleCommandOutput(effectOutput)
+    if (taskOutput.type === 'RemeshCommandPayload') {
+      handleCommandOutput(taskOutput)
       return
-    } else if (effectOutput.type === 'RemeshEventPayload') {
-      handleEventPayload(effectOutput)
+    } else if (taskOutput.type === 'RemeshEventPayload') {
+      handleEventPayload(taskOutput)
       return
     }
 
-    throw new Error(`Unknown effect output of ${effectOutput}`)
+    throw new Error(`Unknown task output of ${taskOutput}`)
   }
 
-  const handleEffectPayload = <T>(effectPayload: RemeshEffectPayload<T>) => {
-    const effectOutput$ = remeshInjectedContext.fromEffect(effectPayload)
-    const domainStorage = getDomainStorage(effectPayload.Effect.Domain ?? DefaultDomain)
+  const handleTaskPayload = <T>(taskPayload: RemeshTaskPayload<T>) => {
+    const taskOutput$ = remeshInjectedContext.fromTask(taskPayload)
+    const domainStorage = getDomainStorage(taskPayload.Task.Domain ?? DefaultDomain)
 
-    const subscription = effectOutput$.subscribe(handleEffectOutput)
+    const subscription = taskOutput$.subscribe(handleTaskOutput)
 
     handleSubscription(domainStorage.subscriptionSet, subscription)
 
@@ -788,8 +788,8 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
         domainStorage.subscriptionSet.add(upstreamDomainSubscription)
       }
 
-      for (const Effect of domainStorage.domain.autorun ?? []) {
-        handleEffectPayload(Effect())
+      for (const Task of domainStorage.domain.autorun ?? []) {
+        handleTaskPayload(Task())
       }
     }
 
@@ -813,7 +813,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     emit: handleEventPayload,
     getDomain,
     destroy,
-    subscribeEffect: handleEffectPayload,
+    subscribeTask: handleTaskPayload,
     subscribeQuery,
     subscribeEvent,
     subscribeDomain,

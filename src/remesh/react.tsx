@@ -9,7 +9,7 @@ import React, {
 import { RemeshDomainDefinition } from "."
 
 import {
-  RemeshEffectPayload,
+  RemeshTaskPayload,
   RemeshQuery,
   RemeshEvent,
   RemeshStore,
@@ -121,8 +121,8 @@ export const useRemeshEmit = function () {
   return remeshStore.emit
 }
 
-export const useRemeshEffect = function <T>(
-  callback: () => RemeshEffectPayload<T>,
+export const useRemeshTask = function <T>(
+  callback: () => RemeshTaskPayload<T>,
   deps: unknown[] = []
 ) {
   const remeshStore = useRemeshStore()
@@ -134,7 +134,7 @@ export const useRemeshEffect = function <T>(
   })
 
   useEffect(() => {
-    const subscription = remeshStore.subscribeEffect(callbackRef.current())
+    const subscription = remeshStore.subscribeTask(callbackRef.current())
     return () => {
       subscription.unsubscribe()
     }
