@@ -39,18 +39,15 @@ export const TodoFilterDomain = Remesh.domain({
             }
         })
 
+        domain.autorun(TodoFooterTask)
+
         return {
-            autorun: [TodoFooterTask],
             event: {
                 ChangeTodoFilterEvent
             },
             query: {
                 TodoFilterQuery
-            },
-            command: {
-                updateTodoFilter
             }
         }
-
     }
 })

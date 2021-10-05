@@ -7,32 +7,38 @@ import {
   useRemeshDomain,
 } from "../remesh/react"
 
-import { TodoFilterDomain } from "../todo-app/domains/todoFilter"
-import { TodoInputDomain } from "../todo-app/domains/todoInput"
-import { Todo, TodoListDomain } from "../todo-app/domains/todoList"
+
+import {
+  Todo,
+  TodoAppHeaderDomain,
+  TodoAppMainDomain,
+  TodoAppFooterDomain,
+} from "../todo-app/domains/todoApp"
 
 export const TodoHeader = () => {
   const emit = useRemeshEmit()
-  const todoInputDomain = useRemeshDomain(TodoInputDomain)
-  const todoListDomain = useRemeshDomain(TodoListDomain)
-  const todoInput = useRemeshQuery(todoInputDomain.query.TodoInputQuery)
+
+  const todoAppHeaderDomain = useRemeshDomain(TodoAppHeaderDomain)
+
+  const todoInput = useRemeshQuery(todoAppHeaderDomain.query.TodoInputQuery)
+
   const isAllCompleted = useRemeshQuery(
-    todoListDomain.query.IsAllCompletedQuery
+    todoAppHeaderDomain.query.IsAllCompletedQuery
   )
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    emit(todoInputDomain.event.TodoInputEvent(event.target.value))
+    emit(todoAppHeaderDomain.event.TodoInputEvent(event.target.value))
   }
 
   const handleAdd = () => {
-    emit(todoListDomain.event.AddTodoEvent(todoInput))
+    emit(todoAppHeaderDomain.event.AddTodoEvent(todoInput))
   }
 
   const handleToggleAllTodos = () => {
-    emit(todoListDomain.event.ToggleAllTodosEvent())
+    emit(todoAppHeaderDomain.event.ToggleAllTodosEvent())
   }
 
-  useRemeshEvent(todoListDomain.event.AddTodoFailedEvent, (event) => {
+  useRemeshEvent(todoAppHeaderDomain.event.AddTodoFailedEvent, (event) => {
     alert(event.message)
   })
 
@@ -56,7 +62,7 @@ export const TodoHeader = () => {
 }
 
 const TodoList = () => {
-  const todoListDomain = useRemeshDomain(TodoListDomain)
+  const todoListDomain = useRemeshDomain(TodoAppMainDomain)
   const matchedTodoList = useRemeshQuery(
     todoListDomain.query.TodoMatchedListQuery
   )
@@ -75,7 +81,7 @@ type TodoItemProps = {
 }
 
 const TodoItem = (props: TodoItemProps) => {
-  const todoListDomain = useRemeshDomain(TodoListDomain)
+  const todoListDomain = useRemeshDomain(TodoAppMainDomain)
   const emit = useRemeshEmit()
 
   const [text, setText] = useState("")
@@ -136,14 +142,13 @@ const TodoItem = (props: TodoItemProps) => {
 
 const TodoFooter = () => {
   const emit = useRemeshEmit()
-  const todoFilterDomain = useRemeshDomain(TodoFilterDomain)
-  const todoListDomain = useRemeshDomain(TodoListDomain)
-  const { activeTodoList } = useRemeshQuery(
-    todoListDomain.query.TodoSortedListQuery
-  )
-  const todoFilter = useRemeshQuery(todoFilterDomain.query.TodoFilterQuery)
 
-  const itemLeft = activeTodoList.length
+  const todoAppFooterDomain = useRemeshDomain(TodoAppFooterDomain)
+
+  const itemLeft = useRemeshQuery(
+    todoAppFooterDomain.query.TodoItemLeftCountQuery
+  )
+  const todoFilter = useRemeshQuery(todoAppFooterDomain.query.TodoFilterQuery)
 
   return (
     <div>
@@ -156,7 +161,7 @@ const TodoFooter = () => {
           color: todoFilter === "all" ? "red" : "",
         }}
         onClick={() => {
-          emit(todoFilterDomain.event.ChangeTodoFilterEvent("all"))
+          emit(todoAppFooterDomain.event.ChangeTodoFilterEvent("all"))
         }}
       >
         All
@@ -166,7 +171,7 @@ const TodoFooter = () => {
           color: todoFilter === "active" ? "red" : "",
         }}
         onClick={() => {
-          emit(todoFilterDomain.event.ChangeTodoFilterEvent("active"))
+          emit(todoAppFooterDomain.event.ChangeTodoFilterEvent("active"))
         }}
       >
         Active
@@ -176,7 +181,7 @@ const TodoFooter = () => {
           color: todoFilter === "completed" ? "red" : "",
         }}
         onClick={() => {
-          emit(todoFilterDomain.event.ChangeTodoFilterEvent("completed"))
+          emit(todoAppFooterDomain.event.ChangeTodoFilterEvent("completed"))
         }}
       >
         Completed

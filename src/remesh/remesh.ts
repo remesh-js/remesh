@@ -228,19 +228,22 @@ export const RemeshTask = <T = void>(
   return Task
 }
 
-export type RemeshDomainExtract<T extends RemeshDomainDefinition> = Pick<T, 'query' | 'event' | 'command' | 'task'>
+export type RemeshDomainExtract<T extends RemeshDomainDefinition> = Pick<T, ('query' | 'event' | 'command' | 'task') & keyof T>
 
 export type RemeshDomainContext = {
-  get: <T extends RemeshDomainDefinition>(Domain: RemeshDomain<T>) => RemeshDomainExtract<T>
+  // definitions
   state: typeof RemeshState
   event: typeof RemeshEvent
   query: typeof RemeshQuery
   command: typeof RemeshCommand
   task: typeof RemeshTask
+  // methods
+  get: <T extends RemeshDomainDefinition>(Domain: RemeshDomain<T>) => RemeshDomainExtract<T>
+  use: <T extends RemeshDomainDefinition, U>(payload: RemeshDomainWidgetPayload<T, U>) => RemeshDomainExtract<T>
+  autorun: (Task: RemeshTask<void>) => void
 }
 
 export type RemeshDomainOutput = {
-  autorun: RemeshTask<void>[]
   event: {
     [key: string]: RemeshEvent<any> | RemeshDomainOutput['event']
   },
@@ -282,6 +285,33 @@ export const RemeshDomain = <T extends RemeshDomainDefinition>(options: RemeshDo
   return Domain
 }
 
+export type RemeshDomainWidgetPayload<T extends RemeshDomainDefinition, U> = {
+  type: 'RemeshDomainWidgetPayload'
+  Widget: RemeshDomainWidget<T, U>
+  arg: U
+}
+
+export type RemeshDomainWidget<T extends RemeshDomainDefinition, U> = {
+  type: 'RemeshDomainWidget',
+  impl: (context: RemeshDomainContext, arg: U) => T
+  (arg: U): RemeshDomainWidgetPayload<T, U>
+}
+
+export const RemeshDomainWidget = <T extends RemeshDomainDefinition, U = void>(impl: RemeshDomainWidget<T, U>['impl']): RemeshDomainWidget<T, U> => {
+  const Widget = (arg => {
+    return {
+      type: 'RemeshDomainWidgetPayload',
+      Widget,
+      arg
+    }
+  }) as RemeshDomainWidget<T, U>
+
+  Widget.type = 'RemeshDomainWidget'
+  Widget.impl = impl
+
+  return Widget
+}
+
 export type RemeshStore = ReturnType<typeof RemeshStore>
 
 type RemeshStateStorage<T = unknown> = {
@@ -317,6 +347,7 @@ type RemeshDomainStorage<T extends RemeshDomainDefinition> = {
   stateMap: Map<RemeshState<any>, RemeshStateStorage<any>>
   queryMap: Map<RemeshQuery<any>, RemeshQueryStorage<any>>
   eventMap: Map<RemeshEvent<any>, RemeshEventStorage<any>>
+  autorunTaskSet: Set<RemeshTask<void>>
   subscriptionSet: Set<Subscription>
   refCount: number
 }
@@ -432,30 +463,62 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
       return domainStorage
     }
 
+    let isInit = false
+    const throwIfIsInit = () => {
+      if (isInit) {
+        throw new Error(`Can not call domain.{method}(..) after domain initialized`)
+      }
+    }
+
+    const extract = <T extends RemeshDomainDefinition>(domainOutput: T): RemeshDomainExtract<T> => {
+      const result = {} as RemeshDomainExtract<T>
+
+      if (domainOutput.query) {
+        result.query = domainOutput.query
+      }
+      if (domainOutput.event) {
+        result.event = domainOutput.event
+      }
+      if (domainOutput.command) {
+        result.command = domainOutput.command
+      }
+      if (domainOutput.task) {
+        result.task = domainOutput.task
+      }
+
+      return result
+    }
+
     const upstreamSet: RemeshDomainStorage<T>['upstreamSet'] = new Set()
+    const autorunTaskSet: RemeshDomainStorage<T>['autorunTaskSet'] = new Set()
 
     const domainContext: RemeshDomainContext = {
       state: options => {
+        throwIfIsInit()
         const State = RemeshState(options)
         State.Domain = Domain
         return State
       },
       query: options => {
+        throwIfIsInit()
         const Query = RemeshQuery(options)
         Query.Domain = Domain
         return Query
       },
       event: options => {
+        throwIfIsInit()
         const Event = RemeshEvent(options)
         Event.Domain = Domain
         return Event
       },
       command: options => {
+        throwIfIsInit()
         const Command = RemeshCommand(options)
         Command.Domain = Domain
         return Command
       },
       task: options => {
+        throwIfIsInit()
         const Task = RemeshTask(options)
         Task.Domain = Domain
         return Task
@@ -466,16 +529,24 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
         upstreamSet.add(upstreamDomainStorage)
 
-        return {
-          query: domain.query,
-          command: domain.command,
-          event: domain.event,
-          task: domain.task
-        }
+        return extract(domain)
+      },
+      use: widgetPayload => {
+        throwIfIsInit()
+        const { Widget, arg } = widgetPayload
+        const widget = Widget.impl(domainContext, arg)
+
+        return extract(widget)
+      },
+      autorun: (Task) => {
+        throwIfIsInit()
+        autorunTaskSet.add(Task)
       }
     }
 
     const domain = Domain.impl(domainContext)
+
+    isInit = true
 
     const currentDomainStorage: RemeshDomainStorage<T> = {
       type: 'RemeshDomainStorage',
@@ -487,6 +558,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
       queryMap: new Map(),
       eventMap: new Map(),
       subscriptionSet: new Set(),
+      autorunTaskSet,
       refCount: 0
     }
 
@@ -788,7 +860,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
         domainStorage.subscriptionSet.add(upstreamDomainSubscription)
       }
 
-      for (const Task of domainStorage.domain.autorun ?? []) {
+      for (const Task of domainStorage.autorunTaskSet) {
         handleTaskPayload(Task())
       }
     }
@@ -822,5 +894,6 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
 export const Remesh = {
   domain: RemeshDomain,
+  widget: RemeshDomainWidget,
   store: RemeshStore
 }
