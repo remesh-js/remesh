@@ -4,9 +4,26 @@ import { Remesh } from '../../remesh'
 import { TodoInputDomain } from './todoInput'
 import { TodoFilterDomain } from './todoFilter'
 import { TodoListDomain } from './todoList'
-import { merge } from 'rxjs'
+import { merge, of } from 'rxjs'
 
-export type { Todo } from './todoList'
+import type { Todo } from './todoList'
+
+export type {
+    Todo
+}
+
+export const TodoAppExtern = Remesh.extern({
+    name: 'TodoAppExtern',
+    default: [] as Todo[],
+    impl: ({ getEvent }, todos: Todo[]) => {
+        const todoListDomainEvent = getEvent(TodoListDomain)
+        return {
+            preload: () => {
+                return todoListDomainEvent.SetTodoListEvent(todos)
+            }
+        }
+    }
+})
 
 const TodoAppHeaderWidget = Remesh.widget(domain => {
     const todoInputDomain = domain.get(TodoInputDomain)
@@ -80,8 +97,17 @@ const TodoAppMainWidget = Remesh.widget(domain => {
         }
     })
 
+    const TodoAppMainTask = domain.task({
+        name: 'TodoAppMainTask',
+        impl: ({ getExtern }) => {
+            const todoAppExtern = getExtern(TodoAppExtern)
+            return of(todoAppExtern.preload())
+        }
+    })
+
 
     return {
+        autorun: [TodoAppMainTask],
         query: {
             ...todoListDomain.query,
             TodoMatchedListQuery,
