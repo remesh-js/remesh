@@ -33,9 +33,8 @@ export const TodoInputDomain = Remesh.domain({
             }
         })
 
-        domain.autorun(TodoInputTask)
-
         return {
+            autorun: [TodoInputTask],
             query: {
                 TodoInputQuery
             },

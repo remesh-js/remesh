@@ -214,9 +214,8 @@ export const TodoListDomain = Remesh.domain({
             }
         })
 
-        domain.autorun(TodoListAutorunTask)
-
         return {
+            autorun: [TodoListAutorunTask],
             event: {
                 AddTodoFailedEvent,
                 AddTodoSuccessEvent,

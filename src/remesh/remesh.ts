@@ -246,10 +246,10 @@ export type RemeshDomainContext = {
   // methods
   get: <T extends RemeshDomainDefinition>(Domain: RemeshDomain<T>) => RemeshDomainExtract<T>
   use: <T extends RemeshDomainWidgetDefinition, U>(payload: RemeshDomainWidgetPayload<T, U>) => RemeshDomainWidgetExtract<T>
-  autorun: (Task: RemeshTask<void>) => void
 }
 
 export type RemeshDomainOutput = {
+  autorun: RemeshTask<void>[]
   event: {
     [key: string]: RemeshEvent<any> | RemeshDomainOutput['event']
   },
@@ -259,6 +259,7 @@ export type RemeshDomainOutput = {
 }
 
 export type RemeshDomainWidgetOutput = {
+  autorun: RemeshTask<void>[]
   event: {
     [key: string]: RemeshEvent<any> | RemeshDomainWidgetOutput['event']
   },
@@ -516,7 +517,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     let isInit = false
     const throwIfIsInit = () => {
       if (isInit) {
-        throw new Error(`Can not call domain.{method}(..) after domain initialized`)
+        throw new Error(`Can not call domain.{method}(..) after domain has been initialized`)
       }
     }
 
@@ -568,17 +569,21 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
         const { Widget, arg } = widgetPayload
         const widget = Widget.impl(domainContext, arg)
 
+        for (const Task of widget.autorun ?? []) {
+          autorunTaskSet.add(Task)
+        }
+
         return extractDomainWidget(widget)
-      },
-      autorun: (Task) => {
-        throwIfIsInit()
-        autorunTaskSet.add(Task)
       }
     }
 
     const domain = Domain.impl(domainContext)
 
     isInit = true
+
+    for (const Task of domain.autorun ?? []) {
+      autorunTaskSet.add(Task)
+    }
 
     const currentDomainStorage: RemeshDomainStorage<T> = {
       type: 'RemeshDomainStorage',
@@ -625,7 +630,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
         return getCurrentQueryValue(input)
       }
 
-      throw new Error(`Unknown input in queryContext.get(..): ${input}`)
+      throw new Error(`Unknown input in get(..): ${input}`)
     },
     fromTask: taskPayload => {
       const { Task, arg } = taskPayload

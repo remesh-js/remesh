@@ -100,7 +100,7 @@ export const useRemeshEvent = function <T, U = T>(
   callback: (data: U) => unknown
 ) {
   const remeshStore = useRemeshStore()
-  const callbackRef = useRef<typeof callback>(callback)
+  const callbackRef = useRef(callback)
 
   useEffect(() => {
     callbackRef.current = callback
