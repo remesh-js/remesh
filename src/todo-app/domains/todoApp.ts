@@ -23,9 +23,8 @@ const TodoAppHeaderWidget = Remesh.widget(domain => {
         }
     })
 
-    domain.autorun(TodoHeaderTask)
-
     return {
+        autorun: [TodoHeaderTask],
         query: {
             IsAllCompletedQuery: todoListDomain.query.IsAllCompletedQuery,
             ...todoInputDomain.query
@@ -112,20 +111,44 @@ const TodoAppFooterWidget = Remesh.widget(domain => {
 export const TodoAppHeaderDomain = Remesh.domain({
     name: 'TodoAppHeaderDomain',
     impl: domain => {
-        return domain.use(TodoAppHeaderWidget())
+        const header = domain.use(TodoAppHeaderWidget())
+        return {
+            query: {
+                ...header.query
+            },
+            event: {
+                ...header.event
+            }
+        }
     }
 })
 
 export const TodoAppMainDomain = Remesh.domain({
     name: 'TodoAppMainDomain',
     impl: domain => {
-        return domain.use(TodoAppMainWidget())
+        const main = domain.use(TodoAppMainWidget())
+        return {
+            query: {
+                ...main.query
+            },
+            event: {
+                ...main.event
+            }
+        }
     }
 })
 
 export const TodoAppFooterDomain = Remesh.domain({
     name: 'TodoAppFooterDomain',
     impl: domain => {
-        return domain.use(TodoAppFooterWidget())
+        const footer = domain.use(TodoAppFooterWidget())
+        return {
+            query: {
+                ...footer.query
+            },
+            event: {
+                ...footer.event
+            }
+        }
     }
 })
