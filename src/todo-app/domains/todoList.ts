@@ -39,6 +39,13 @@ export const TodoListDomain = Remesh.domain({
             name: 'AddTodoSuccessEvent'
         })
 
+        const setTodoList = domain.command({
+            name: 'setTodos',
+            impl: ({ }, todos: Todo[]) => {
+                return TodoListState(todos)
+            }
+        })
+
         let todoUid = 0
 
         const addTodo = domain.command({
@@ -204,12 +211,17 @@ export const TodoListDomain = Remesh.domain({
                     map(todoId => removeTodo(todoId))
                 )
 
+                const setTodoList$ = fromEvent(setTodoList.Event).pipe(
+                    map(todoList => setTodoList(todoList))
+                )
+
                 return merge(
                     addTodo$,
                     updateTodo$,
                     removeTodo$,
                     toggleAllTodos$,
                     toggleTodo$,
+                    setTodoList$
                 )
             }
         })
@@ -219,6 +231,7 @@ export const TodoListDomain = Remesh.domain({
             event: {
                 AddTodoFailedEvent,
                 AddTodoSuccessEvent,
+                SetTodoListEvent: setTodoList.Event,
                 AddTodoEvent: addTodo.Event,
                 ToggleAllTodosEvent: toggleAllTodos.Event,
                 UpdateTodoEvent: updateTodo.Event,

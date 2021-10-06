@@ -183,6 +183,7 @@ export const RemeshCommand = <T = void>(
 export type RemeshTaskContext = {
   fromEvent: RemeshInjectedContext['fromEvent']
   fromTask: RemeshInjectedContext['fromTask']
+  getExtern: <T, U = T>(Extern: RemeshTaskExtern<T, U>) => U
 }
 
 export type RemeshTaskPayload<T> = {
@@ -230,6 +231,51 @@ export const RemeshTask = <T = void>(
   Task.impl = options.impl
 
   return Task
+}
+
+export type RemeshTaskExternPayload<T, U = T> = {
+  type: 'RemeshTaskExternPayload'
+  Extern: RemeshTaskExtern<T, U>
+  value: T
+}
+
+export type RemeshTaskExternContext = {
+  getEvent: <T extends RemeshDomainDefinition>(Domain: RemeshDomain<T>) => RemeshDomainExtract<T>['event']
+  getExtern: RemeshTaskContext['getExtern']
+  fromEvent: RemeshTaskContext['fromEvent']
+}
+
+export type RemeshTaskExtern<T = unknown, U = T> = {
+  type: 'RemeshTaskExtern'
+  externName: string
+  externId: number
+  default: T
+  impl?: (context: RemeshTaskExternContext, value: T) => U
+  (value: T): RemeshTaskExternPayload<T, U>
+}
+
+export type RemeshTaskExternOptions<T, U = T> = {
+  name: RemeshTaskExtern<T, U>['externName']
+  default: RemeshTaskExtern<T, U>['default']
+  impl?: RemeshTaskExtern<T, U>['impl']
+}
+
+let taskExternUid = 0
+export const RemeshTaskExtern = <T = void, U = T>(options: RemeshTaskExternOptions<T, U>): RemeshTaskExtern<T, U> => {
+  const Extern = (value => {
+    return {
+      type: 'RemeshTaskExternPayload',
+      Extern,
+      value
+    }
+  }) as RemeshTaskExtern<T, U>
+
+  Extern.externId = taskExternUid++
+  Extern.externName = options.name
+  Extern.impl = options.impl
+  Extern.default = options.default
+
+  return Extern
 }
 
 export type RemeshDomainExtract<T extends RemeshDomainDefinition> = Pick<T, ('query' | 'event') & keyof T>
@@ -403,8 +449,15 @@ type RemeshDomainStorage<T extends RemeshDomainDefinition> = {
   refCount: number
 }
 
+type RemeshTaskExternStorage<T, U = T> = {
+  type: 'RemeshTaskExternStorage',
+  Extern: RemeshTaskExtern<T, U>
+  currentValue: U
+}
+
 export type RemeshStoreOptions = {
   name: string
+  externs?: RemeshTaskExternPayload<any>[]
 }
 
 const DefaultDomain = RemeshDomain({
@@ -417,6 +470,51 @@ const DefaultDomain = RemeshDomain({
 export const RemeshStore = (options: RemeshStoreOptions) => {
   const dirtySet = new Set<RemeshQueryStorage<any>>()
   const domainStorageMap = new Map<RemeshDomain<any>, RemeshDomainStorage<any>>()
+  const taskExternStorageMap = new Map<RemeshTaskExtern<any>, RemeshTaskExternStorage<any>>()
+
+  const getInjectedExternValue = <T, U>(Extern: RemeshTaskExtern<T, U>): T => {
+    for (const payload of options.externs ?? []) {
+      if (payload.Extern === Extern) {
+        return payload.value
+      }
+    }
+    return Extern.default
+  }
+
+  const getTaskExternStorage = <T, U = T>(Extern: RemeshTaskExtern<T, U>): RemeshTaskExternStorage<T, U> => {
+    const taskExternStorage = taskExternStorageMap.get(Extern)
+
+    if (taskExternStorage) {
+      return taskExternStorage
+    }
+
+    const getCurrentValue = (): U => {
+      const injectedValue = getInjectedExternValue(Extern)
+      if (Extern.impl) {
+        const taskExternContext: RemeshTaskExternContext = {
+          getExtern: getTaskExternCurrentValue,
+          getEvent: (Domain) => getDomain(Domain).event,
+          fromEvent: remeshInjectedContext.fromEvent,
+        }
+        return Extern.impl(taskExternContext, injectedValue)
+      }
+      return injectedValue as unknown as U
+    }
+
+    const currentTaskExternStorage: RemeshTaskExternStorage<T, U> = {
+      type: 'RemeshTaskExternStorage',
+      Extern,
+      currentValue: getCurrentValue()
+    }
+
+    taskExternStorageMap.set(Extern, currentTaskExternStorage)
+
+    return getTaskExternStorage(Extern)
+  }
+
+  const getTaskExternCurrentValue = <T, U>(Extern: RemeshTaskExtern<T, U>): U => {
+    return getTaskExternStorage(Extern).currentValue
+  }
 
   const getStateStorage = <T>(State: RemeshState<T>): RemeshStateStorage<T> => {
     const domainsStorage = getDomainStorage(State.Domain ?? DefaultDomain)
@@ -562,7 +660,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
         upstreamSet.add(upstreamDomainStorage)
 
-        return extractDomain(domain)
+        return domain
       },
       use: widgetPayload => {
         throwIfIsInit()
@@ -636,14 +734,14 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
       const { Task, arg } = taskPayload
       const taskContext: RemeshTaskContext = {
         fromTask: remeshInjectedContext.fromTask,
-        fromEvent: remeshInjectedContext.fromEvent
+        fromEvent: remeshInjectedContext.fromEvent,
+        getExtern: getTaskExternCurrentValue
       }
       const observable = Task.impl(taskContext, arg)
       return observable
     },
     fromEvent: Event => {
       const eventStorage = getEventStorage(Event)
-
       return eventStorage.observable
     }
   }
@@ -842,9 +940,9 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     return subscription
   }
 
-  const getDomain = <T extends RemeshDomainDefinition>(Domain: RemeshDomain<T>): T => {
+  const getDomain = <T extends RemeshDomainDefinition>(Domain: RemeshDomain<T>): RemeshDomainExtract<T> => {
     const domainStorage = getDomainStorage(Domain)
-    return domainStorage.domain
+    return extractDomain(domainStorage.domain)
   }
 
   const clearDomainResourcesIfNeeded = <T extends RemeshDomainDefinition>(Domain: RemeshDomain<T>) => {
@@ -932,5 +1030,6 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 export const Remesh = {
   domain: RemeshDomain,
   widget: RemeshDomainWidget,
+  extern: RemeshTaskExtern,
   store: RemeshStore
 }
