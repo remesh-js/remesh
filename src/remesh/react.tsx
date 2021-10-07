@@ -6,7 +6,7 @@ import React, {
   ReactNode,
   useState,
 } from "react"
-import { RemeshDomainDefinition, RemeshDomainExtract } from "."
+import { RemeshDomainDefinition, RemeshDomainExtract, RemeshQueryRef } from "."
 
 import {
   RemeshTaskPayload,
@@ -83,14 +83,23 @@ export const RemeshRoot = (props: RemeshRootProps) => {
 export const useRemeshQuery = function <T>(Query: RemeshQuery<T>): T {
   const remeshStore = useRemeshStore()
 
-  const [state, setState] = useState(() => remeshStore.query(Query))
+  const queryRef = useRef<RemeshQueryRef<T> | null>(null)
+
+  if (queryRef.current === null) {
+    queryRef.current = remeshStore.createQueryRef(Query)
+  }
+
+  const query = queryRef.current
+
+  const [state, setState] = useState(query.get())
 
   useEffect(() => {
     const subscription = remeshStore.subscribeQuery(Query, setState)
     return () => {
       subscription.unsubscribe()
+      query.drop()
     }
-  }, [Query, remeshStore])
+  }, [Query, query, remeshStore])
 
   return state
 }

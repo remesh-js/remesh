@@ -1,4 +1,4 @@
-import { Observable, Subject, Subscription } from "rxjs"
+import { Observable, of, Subject, Subscription } from "rxjs"
 
 type RemeshInjectedContext = {
   get: <T>(State: RemeshState<T> | RemeshQuery<T>) => T
@@ -426,6 +426,7 @@ type RemeshQueryStorage<T = unknown> = {
   downstreamSet: Set<RemeshQueryStorage<any>>,
   subject: Subject<T>
   observable: Observable<T>
+  refCount: number
 }
 
 type RemeshEventStorage<T = unknown, U = T> = {
@@ -433,6 +434,7 @@ type RemeshEventStorage<T = unknown, U = T> = {
   Event: RemeshEvent<T, U>
   subject: Subject<U>
   observable: Observable<U>
+  refCount: number
 }
 
 type RemeshDomainStorage<T extends RemeshDomainDefinition> = {
@@ -441,11 +443,11 @@ type RemeshDomainStorage<T extends RemeshDomainDefinition> = {
   domain: T
   upstreamSet: Set<RemeshDomainStorage<any>>
   downstreamSet: Set<RemeshDomainStorage<any>>
+  autorunTaskSet: Set<RemeshTask<void>>
+  subscriptionSet: Set<Subscription>
   stateMap: Map<RemeshState<any>, RemeshStateStorage<any>>
   queryMap: Map<RemeshQuery<any>, RemeshQueryStorage<any>>
   eventMap: Map<RemeshEvent<any>, RemeshEventStorage<any>>
-  autorunTaskSet: Set<RemeshTask<void>>
-  subscriptionSet: Set<Subscription>
   refCount: number
 }
 
@@ -453,6 +455,11 @@ type RemeshTaskExternStorage<T, U = T> = {
   type: 'RemeshTaskExternStorage',
   Extern: RemeshTaskExtern<T, U>
   currentValue: U
+}
+
+export type RemeshQueryRef<T> = {
+  drop: () => void
+  get: () => T
 }
 
 export type RemeshStoreOptions = {
@@ -544,14 +551,28 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     }
 
     const subject = new Subject<U>()
-    const observable = subject.asObservable()
 
-    domainStorage.eventMap.set(Event, {
+    const observable = new Observable<U>(subscriber => {
+      const subscription = subject.subscribe(subscriber)
+      currentEventStorage.refCount += 1
+      return () => {
+        subscription.unsubscribe()
+        currentEventStorage.refCount -= 1
+        if (currentEventStorage.refCount === 0) {
+          clearEventStorageIfNeeded(currentEventStorage)
+        }
+      }
+    })
+
+    const currentEventStorage: RemeshEventStorage<T, U> = {
       type: 'RemeshEventStorage',
       Event,
       subject,
-      observable
-    })
+      observable,
+      refCount: 0
+    }
+
+    domainStorage.eventMap.set(Event, currentEventStorage)
 
     return getEventStorage(Event)
   }
@@ -566,7 +587,17 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
     const subject = new Subject<T>()
 
-    const observable = subject.asObservable()
+    const observable = new Observable<T>(subscriber => {
+      const subscription = subject.subscribe(subscriber)
+      currentQueryStorage.refCount += 1
+      return () => {
+        subscription.unsubscribe()
+        currentQueryStorage.refCount -= 1
+        if (currentQueryStorage.refCount === 0) {
+          clearQueryStorageIfNeeded(currentQueryStorage)
+        }
+      }
+    })
 
     const upstreamSet: RemeshQueryStorage<T>['upstreamSet'] = new Set()
     const downstreamSet: RemeshQueryStorage<T>['downstreamSet'] = new Set()
@@ -593,7 +624,8 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
       upstreamSet,
       downstreamSet,
       subject,
-      observable
+      observable,
+      refCount: 0
     }
 
     for (const upstream of upstreamSet) {
@@ -689,11 +721,11 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
       domain,
       upstreamSet,
       downstreamSet: new Set(),
+      autorunTaskSet,
+      subscriptionSet: new Set(),
       stateMap: new Map(),
       queryMap: new Map(),
       eventMap: new Map(),
-      subscriptionSet: new Set(),
-      autorunTaskSet,
       refCount: 0
     }
 
@@ -704,6 +736,96 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     }
 
     return getDomainStorage(Domain)
+  }
+
+
+  const clearQueryStorageIfNeeded = <T>(queryStorage: RemeshQueryStorage<T>) => {
+    if (queryStorage.refCount !== 0) {
+      return
+    }
+
+    if (queryStorage.downstreamSet.size !== 0) {
+      return
+    }
+
+    const domainStorage = getDomainStorage(queryStorage.Query.Domain ?? DefaultDomain)
+
+    queryStorage.subject.complete()
+    domainStorage.queryMap.delete(queryStorage.Query)
+
+    for (const upstreamStorage of queryStorage.upstreamSet) {
+      upstreamStorage.downstreamSet.delete(queryStorage)
+      if (upstreamStorage.type === 'RemeshQueryStorage') {
+        clearQueryStorageIfNeeded(upstreamStorage)
+      } else if (upstreamStorage.type === 'RemeshStateStorage') {
+        clearStateStorageIfNeeded(upstreamStorage)
+      } else {
+        throw new Error(`Unknown upstream in clearQueryStorageIfNeeded(..): ${upstreamStorage}`)
+      }
+    }
+  }
+
+  const clearStateStorageIfNeeded = <T>(stateStorage: RemeshStateStorage<T>) => {
+    if (stateStorage.downstreamSet.size !== 0) {
+      return
+    }
+
+    const domainStorage = getDomainStorage(stateStorage.State.Domain ?? DefaultDomain)
+
+    domainStorage.stateMap.delete(stateStorage.State)
+  }
+
+  const clearEventStorageIfNeeded = <T, U>(eventStorage: RemeshEventStorage<T, U>) => {
+    if (eventStorage.refCount !== 0) {
+      return
+    }
+
+    const domainStorage = getDomainStorage(eventStorage.Event.Domain ?? DefaultDomain)
+
+    eventStorage.subject.complete()
+    domainStorage.eventMap.delete(eventStorage.Event)
+  }
+
+  const clearDomainStorageIfNeeded = <T extends RemeshDomainDefinition>(domainStorage: RemeshDomainStorage<T>) => {
+    if (domainStorage.refCount !== 0) {
+      return
+    }
+
+    if (domainStorage.downstreamSet.size !== 0) {
+      return
+    }
+
+    const upstreamList = [...domainStorage.upstreamSet]
+
+    for (const subscription of domainStorage.subscriptionSet) {
+      subscription.unsubscribe()
+    }
+
+    for (const eventStorage of domainStorage.eventMap.values()) {
+      clearEventStorageIfNeeded(eventStorage)
+    }
+
+    for (const queryStorage of domainStorage.queryMap.values()) {
+      clearQueryStorageIfNeeded(queryStorage)
+    }
+
+    for (const stateStorage of domainStorage.stateMap.values()) {
+      clearStateStorageIfNeeded(stateStorage)
+    }
+
+    domainStorage.autorunTaskSet.clear()
+    domainStorage.upstreamSet.clear()
+    domainStorage.subscriptionSet.clear()
+    domainStorage.stateMap.clear()
+    domainStorage.queryMap.clear()
+    domainStorage.eventMap.clear()
+
+    domainStorageMap.delete(domainStorage.Domain)
+
+    for (const upstreamDomainStorage of upstreamList) {
+      upstreamDomainStorage.downstreamSet.delete(domainStorage)
+      clearDomainStorageIfNeeded(upstreamDomainStorage)
+    }
   }
 
   const getCurrentState = <T>(State: RemeshState<T>): T => {
@@ -923,9 +1045,6 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
   const subscribeQuery = <T>(Query: RemeshQuery<T>, subscriber: (data: T) => unknown): Subscription => {
     const queryStorage = getQueryStorage(Query)
     const subscription = queryStorage.observable.subscribe(subscriber)
-    const domainStorage = getDomainStorage(Query.Domain ?? DefaultDomain)
-
-    handleSubscription(domainStorage.subscriptionSet, subscription)
 
     return subscription
   }
@@ -933,9 +1052,6 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
   const subscribeEvent = <T, U = T>(Event: RemeshEvent<T, U>, subscriber: (event: U) => unknown) => {
     const eventStorage = getEventStorage(Event)
     const subscription = eventStorage.observable.subscribe(subscriber)
-    const domainStorage = getDomainStorage(Event.Domain ?? DefaultDomain)
-
-    handleSubscription(domainStorage.subscriptionSet, subscription)
 
     return subscription
   }
@@ -943,33 +1059,6 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
   const getDomain = <T extends RemeshDomainDefinition>(Domain: RemeshDomain<T>): RemeshDomainExtract<T> => {
     const domainStorage = getDomainStorage(Domain)
     return extractDomain(domainStorage.domain)
-  }
-
-  const clearDomainResourcesIfNeeded = <T extends RemeshDomainDefinition>(Domain: RemeshDomain<T>) => {
-    const domainStorage = getDomainStorage(Domain)
-
-    if (domainStorage.refCount !== 0) {
-      return
-    }
-
-    if (domainStorage.downstreamSet.size !== 0) {
-      return
-    }
-
-    for (const subscription of domainStorage.subscriptionSet) {
-      subscription.unsubscribe()
-    }
-
-    for (const upstreamDomainStorage of domainStorage.upstreamSet) {
-      upstreamDomainStorage.downstreamSet.delete(domainStorage)
-      clearDomainResourcesIfNeeded(upstreamDomainStorage.Domain)
-    }
-
-    domainStorage.upstreamSet.clear()
-    domainStorage.subscriptionSet.clear()
-    domainStorage.stateMap.clear()
-    domainStorage.queryMap.clear()
-    domainStorage.eventMap.clear()
   }
 
   const domainSubscriptionSet = new Set<Subscription>()
@@ -985,7 +1074,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     subscription.add(() => {
       domainStorage.refCount -= 1
       domainSubscriptionSet.delete(subscription)
-      clearDomainResourcesIfNeeded(Domain)
+      clearDomainStorageIfNeeded(domainStorage)
 
     })
 
@@ -1008,15 +1097,41 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     for (const subscription of domainSubscriptionSet) {
       subscription.unsubscribe()
     }
-    clearDomainResourcesIfNeeded(DefaultDomain)
+    clearDomainStorageIfNeeded(getDomainStorage(DefaultDomain))
     domainSubscriptionSet.clear()
     domainStorageMap.clear()
     dirtySet.clear()
   }
 
+  const createQueryRef = <T>(Query: RemeshQuery<T>): RemeshQueryRef<T> => {
+    const queryStorage = getQueryStorage(Query)
+    let isDropped = false
+
+    queryStorage.refCount += 1
+
+    return {
+      drop: () => {
+        if (isDropped) {
+          return
+        }
+        isDropped = true
+        queryStorage.refCount -= 1
+        if (queryStorage.refCount === 0) {
+          clearQueryStorageIfNeeded(queryStorage)
+        }
+      },
+      get: () => {
+        if (isDropped) {
+          throw new Error(`Unexpected calling queryRef.get() after queryRef was dropped!`)
+        }
+        return getCurrentQueryValue(Query)
+      }
+    }
+  }
+
   return {
     name: options.name,
-    query: getCurrentQueryValue,
+    createQueryRef,
     emit: handleEventPayload,
     getDomain,
     destroy,
@@ -1033,3 +1148,22 @@ export const Remesh = {
   extern: RemeshTaskExtern,
   store: RemeshStore
 }
+
+
+// const subject = new Subject()
+
+// const subscription = subject.asObservable().subscribe({
+//   next: n => console.log('n', n),
+//   complete: () => console.log('complete')
+// })
+
+// subject.next(1)
+// subject.complete()
+
+// subscription.add(() => {
+//   console.log('teardown')
+// })
+
+// console.log('unsubscribe')
+
+// subscription.unsubscribe()
