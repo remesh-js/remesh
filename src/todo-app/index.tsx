@@ -19,10 +19,10 @@ export const TodoHeader = () => {
 
   const todoAppHeaderDomain = useRemeshDomain(TodoAppHeaderDomain)
 
-  const todoInput = useRemeshQuery(todoAppHeaderDomain.query.TodoInputQuery)
+  const todoInput = useRemeshQuery(todoAppHeaderDomain.query.TodoInputQuery())
 
   const isAllCompleted = useRemeshQuery(
-    todoAppHeaderDomain.query.IsAllCompletedQuery
+    todoAppHeaderDomain.query.IsAllCompletedQuery()
   )
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,7 +63,7 @@ export const TodoHeader = () => {
 const TodoList = () => {
   const todoListDomain = useRemeshDomain(TodoAppMainDomain)
   const matchedTodoList = useRemeshQuery(
-    todoListDomain.query.TodoMatchedListQuery
+    todoListDomain.query.TodoMatchedListQuery()
   )
 
   return (
@@ -145,9 +145,9 @@ const TodoFooter = () => {
   const todoAppFooterDomain = useRemeshDomain(TodoAppFooterDomain)
 
   const itemLeft = useRemeshQuery(
-    todoAppFooterDomain.query.TodoItemLeftCountQuery
+    todoAppFooterDomain.query.TodoItemLeftCountQuery()
   )
-  const todoFilter = useRemeshQuery(todoAppFooterDomain.query.TodoFilterQuery)
+  const todoFilter = useRemeshQuery(todoAppFooterDomain.query.TodoFilterQuery())
 
   return (
     <div>

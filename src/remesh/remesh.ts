@@ -3,7 +3,7 @@ import { Observable, Subject, Subscription } from "rxjs"
 import shallowEqual from 'shallowequal'
 
 type RemeshInjectedContext = {
-  get: <T>(State: RemeshState<T> | RemeshQuery<T>) => T
+  get: <T>(State: RemeshState<T> | RemeshQueryPayload<T, any>) => T
   fromEvent: <T, U = T>(Event: RemeshEvent<T, U>) => Observable<U>
   fromTask: <T>(Task: RemeshTaskPayload<T>) => Observable<RemeshTaskOutput>
 }
@@ -105,32 +105,62 @@ export type RemeshQueryContext = {
   get: RemeshInjectedContext['get']
 }
 
-export type RemeshQuery<T = unknown> = {
+export type RemeshQuery<T, U> = {
   type: 'RemeshQuery'
   queryId: number
   queryName: string
-  impl: (context: RemeshQueryContext) => T
+  impl: (context: RemeshQueryContext, arg: U) => T
+  (arg: U): RemeshQueryPayload<T, U>
   Domain?: RemeshDomain<any>
   compare: CompareFn<T>
 }
 
-export type RemeshQueryOptions<T> = {
-  name: RemeshQuery<T>["queryName"]
-  impl: RemeshQuery<T>["impl"]
-  compare?: RemeshQuery<T>['compare']
+export type RemeshQueryPayload<T, U> = {
+  type: 'RemeshQueryPayload'
+  Query: RemeshQuery<T, U>
+  arg: U
+}
+
+export type RemeshQueryOptions<T, U> = {
+  name: RemeshQuery<T, U>["queryName"]
+  impl: RemeshQuery<T, U>["impl"]
+  compare?: RemeshQuery<T, U>['compare']
 }
 
 let queryUid = 0
-export const RemeshQuery = <T>(options: RemeshQueryOptions<T>): RemeshQuery<T> => {
+export const RemeshQuery = <T, U = void>(options: RemeshQueryOptions<T, U>): RemeshQuery<T, U> => {
   const queryId = queryUid++
 
-  return {
-    type: 'RemeshQuery',
-    queryId: queryId,
-    queryName: options.name,
-    impl: options.impl,
-    compare: options.compare ?? shallowEqual
-  }
+  /**
+   * optimize for nullary query
+   */
+  let cacheForNullary: RemeshQueryPayload<T, U> | null = null
+
+  const Query = (arg => {
+    if (arg === undefined && cacheForNullary) {
+      return cacheForNullary
+    }
+
+    const payload: RemeshQueryPayload<T, U> =  {
+      type: 'RemeshQueryPayload',
+      Query,
+      arg
+    }
+
+    if (arg === undefined) {
+      cacheForNullary = payload
+    }
+
+    return payload
+  }) as RemeshQuery<T, U>
+
+  Query.type = 'RemeshQuery'
+  Query.queryId = queryId
+  Query.queryName = options.name
+  Query.impl = options.impl
+  Query.compare = options.compare ?? shallowEqual
+
+  return Query
 }
 
 export type RemeshCommandContext = {
@@ -310,7 +340,7 @@ export type RemeshDomainOutput = {
     [key: string]: RemeshEvent<any> | RemeshDomainOutput['event']
   },
   query: {
-    [key: string]: RemeshQuery<any> | RemeshDomainOutput['query']
+    [key: string]: RemeshQuery<any, any> | RemeshDomainOutput['query']
   }
 }
 
@@ -320,7 +350,7 @@ export type RemeshDomainWidgetOutput = {
     [key: string]: RemeshEvent<any> | RemeshDomainWidgetOutput['event']
   },
   query: {
-    [key: string]: RemeshQuery<any> | RemeshDomainWidgetOutput['query']
+    [key: string]: RemeshQuery<any, any> | RemeshDomainWidgetOutput['query']
   },
   command: {
     [key: string]: RemeshCommand<any> | RemeshDomainWidgetOutput['command']
@@ -425,15 +455,17 @@ type RemeshStateStorage<T = unknown> = {
   type: 'RemeshStateStorage'
   State: RemeshState<T>
   currentState: T
-  downstreamSet: Set<RemeshQueryStorage<any>>
+  downstreamSet: Set<RemeshQueryStorage<any, any>>
 }
 
-type RemeshQueryStorage<T = unknown> = {
+type RemeshQueryStorage<T = unknown, U = unknown> = {
   type: "RemeshQueryStorage"
-  Query: RemeshQuery<T>
+  Query: RemeshQuery<T, U>
+  currentArg: U,
+  currentKey: string,
   currentValue: T
-  upstreamSet: Set<RemeshQueryStorage<any> | RemeshStateStorage<any>>
-  downstreamSet: Set<RemeshQueryStorage<any>>,
+  upstreamSet: Set<RemeshQueryStorage<any, any> | RemeshStateStorage<any>>
+  downstreamSet: Set<RemeshQueryStorage<any, any>>,
   subject: Subject<T>
   observable: Observable<T>
   refCount: number
@@ -456,7 +488,7 @@ type RemeshDomainStorage<T extends RemeshDomainDefinition> = {
   autorunTaskSet: Set<RemeshTask<void>>
   subscriptionSet: Set<Subscription>
   stateMap: Map<RemeshState<any>, RemeshStateStorage<any>>
-  queryMap: Map<RemeshQuery<any>, RemeshQueryStorage<any>>
+  queryMap: Map<string, RemeshQueryStorage<any, any>>
   eventMap: Map<RemeshEvent<any>, RemeshEventStorage<any>>
   refCount: number
 }
@@ -485,7 +517,7 @@ const DefaultDomain = RemeshDomain({
 })
 
 export const RemeshStore = (options: RemeshStoreOptions) => {
-  const dirtySet = new Set<RemeshQueryStorage<any>>()
+  const dirtySet = new Set<RemeshQueryStorage<any, any>>()
   const domainStorageMap = new Map<RemeshDomain<any>, RemeshDomainStorage<any>>()
   const taskExternStorageMap = new Map<RemeshTaskExtern<any>, RemeshTaskExternStorage<any>>()
 
@@ -587,9 +619,10 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     return getEventStorage(Event)
   }
 
-  const getQueryStorage = <T>(Query: RemeshQuery<T>): RemeshQueryStorage<T> => {
-    const domainStorage = getDomainStorage(Query.Domain ?? DefaultDomain)
-    const queryStorage = domainStorage.queryMap.get(Query)
+  const getQueryStorage = <T, U>(queryPayload: RemeshQueryPayload<T, U>): RemeshQueryStorage<T, U> => {
+    const domainStorage = getDomainStorage(queryPayload.Query.Domain ?? DefaultDomain)
+    const key = `${queryPayload.Query.queryId}-${queryPayload.Query.queryName}-${JSON.stringify(queryPayload.arg)}`
+    const queryStorage = domainStorage.queryMap.get(key)
 
     if (queryStorage) {
       return queryStorage
@@ -612,11 +645,11 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     const upstreamSet: RemeshQueryStorage<T>['upstreamSet'] = new Set()
     const downstreamSet: RemeshQueryStorage<T>['downstreamSet'] = new Set()
 
-    const { impl } = Query
+    const { impl } = queryPayload.Query
 
-    const currentValue = impl({
+    const queryContext: RemeshQueryContext = {
       get: (input) => {
-        if (input.type === 'RemeshQuery') {
+        if (input.type === 'RemeshQueryPayload') {
           const upstreamQueryStorage = getQueryStorage(input)
           upstreamSet.add(upstreamQueryStorage)
         } else if (input.type === 'RemeshState') {
@@ -625,12 +658,16 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
         }
         return remeshInjectedContext.get(input)
       }
-    })
+    }
 
-    const currentQueryStorage: RemeshQueryStorage<T> = {
+    const currentValue = impl(queryContext, queryPayload.arg)
+
+    const currentQueryStorage: RemeshQueryStorage<T, U> = {
       type: 'RemeshQueryStorage',
-      Query: Query,
+      Query: queryPayload.Query,
+      currentArg: queryPayload.arg,
       currentValue,
+      currentKey: key,
       upstreamSet,
       downstreamSet,
       subject,
@@ -642,9 +679,9 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
       upstream.downstreamSet.add(currentQueryStorage)
     }
 
-    domainStorage.queryMap.set(Query, currentQueryStorage)
+    domainStorage.queryMap.set(key, currentQueryStorage)
 
-    return getQueryStorage(Query)
+    return currentQueryStorage
   }
 
   const getDomainStorage = <T extends RemeshDomainDefinition>(Domain: RemeshDomain<T>): RemeshDomainStorage<T> => {
@@ -748,11 +785,11 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     return getDomainStorage(Domain)
   }
 
-  const clearQueryStorage = <T>(queryStorage: RemeshQueryStorage<T>) => {
+  const clearQueryStorage = <T, U>(queryStorage: RemeshQueryStorage<T, U>) => {
     const domainStorage = getDomainStorage(queryStorage.Query.Domain ?? DefaultDomain)
 
     queryStorage.subject.complete()
-    domainStorage.queryMap.delete(queryStorage.Query)
+    domainStorage.queryMap.delete(queryStorage.currentKey)
 
     for (const upstreamStorage of queryStorage.upstreamSet) {
       upstreamStorage.downstreamSet.delete(queryStorage)
@@ -766,8 +803,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     }
   }
 
-
-  const clearQueryStorageIfNeeded = <T>(queryStorage: RemeshQueryStorage<T>) => {
+  const clearQueryStorageIfNeeded = <T, U>(queryStorage: RemeshQueryStorage<T, U>) => {
     if (queryStorage.refCount !== 0) {
       return
     }
@@ -861,8 +897,8 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     return stateStorage.currentState
   }
 
-  const getCurrentQueryValue = <T>(Query: RemeshQuery<T>): T => {
-    const queryStorage = getQueryStorage(Query)
+  const getCurrentQueryValue = <T, U>(queryPayload: RemeshQueryPayload<T, U>): T => {
+    const queryStorage = getQueryStorage(queryPayload)
 
     return queryStorage.currentValue
   }
@@ -873,7 +909,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
         return getCurrentState(input)
       }
 
-      if (input.type === 'RemeshQuery') {
+      if (input.type === 'RemeshQueryPayload') {
         return getCurrentQueryValue(input)
       }
 
@@ -895,7 +931,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     }
   }
 
-  const updateQueryStorage = <T>(queryStorage: RemeshQueryStorage<T>) => {
+  const updateQueryStorage = <T, U>(queryStorage: RemeshQueryStorage<T, U>) => {
     const { Query } = queryStorage
 
     for (const upstream of queryStorage.upstreamSet) {
@@ -904,9 +940,9 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
     queryStorage.upstreamSet.clear()
 
-    const newValue = Query.impl({
+    const queryContext: RemeshQueryContext = {
       get: (input) => {
-        if (input.type === 'RemeshQuery') {
+        if (input.type === 'RemeshQueryPayload') {
           const upstreamQueryStorage = getQueryStorage(input)
           queryStorage.upstreamSet.add(upstreamQueryStorage)
           upstreamQueryStorage.downstreamSet.add(queryStorage)
@@ -917,7 +953,9 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
         }
         return remeshInjectedContext.get(input)
       }
-    })
+    }
+
+    const newValue = Query.impl(queryContext, queryStorage.currentArg)
 
     const isEqual = queryStorage.Query.compare(queryStorage.currentValue, newValue)
 
@@ -1073,8 +1111,8 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     return subscription
   }
 
-  const subscribeQuery = <T>(Query: RemeshQuery<T>, subscriber: (data: T) => unknown): Subscription => {
-    const queryStorage = getQueryStorage(Query)
+  const subscribeQuery = <T, U>(queryPayload: RemeshQueryPayload<T, U>, subscriber: (data: T) => unknown): Subscription => {
+    const queryStorage = getQueryStorage(queryPayload)
     const subscription = queryStorage.observable.subscribe(subscriber)
 
     return subscription
@@ -1134,8 +1172,8 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     dirtySet.clear()
   }
 
-  const createQueryRef = <T>(Query: RemeshQuery<T>): RemeshQueryRef<T> => {
-    const queryStorage = getQueryStorage(Query)
+  const createQueryRef = <T, U>(queryPayload: RemeshQueryPayload<T, U>): RemeshQueryRef<T> => {
+    const queryStorage = getQueryStorage(queryPayload)
     let isDropped = false
 
     queryStorage.refCount += 1
@@ -1155,7 +1193,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
         if (isDropped) {
           throw new Error(`Unexpected calling queryRef.get() after queryRef was dropped!`)
         }
-        return getCurrentQueryValue(Query)
+        return getCurrentQueryValue(queryPayload)
       }
     }
   }
