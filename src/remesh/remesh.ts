@@ -748,16 +748,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     return getDomainStorage(Domain)
   }
 
-
-  const clearQueryStorageIfNeeded = <T>(queryStorage: RemeshQueryStorage<T>) => {
-    if (queryStorage.refCount !== 0) {
-      return
-    }
-
-    if (queryStorage.downstreamSet.size !== 0) {
-      return
-    }
-
+  const clearQueryStorage = <T>(queryStorage: RemeshQueryStorage<T>) => {
     const domainStorage = getDomainStorage(queryStorage.Query.Domain ?? DefaultDomain)
 
     queryStorage.subject.complete()
@@ -775,14 +766,39 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     }
   }
 
+
+  const clearQueryStorageIfNeeded = <T>(queryStorage: RemeshQueryStorage<T>) => {
+    if (queryStorage.refCount !== 0) {
+      return
+    }
+
+    if (queryStorage.downstreamSet.size !== 0) {
+      return
+    }
+
+    clearQueryStorage(queryStorage)
+  }
+
+  const clearStateStorage = <T>(stateStorage: RemeshStateStorage<T>) => {
+    const domainStorage = getDomainStorage(stateStorage.State.Domain ?? DefaultDomain)
+
+    domainStorage.stateMap.delete(stateStorage.State)
+  }
+
+
   const clearStateStorageIfNeeded = <T>(stateStorage: RemeshStateStorage<T>) => {
     if (stateStorage.downstreamSet.size !== 0) {
       return
     }
 
-    const domainStorage = getDomainStorage(stateStorage.State.Domain ?? DefaultDomain)
+    clearStateStorage(stateStorage)
+  }
 
-    domainStorage.stateMap.delete(stateStorage.State)
+  const clearEventStorage = <T, U>(eventStorage: RemeshEventStorage<T, U>) => {
+    const domainStorage = getDomainStorage(eventStorage.Event.Domain ?? DefaultDomain)
+
+    eventStorage.subject.complete()
+    domainStorage.eventMap.delete(eventStorage.Event)
   }
 
   const clearEventStorageIfNeeded = <T, U>(eventStorage: RemeshEventStorage<T, U>) => {
@@ -790,21 +806,10 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
       return
     }
 
-    const domainStorage = getDomainStorage(eventStorage.Event.Domain ?? DefaultDomain)
-
-    eventStorage.subject.complete()
-    domainStorage.eventMap.delete(eventStorage.Event)
+    clearEventStorage(eventStorage)
   }
 
-  const clearDomainStorageIfNeeded = <T extends RemeshDomainDefinition>(domainStorage: RemeshDomainStorage<T>) => {
-    if (domainStorage.refCount !== 0) {
-      return
-    }
-
-    if (domainStorage.downstreamSet.size !== 0) {
-      return
-    }
-
+  const clearDomainStorage = <T extends RemeshDomainDefinition>(domainStorage: RemeshDomainStorage<T>) => {
     const upstreamList = [...domainStorage.upstreamSet]
 
     for (const subscription of domainStorage.subscriptionSet) {
@@ -812,15 +817,15 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     }
 
     for (const eventStorage of domainStorage.eventMap.values()) {
-      clearEventStorageIfNeeded(eventStorage)
+      clearEventStorage(eventStorage)
     }
 
     for (const queryStorage of domainStorage.queryMap.values()) {
-      clearQueryStorageIfNeeded(queryStorage)
+      clearQueryStorage(queryStorage)
     }
 
     for (const stateStorage of domainStorage.stateMap.values()) {
-      clearStateStorageIfNeeded(stateStorage)
+      clearStateStorage(stateStorage)
     }
 
     domainStorage.autorunTaskSet.clear()
@@ -836,6 +841,18 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
       upstreamDomainStorage.downstreamSet.delete(domainStorage)
       clearDomainStorageIfNeeded(upstreamDomainStorage)
     }
+  }
+
+  const clearDomainStorageIfNeeded = <T extends RemeshDomainDefinition>(domainStorage: RemeshDomainStorage<T>) => {
+    if (domainStorage.refCount !== 0) {
+      return
+    }
+
+    if (domainStorage.downstreamSet.size !== 0) {
+      return
+    }
+
+    clearDomainStorage(domainStorage)
   }
 
   const getCurrentState = <T>(State: RemeshState<T>): T => {
