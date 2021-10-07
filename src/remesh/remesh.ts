@@ -1,4 +1,6 @@
-import { Observable, of, Subject, Subscription } from "rxjs"
+import { Observable, Subject, Subscription } from "rxjs"
+
+import shallowEqual from 'shallowequal'
 
 type RemeshInjectedContext = {
   get: <T>(State: RemeshState<T> | RemeshQuery<T>) => T
@@ -53,6 +55,8 @@ export const RemeshEvent = <T = void, U = T>(
   return Event
 }
 
+export type CompareFn<T> = (prev: T, curr: T) => boolean
+
 export type RemeshState<T> = {
   type: 'RemeshState'
   stateId: number
@@ -60,6 +64,7 @@ export type RemeshState<T> = {
   default: T
   (newState: T): RemeshStatePayload<T>
   Domain?: RemeshDomain<any>
+  compare: CompareFn<T>
 }
 
 export type RemeshStatePayload<T = unknown> = {
@@ -71,6 +76,7 @@ export type RemeshStatePayload<T = unknown> = {
 export type RemeshStateOptions<T> = {
   name: RemeshState<T>['stateName']
   default: RemeshState<T>['default']
+  compare?: RemeshState<T>['compare']
 }
 
 let stateUid = 0
@@ -90,6 +96,7 @@ export const RemeshState = <T>(options: RemeshStateOptions<T>): RemeshState<T> =
   State.stateId = stateId
   State.stateName = options.name
   State.default = options.default
+  State.compare = options.compare ?? shallowEqual
 
   return State
 }
@@ -104,11 +111,13 @@ export type RemeshQuery<T = unknown> = {
   queryName: string
   impl: (context: RemeshQueryContext) => T
   Domain?: RemeshDomain<any>
+  compare: CompareFn<T>
 }
 
 export type RemeshQueryOptions<T> = {
   name: RemeshQuery<T>["queryName"]
   impl: RemeshQuery<T>["impl"]
+  compare?: RemeshQuery<T>['compare']
 }
 
 let queryUid = 0
@@ -119,7 +128,8 @@ export const RemeshQuery = <T>(options: RemeshQueryOptions<T>): RemeshQuery<T> =
     type: 'RemeshQuery',
     queryId: queryId,
     queryName: options.name,
-    impl: options.impl
+    impl: options.impl,
+    compare: options.compare ?? shallowEqual
   }
 }
 
@@ -892,7 +902,9 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
       }
     })
 
-    if (queryStorage.currentValue === newValue) {
+    const isEqual = queryStorage.Query.compare(queryStorage.currentValue, newValue)
+
+    if (isEqual) {
       return
     }
 
@@ -940,7 +952,9 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     const { State, newState } = data
     const stateStorage = getStateStorage(State)
 
-    if (stateStorage.currentState === newState) {
+    const isEqual = State.compare(stateStorage.currentState, newState)
+
+    if (isEqual) {
       return
     }
 
@@ -1148,22 +1162,3 @@ export const Remesh = {
   extern: RemeshTaskExtern,
   store: RemeshStore
 }
-
-
-// const subject = new Subject()
-
-// const subscription = subject.asObservable().subscribe({
-//   next: n => console.log('n', n),
-//   complete: () => console.log('complete')
-// })
-
-// subject.next(1)
-// subject.complete()
-
-// subscription.add(() => {
-//   console.log('teardown')
-// })
-
-// console.log('unsubscribe')
-
-// subscription.unsubscribe()
