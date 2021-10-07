@@ -19,10 +19,12 @@
     "rxjs": "^7.3.0"
   },
   "dependencies": {
+    "lru-cache": "^6.0.0",
     "shallowequal": "^1.1.0"
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^13.0.4",
+    "@types/lru-cache": "^5.1.1",
     "@types/node": "^16.7.2",
     "@types/react": "^17.0.0",
     "@types/react-dom": "^17.0.0",

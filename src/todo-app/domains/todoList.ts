@@ -129,7 +129,7 @@ export const TodoListDomain = Remesh.domain({
             name: 'toggleAllTodos',
             impl: ({ get }) => {
                 const todoList = get(TodoListState)
-                const isAllCompleted = get(IsAllCompletedQuery)
+                const isAllCompleted = get(IsAllCompletedQuery())
 
                 const newTodoList = todoList.map(todo => {
                     return {
@@ -174,7 +174,7 @@ export const TodoListDomain = Remesh.domain({
         const IsAllCompletedQuery = domain.query({
             name: 'IsAllCompletedQuery',
             impl: ({ get }) => {
-                const { activeTodoList, completedTodoList } = get(TodoSortedListQuery)
+                const { activeTodoList, completedTodoList } = get(TodoSortedListQuery())
 
                 return activeTodoList.length === 0 && completedTodoList.length > 0
             }
@@ -183,7 +183,7 @@ export const TodoListDomain = Remesh.domain({
         const TodoItemLeftCountQuery = domain.query({
             name: 'TodoItemLeftCountQuery',
             impl: ({ get }) => {
-                const { activeTodoList } = get(TodoSortedListQuery)
+                const { activeTodoList } = get(TodoSortedListQuery())
                 return activeTodoList.length
             }
         })

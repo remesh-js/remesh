@@ -63,9 +63,9 @@ const TodoAppMainWidget = Remesh.widget(domain => {
     const TodoFilteredListQuery = domain.query({
         name: 'TodoFilteredListQuery',
         impl: ({ get }) => {
-            const todoList = get(todoListDomain.query.TodoListQuery)
-            const todoSortedList = get(todoListDomain.query.TodoSortedListQuery)
-            const todoFilter = get(todoFilterDomain.query.TodoFilterQuery)
+            const todoList = get(todoListDomain.query.TodoListQuery())
+            const todoSortedList = get(todoListDomain.query.TodoSortedListQuery())
+            const todoFilter = get(todoFilterDomain.query.TodoFilterQuery())
 
             if (todoFilter === 'active') {
                 return todoSortedList.activeTodoList
@@ -82,8 +82,8 @@ const TodoAppMainWidget = Remesh.widget(domain => {
     const TodoMatchedListQuery = domain.query({
         name: 'TodoMatchedListQuery',
         impl: ({ get }) => {
-            const todoFilteredList = get(TodoFilteredListQuery)
-            const todoInput = get(todoInputDomain.query.TodoInputQuery)
+            const todoFilteredList = get(TodoFilteredListQuery())
+            const todoInput = get(todoInputDomain.query.TodoInputQuery())
 
             if (todoInput.length === 0) {
                 return todoFilteredList
