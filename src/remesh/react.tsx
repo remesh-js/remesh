@@ -87,19 +87,14 @@ export const useRemeshQuery = function <T, U>(
 ): T {
   const store = useRemeshStore()
 
-  const queryRef = useMemo(() => {
-    return store.createQueryRef(queryPayload)
-  }, [queryPayload, store])
-
-  const [state, setState] = useState(queryRef.get())
+  const [state, setState] = useState(() => store.query(queryPayload))
 
   useEffect(() => {
     const subscription = store.subscribeQuery(queryPayload, setState)
     return () => {
       subscription.unsubscribe()
-      queryRef.drop()
     }
-  }, [queryPayload, queryRef, store])
+  }, [queryPayload, store])
 
   return state
 }
@@ -154,20 +149,14 @@ export const useRemeshDomain = function <T extends RemeshDomainDefinition>(
   Domain: RemeshDomain<T>
 ): RemeshDomainExtract<T> {
   const store = useRemeshStore()
-
-  const domainRef = useMemo(() => {
-    return store.createDomainRef(Domain)
-  }, [store, Domain])
-
-  const domain = domainRef.get()
+  const domain = store.getDomain(Domain)
 
   useEffect(() => {
     const subscription = store.subscribeDomain(Domain)
     return () => {
-      domainRef.drop()
       subscription.unsubscribe()
     }
-  }, [store, Domain, domainRef])
+  }, [store, Domain])
 
   return domain
 }

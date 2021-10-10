@@ -2,7 +2,8 @@ import React from "react"
 import ReactDOM from "react-dom"
 import { RemeshRoot } from "./remesh/react"
 
-import { Todo, TodoAppExtern } from "./todo-app/domains/todoApp"
+import { TodoListExtern } from "./todo-app/domains/todoList"
+import { Todo } from "./todo-app/domains/todoApp"
 import { TodoApp } from "./todo-app"
 
 const initialTodoList: Todo[] = [
@@ -18,7 +19,7 @@ ReactDOM.render(
     <RemeshRoot
       options={{
         name: "TodoAppStore",
-        externs: [TodoAppExtern(initialTodoList)],
+        externs: [TodoListExtern(initialTodoList)],
       }}
     >
       <TodoApp />

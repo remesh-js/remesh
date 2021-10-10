@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 
 import {
   useRemeshEmit,
@@ -62,26 +62,26 @@ export const TodoHeader = () => {
 
 const TodoList = () => {
   const todoListDomain = useRemeshDomain(TodoAppMainDomain)
-  const matchedTodoList = useRemeshQuery(
-    todoListDomain.query.TodoMatchedListQuery()
-  )
+  const matchedTodoIdList = useRemeshQuery(todoListDomain.query.TodoIdListQuery())
 
   return (
     <div>
-      {matchedTodoList.map((todo) => {
-        return <TodoItem key={todo.id} todo={todo} />
+      {matchedTodoIdList.map((todoId) => {
+        return <TodoItem key={todoId} todoId={todoId} />
       })}
     </div>
   )
 }
 
 type TodoItemProps = {
-  todo: Todo
+  todoId: number
 }
 
-const TodoItem = (props: TodoItemProps) => {
+const TodoItem = React.memo((props: TodoItemProps) => {
   const todoListDomain = useRemeshDomain(TodoAppMainDomain)
   const emit = useRemeshEmit()
+
+  const todo = useRemeshQuery(todoListDomain.query.TodoItemQuery(props.todoId))
 
   const [text, setText] = useState("")
   const [edit, setEdit] = useState(false)
@@ -91,12 +91,12 @@ const TodoItem = (props: TodoItemProps) => {
   }
 
   const handleBlur = () => {
-    if (text === props.todo.content) {
+    if (text === todo.content) {
       setEdit(false)
     } else {
       emit(
         todoListDomain.event.UpdateTodoEvent({
-          todoId: props.todo.id,
+          todoId: todo.id,
           content: text,
         })
       )
@@ -107,22 +107,20 @@ const TodoItem = (props: TodoItemProps) => {
 
   const handleDoubleClick = () => {
     setEdit(true)
-    setText(props.todo.content)
+    setText(todo.content)
   }
 
   const handleRemove = () => {
-    emit(todoListDomain.event.RemoveTodoEvent(props.todo.id))
+    emit(todoListDomain.event.RemoveTodoEvent(props.todoId))
   }
 
   const handleToggle = () => {
-    emit(todoListDomain.event.ToggleTodoEvent(props.todo.id))
+    emit(todoListDomain.event.ToggleTodoEvent(props.todoId))
   }
 
   return (
     <div>
-      {!edit && (
-        <label onDoubleClick={handleDoubleClick}>{props.todo.content}</label>
-      )}
+      {!edit && <label onDoubleClick={handleDoubleClick}>{todo.content}</label>}
       {edit && (
         <input
           type="text"
@@ -132,12 +130,12 @@ const TodoItem = (props: TodoItemProps) => {
         />
       )}
       <button onClick={handleToggle}>
-        {props.todo.completed ? "completed" : "active"}
+        {todo.completed ? "completed" : "active"}
       </button>
       <button onClick={handleRemove}>remove</button>
     </div>
   )
-}
+})
 
 const TodoFooter = () => {
   const emit = useRemeshEmit()
