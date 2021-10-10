@@ -7,15 +7,12 @@ import React, {
   useState,
   useMemo,
 } from "react"
+
 import {
   RemeshDomainDefinition,
   RemeshDomainExtract,
   RemeshQueryPayload,
-} from "."
-
-import {
   RemeshTaskPayload,
-  RemeshQuery,
   RemeshEvent,
   RemeshStore,
   RemeshStoreOptions,
@@ -88,21 +85,21 @@ export const RemeshRoot = (props: RemeshRootProps) => {
 export const useRemeshQuery = function <T, U>(
   queryPayload: RemeshQueryPayload<T, U>
 ): T {
-  const remeshStore = useRemeshStore()
+  const store = useRemeshStore()
 
   const queryRef = useMemo(() => {
-    return remeshStore.createQueryRef(queryPayload)
-  }, [queryPayload])
+    return store.createQueryRef(queryPayload)
+  }, [queryPayload, store])
 
   const [state, setState] = useState(queryRef.get())
 
   useEffect(() => {
-    const subscription = remeshStore.subscribeQuery(queryPayload, setState)
+    const subscription = store.subscribeQuery(queryPayload, setState)
     return () => {
       subscription.unsubscribe()
       queryRef.drop()
     }
-  }, [queryPayload, queryRef, remeshStore])
+  }, [queryPayload, queryRef, store])
 
   return state
 }
@@ -111,7 +108,7 @@ export const useRemeshEvent = function <T, U = T>(
   Event: RemeshEvent<T, U>,
   callback: (data: U) => unknown
 ) {
-  const remeshStore = useRemeshStore()
+  const store = useRemeshStore()
   const callbackRef = useRef(callback)
 
   useEffect(() => {
@@ -119,25 +116,25 @@ export const useRemeshEvent = function <T, U = T>(
   })
 
   useEffect(() => {
-    const subscription = remeshStore.subscribeEvent(Event, (data) => {
+    const subscription = store.subscribeEvent(Event, (data) => {
       callbackRef.current(data)
     })
     return () => {
       subscription.unsubscribe()
     }
-  }, [Event, remeshStore])
+  }, [Event, store])
 }
 
 export const useRemeshEmit = function () {
-  const remeshStore = useRemeshStore()
-  return remeshStore.emit
+  const store = useRemeshStore()
+  return store.emit
 }
 
 export const useRemeshTask = function <T>(
   callback: () => RemeshTaskPayload<T>,
   deps: unknown[] = []
 ) {
-  const remeshStore = useRemeshStore()
+  const store = useRemeshStore()
 
   const callbackRef = useRef(callback)
 
@@ -146,7 +143,7 @@ export const useRemeshTask = function <T>(
   })
 
   useEffect(() => {
-    const subscription = remeshStore.subscribeTask(callbackRef.current())
+    const subscription = store.subscribeTask(callbackRef.current())
     return () => {
       subscription.unsubscribe()
     }
@@ -157,14 +154,20 @@ export const useRemeshDomain = function <T extends RemeshDomainDefinition>(
   Domain: RemeshDomain<T>
 ): RemeshDomainExtract<T> {
   const store = useRemeshStore()
-  const domain = store.getDomain(Domain)
+
+  const domainRef = useMemo(() => {
+    return store.createDomainRef(Domain)
+  }, [store, Domain])
+
+  const domain = domainRef.get()
 
   useEffect(() => {
     const subscription = store.subscribeDomain(Domain)
     return () => {
+      domainRef.drop()
       subscription.unsubscribe()
     }
-  }, [store, Domain])
+  }, [store, Domain, domainRef])
 
   return domain
 }
