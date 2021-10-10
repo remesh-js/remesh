@@ -1,7 +1,7 @@
 import { map } from 'rxjs/operators'
-import { Remesh } from '../../remesh'
+import { Remesh, RemeshEventPayload } from '../../remesh'
 
-import { merge } from 'rxjs'
+import { merge, of } from 'rxjs'
 
 export type Todo = {
     id: number
@@ -226,8 +226,16 @@ export const TodoListDomain = Remesh.domain({
             }
         })
 
+        const TodoListPreloadTask = domain.task({
+            name: 'TodoListPreloadTask',
+            impl: ({ getExtern }) => {
+                const todoListExtern = getExtern(TodoListExtern)
+                return of(todoListExtern.preload())
+            }
+        })
+
         return {
-            autorun: [TodoListAutorunTask],
+            autorun: [TodoListAutorunTask, TodoListPreloadTask],
             event: {
                 AddTodoFailedEvent,
                 AddTodoSuccessEvent,
@@ -242,7 +250,19 @@ export const TodoListDomain = Remesh.domain({
                 TodoListQuery,
                 IsAllCompletedQuery,
                 TodoSortedListQuery,
-                TodoItemLeftCountQuery,
+                TodoItemLeftCountQuery
+            }
+        }
+    }
+})
+
+export const TodoListExtern = Remesh.extern({
+    name: 'TodoListExtern',
+    default: [] as Todo[],
+    impl: ({ getEvent }, todos: Todo[]) => {
+        return {
+            preload: (): RemeshEventPayload<Todo[]> => {
+                return getEvent(TodoListDomain).SetTodoListEvent(todos)
             }
         }
     }

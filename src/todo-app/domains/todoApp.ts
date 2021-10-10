@@ -12,18 +12,6 @@ export type {
     Todo
 }
 
-export const TodoAppExtern = Remesh.extern({
-    name: 'TodoAppExtern',
-    default: [] as Todo[],
-    impl: ({ getEvent }, todos: Todo[]) => {
-        const todoListDomainEvent = getEvent(TodoListDomain)
-        return {
-            preload: () => {
-                return todoListDomainEvent.SetTodoListEvent(todos)
-            }
-        }
-    }
-})
 
 const TodoAppHeaderWidget = Remesh.widget(domain => {
     const todoInputDomain = domain.get(TodoInputDomain)
@@ -97,21 +85,61 @@ const TodoAppMainWidget = Remesh.widget(domain => {
         }
     })
 
-    const TodoAppMainTask = domain.task({
-        name: 'TodoAppMainTask',
-        impl: ({ getExtern }) => {
-            const todoAppExtern = getExtern(TodoAppExtern)
-            return of(todoAppExtern.preload())
+
+    const TodoInfoQuery = domain.query({
+        name: 'TodoInfoQuery',
+        impl: ({ get }) => {
+            const todoList = get(TodoMatchedListQuery())
+            const todoIdList = [] as number[]
+            const todoMap = {} as { [key: number]: Todo }
+
+            for (const todo of todoList) {
+                todoIdList.push(todo.id)
+                todoMap[todo.id] = todo
+            }
+
+            return {
+                todoIdList,
+                todoMap
+            }
+        }
+    })
+
+    const TodoIdListQuery = domain.query({
+        name: 'TodoIdListQuery',
+        impl: ({ get }) => {
+            const todoInfo = get(TodoInfoQuery())
+            return todoInfo.todoIdList
         }
     })
 
 
+    const TodoMapQuery = domain.query({
+        name: 'TodoMapQuery',
+        impl: ({ get }) => {
+            const todoInfo = get(TodoInfoQuery())
+            return todoInfo.todoMap
+        }
+    })
+
+    const TodoItemQuery = domain.query({
+        name: 'TodoItemQuery',
+        impl: ({ get }, todoId: number) => {
+            const todoMap = get(TodoMapQuery())
+            return todoMap[todoId]
+        }
+    })
+
+
+
     return {
-        autorun: [TodoAppMainTask],
+        autorun: [],
         query: {
             ...todoListDomain.query,
             TodoMatchedListQuery,
             TodoFilteredListQuery,
+            TodoIdListQuery,
+            TodoItemQuery
         },
         event: {
             ...todoListDomain.event
