@@ -617,7 +617,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
         subscription.unsubscribe()
         currentEventStorage.refCount -= 1
         pendingStorageSet.add(currentEventStorage)
-        notify()
+        commit()
       }
     })
 
@@ -654,7 +654,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
         subscription.unsubscribe()
         currentQueryStorage.refCount -= 1
         pendingStorageSet.add(currentQueryStorage)
-        notify()
+        commit()
       }
     })
 
@@ -1056,10 +1056,9 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     clearDirtySetIfNeeded()
   }
 
-  let tid: ReturnType<typeof setTimeout>
-  const notify = () => {
-    clearTimeout(tid)
-    tid = setTimeout(clearIfNeeded, 0)
+  const tick = createTick(clearIfNeeded)
+  const commit = () => {
+    tick.commit()
   }
 
   const handleStatePayload = (data: RemeshStatePayload) => {
@@ -1082,7 +1081,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
       updateQueryStorage(downstream)
     }
 
-    notify()
+    commit()
   }
 
   const handleEventPayload = <T, U = T>(eventPayload: RemeshEventPayload<T, U>) => {
@@ -1190,7 +1189,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
     taskSubscription.add(() => {
       pendingStorageSet.add(domainStorage)
-      notify()
+      commit()
     })
   }
 
@@ -1199,7 +1198,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
     domainSubscription.add(() => {
       pendingStorageSet.add(domainStorage)
-      notify()
+      commit()
     })
   }
 
@@ -1266,12 +1265,11 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
   }
 
   const destroy = () => {
-    clearTimeout(tid)
-
     for (const domainStorage of domainStorageMap.values()) {
       clearDomainStorage(domainStorage)
     }
 
+    tick.cancel()
     domainStorageMap.clear()
     dirtySet.clear()
   }
@@ -1301,5 +1299,22 @@ export const Remesh = {
 const clearSubscriptionSet = (subscriptionSet: Set<Subscription>) => {
   for (const subscription of subscriptionSet) {
     subscription.unsubscribe()
+  }
+}
+
+const createTick = (f: () => unknown) => {
+  let count = 0
+  return {
+    commit: () => {
+      count += 1
+      let currentCount = count
+      Promise.resolve().then(() => {
+        if (currentCount !== count) return
+        f()
+      }, noop)
+    },
+    cancel: () => {
+      count = -1
+    }
   }
 }
