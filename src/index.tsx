@@ -2,9 +2,9 @@ import React from "react"
 import ReactDOM from "react-dom"
 import { RemeshRoot } from "./remesh/react"
 
-import { TodoListExtern } from "./todo-app/domains/todoList"
-import { Todo } from "./todo-app/domains/todoApp"
-import { TodoApp } from "./todo-app"
+import { TodoListExtern } from "./todo-rac-app/domains/todoList"
+import { Todo } from "./todo-rac-app/domains/todoApp"
+import { TodoApp } from "./todo-rac-app"
 
 const initialTodoList: Todo[] = [
   {
