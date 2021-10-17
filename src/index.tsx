@@ -2,9 +2,9 @@ import React from "react"
 import ReactDOM from "react-dom"
 import { RemeshRoot } from "./remesh/react"
 
-import { TodoListExtern } from "./todo-rac-app/domains/todoList"
-import { Todo } from "./todo-rac-app/domains/todoApp"
-import { TodoApp } from "./todo-rac-app"
+import { TodoListExtern } from "./todo-remise-app/domains/todoList"
+import { Todo } from "./todo-remise-app/domains/todoApp"
+import { TodoAppRoot } from "./todo-remise-app"
 
 const initialTodoList: Todo[] = [
   {
@@ -22,7 +22,7 @@ ReactDOM.render(
         externs: [TodoListExtern(initialTodoList)],
       }}
     >
-      <TodoApp />
+      <TodoAppRoot />
     </RemeshRoot>
   </React.StrictMode>,
   document.getElementById("root")
