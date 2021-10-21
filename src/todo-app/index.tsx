@@ -1,198 +1,22 @@
-import React, { useEffect, useState } from "react"
+import React from "react"
+
+import { RemiseProvider } from "../remise"
+
+import { TodoApp } from "./View.headless"
 
 import {
-  useRemeshEmit,
-  useRemeshEvent,
-  useRemeshQuery,
-  useRemeshDomain,
-} from "../remesh/react"
+  TodoHeaderImpl,
+  TodoFooterImpl,
+  TodoListImpl,
+  TodoItemImpl,
+} from "./View.impl"
 
-import {
-  Todo,
-  TodoAppHeaderDomain,
-  TodoAppMainDomain,
-  TodoAppFooterDomain,
-} from "../todo-app/domains/todoApp"
+const implList = [TodoHeaderImpl, TodoFooterImpl, TodoListImpl, TodoItemImpl]
 
-export const TodoHeader = () => {
-  const emit = useRemeshEmit()
-
-  const todoAppHeaderDomain = useRemeshDomain(TodoAppHeaderDomain)
-
-  const todoInput = useRemeshQuery(todoAppHeaderDomain.query.TodoInputQuery())
-
-  const isAllCompleted = useRemeshQuery(
-    todoAppHeaderDomain.query.IsAllCompletedQuery()
-  )
-
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    emit(todoAppHeaderDomain.event.TodoInputEvent(event.target.value))
-  }
-
-  const handleAdd = () => {
-    emit(todoAppHeaderDomain.event.AddTodoEvent(todoInput))
-  }
-
-  const handleToggleAllTodos = () => {
-    emit(todoAppHeaderDomain.event.ToggleAllTodosEvent())
-  }
-
-  useRemeshEvent(todoAppHeaderDomain.event.AddTodoFailedEvent, (event) => {
-    alert(event.message)
-  })
-
+export const TodoAppRoot = () => {
   return (
-    <div>
-      <input
-        type="checkbox"
-        checked={isAllCompleted}
-        readOnly
-        onClick={handleToggleAllTodos}
-      />
-      <input
-        type="text"
-        placeholder="Input your todo here"
-        value={todoInput}
-        onChange={handleChange}
-      />
-      <button onClick={handleAdd}>add</button>
-    </div>
-  )
-}
-
-const TodoList = () => {
-  const todoListDomain = useRemeshDomain(TodoAppMainDomain)
-  const matchedTodoIdList = useRemeshQuery(todoListDomain.query.TodoIdListQuery())
-
-  return (
-    <div>
-      {matchedTodoIdList.map((todoId) => {
-        return <TodoItem key={todoId} todoId={todoId} />
-      })}
-    </div>
-  )
-}
-
-type TodoItemProps = {
-  todoId: number
-}
-
-const TodoItem = React.memo((props: TodoItemProps) => {
-  const todoListDomain = useRemeshDomain(TodoAppMainDomain)
-  const emit = useRemeshEmit()
-
-  const todo = useRemeshQuery(todoListDomain.query.TodoItemQuery(props.todoId))
-
-  const [text, setText] = useState("")
-  const [edit, setEdit] = useState(false)
-
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setText(event.target.value)
-  }
-
-  const handleBlur = () => {
-    if (text === todo.content) {
-      setEdit(false)
-    } else {
-      emit(
-        todoListDomain.event.UpdateTodoEvent({
-          todoId: todo.id,
-          content: text,
-        })
-      )
-      setText("")
-      setEdit(false)
-    }
-  }
-
-  const handleDoubleClick = () => {
-    setEdit(true)
-    setText(todo.content)
-  }
-
-  const handleRemove = () => {
-    emit(todoListDomain.event.RemoveTodoEvent(props.todoId))
-  }
-
-  const handleToggle = () => {
-    emit(todoListDomain.event.ToggleTodoEvent(props.todoId))
-  }
-
-  return (
-    <div>
-      {!edit && <label onDoubleClick={handleDoubleClick}>{todo.content}</label>}
-      {edit && (
-        <input
-          type="text"
-          value={text}
-          onChange={handleChange}
-          onBlur={handleBlur}
-        />
-      )}
-      <button onClick={handleToggle}>
-        {todo.completed ? "completed" : "active"}
-      </button>
-      <button onClick={handleRemove}>remove</button>
-    </div>
-  )
-})
-
-const TodoFooter = () => {
-  const emit = useRemeshEmit()
-
-  const todoAppFooterDomain = useRemeshDomain(TodoAppFooterDomain)
-
-  const itemLeft = useRemeshQuery(
-    todoAppFooterDomain.query.TodoItemLeftCountQuery()
-  )
-  const todoFilter = useRemeshQuery(todoAppFooterDomain.query.TodoFilterQuery())
-
-  return (
-    <div>
-      <span>
-        {itemLeft} item{itemLeft === 0 || itemLeft > 1 ? `s` : ""} left
-      </span>
-      {" | "}
-      <span
-        style={{
-          color: todoFilter === "all" ? "red" : "",
-        }}
-        onClick={() => {
-          emit(todoAppFooterDomain.event.ChangeTodoFilterEvent("all"))
-        }}
-      >
-        All
-      </span>{" "}
-      <span
-        style={{
-          color: todoFilter === "active" ? "red" : "",
-        }}
-        onClick={() => {
-          emit(todoAppFooterDomain.event.ChangeTodoFilterEvent("active"))
-        }}
-      >
-        Active
-      </span>{" "}
-      <span
-        style={{
-          color: todoFilter === "completed" ? "red" : "",
-        }}
-        onClick={() => {
-          emit(todoAppFooterDomain.event.ChangeTodoFilterEvent("completed"))
-        }}
-      >
-        Completed
-      </span>
-    </div>
-  )
-}
-
-export const TodoApp = () => {
-  return (
-    <>
-      <TodoHeader />
-      <TodoList />
-      <TodoFooter />
-    </>
+    <RemiseProvider list={implList}>
+      <TodoApp />
+    </RemiseProvider>
   )
 }

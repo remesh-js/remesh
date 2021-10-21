@@ -1,6 +1,6 @@
 import React from "react"
 
-import { TodoHeader, TodoList, TodoItem, TodoFooter } from "./View"
+import { TodoHeader, TodoList, TodoItem, TodoFooter } from "./View.headless"
 
 export const TodoHeaderImpl = TodoHeader.impl((props) => {
   return (
