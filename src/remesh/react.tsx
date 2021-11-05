@@ -84,7 +84,7 @@ export const RemeshRoot = (props: RemeshRootProps) => {
 
 export const useRemeshQuery = function <T, U>(
   queryPayload: RemeshQueryPayload<T, U>
-): T {
+): U {
   const store = useRemeshStore()
 
   const [state, setState] = useState(() => store.query(queryPayload))

@@ -50,10 +50,10 @@ const TodoAppMainWidget = Remesh.widget(domain => {
 
     const TodoFilteredListQuery = domain.query({
         name: 'TodoFilteredListQuery',
-        impl: ({ get }) => {
-            const todoList = get(todoListDomain.query.TodoListQuery())
-            const todoSortedList = get(todoListDomain.query.TodoSortedListQuery())
-            const todoFilter = get(todoFilterDomain.query.TodoFilterQuery())
+        impl: ({ query }) => {
+            const todoList = query(todoListDomain.query.TodoListQuery())
+            const todoSortedList = query(todoListDomain.query.TodoSortedListQuery())
+            const todoFilter = query(todoFilterDomain.query.TodoFilterQuery())
 
             if (todoFilter === 'active') {
                 return todoSortedList.activeTodoList
@@ -69,9 +69,9 @@ const TodoAppMainWidget = Remesh.widget(domain => {
 
     const TodoMatchedListQuery = domain.query({
         name: 'TodoMatchedListQuery',
-        impl: ({ get }) => {
-            const todoFilteredList = get(TodoFilteredListQuery())
-            const todoInput = get(todoInputDomain.query.TodoInputQuery())
+        impl: ({ query }) => {
+            const todoFilteredList = query(TodoFilteredListQuery())
+            const todoInput = query(todoInputDomain.query.TodoInputQuery())
 
             if (todoInput.length === 0) {
                 return todoFilteredList
@@ -85,51 +85,12 @@ const TodoAppMainWidget = Remesh.widget(domain => {
         }
     })
 
-
-    const TodoInfoQuery = domain.query({
-        name: 'TodoInfoQuery',
-        impl: ({ get }) => {
-            const todoList = get(TodoMatchedListQuery())
-            const todoIdList = [] as number[]
-            const todoMap = {} as { [key: number]: Todo }
-
-            for (const todo of todoList) {
-                todoIdList.push(todo.id)
-                todoMap[todo.id] = todo
-            }
-
-            return {
-                todoIdList,
-                todoMap
-            }
+    const TodoMatchedKeyListQuery = domain.query({
+        name: 'TodoMatchedKeyListQuery',
+        impl: ({ query }) => {
+            return query(TodoMatchedListQuery()).map(todo => todo.id)
         }
     })
-
-    const TodoIdListQuery = domain.query({
-        name: 'TodoIdListQuery',
-        impl: ({ get }) => {
-            const todoInfo = get(TodoInfoQuery())
-            return todoInfo.todoIdList
-        }
-    })
-
-
-    const TodoMapQuery = domain.query({
-        name: 'TodoMapQuery',
-        impl: ({ get }) => {
-            const todoInfo = get(TodoInfoQuery())
-            return todoInfo.todoMap
-        }
-    })
-
-    const TodoItemQuery = domain.query({
-        name: 'TodoItemQuery',
-        impl: ({ get }, todoId: number) => {
-            const todoMap = get(TodoMapQuery())
-            return todoMap[todoId]
-        }
-    })
-
 
 
     return {
@@ -138,8 +99,7 @@ const TodoAppMainWidget = Remesh.widget(domain => {
             ...todoListDomain.query,
             TodoMatchedListQuery,
             TodoFilteredListQuery,
-            TodoIdListQuery,
-            TodoItemQuery
+            TodoMatchedKeyListQuery
         },
         event: {
             ...todoListDomain.event

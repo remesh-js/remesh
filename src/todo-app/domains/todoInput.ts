@@ -12,15 +12,15 @@ export const TodoInputDomain = Remesh.domain({
         const TodoInputQuery = domain.query({
             name: 'TodoInputQuery',
             impl: ({ get }) => {
-                const todoInput = get(TodoInputState)
+                const todoInput = get(TodoInputState())
                 return todoInput
             }
         })
 
         const updateTodoInput = domain.command({
             name: 'updateTodoInput',
-            impl: (_, newTodoInput: string) => {
-                return TodoInputState(newTodoInput)
+            impl: ({ set }, newTodoInput: string) => {
+                return set(TodoInputState().new(newTodoInput))
             }
         })
 

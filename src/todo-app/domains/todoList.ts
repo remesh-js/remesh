@@ -1,10 +1,12 @@
 import { map } from 'rxjs/operators'
-import { Remesh, RemeshEventPayload } from '../../remesh'
+import { Remesh, RemeshEventItem } from '../../remesh'
+
+import { ListWidget } from '../../remesh/widgets/list'
 
 import { merge, of } from 'rxjs'
 
 export type Todo = {
-    id: number
+    id: string
     content: string
     completed: boolean
 }
@@ -19,17 +21,27 @@ export type AddTodoSucceededEventData = {
 
 
 export type UpdateTodoPayload = {
-    todoId: number
+    todoId: string
     content: string
 }
 
 export const TodoListDomain = Remesh.domain({
     name: 'TodoListDomain',
     impl: domain => {
-        const TodoListState = domain.state<Todo[]>({
-            name: 'TodoListState',
-            default: []
-        })
+
+        const listWidget = domain.use(ListWidget({
+            name: 'TodoList',
+            getKey: (todo: Todo) => {
+                return todo.id
+            },
+            createItem: (todoId): Todo => {
+                return {
+                    id: todoId,
+                    content: '',
+                    completed: false
+                }
+            }
+        }))
 
         const AddTodoFailedEvent = domain.event<AddTodoFailedEventData>({
             name: 'AddTodoFailedEvent'
@@ -39,120 +51,78 @@ export const TodoListDomain = Remesh.domain({
             name: 'AddTodoSuccessEvent'
         })
 
-        const setTodoList = domain.command({
-            name: 'setTodos',
-            impl: ({ }, todos: Todo[]) => {
-                return TodoListState(todos)
-            }
-        })
-
         let todoUid = 0
 
         const addTodo = domain.command({
             name: 'addTodo',
-            impl: ({ get }, todoContent: string) => {
-                const todoList = get(TodoListState)
-
+            impl: ({ emit }, todoContent: string) => {
                 if (todoContent.length === 0) {
-                    return AddTodoFailedEvent({
+                    return emit(AddTodoFailedEvent({
                         message: `Unexpected empty todo input`
-                    })
+                    }))
                 }
 
                 const newTodo: Todo = {
-                    id: todoUid++,
+                    id: todoUid++ + '',
                     content: todoContent,
                     completed: false
                 }
 
-                const newTodoList = todoList.concat(newTodo)
-
                 return [
-                    TodoListState(newTodoList),
-                    AddTodoSuccessEvent({ newTodo })
+                    emit(listWidget.event.addItem(newTodo)),
+                    emit(AddTodoSuccessEvent({ newTodo }))
                 ]
-            }
-        })
-
-        const removeTodo = domain.command({
-            name: 'removeTodo',
-            impl: ({ get }, todoId: number) => {
-                const todoList = get(TodoListState)
-                const newTodoList = todoList.filter(todo => todo.id !== todoId)
-
-                return TodoListState(newTodoList)
             }
         })
 
 
         const updateTodo = domain.command({
             name: 'updateTodo',
-            impl: ({ get }, payload: UpdateTodoPayload) => {
+            impl: ({ query, emit }, payload: UpdateTodoPayload) => {
                 if (payload.content.length === 0) {
-                    return removeTodo(payload.todoId)
+                    return emit(listWidget.event.removeItem(payload.todoId))
                 }
 
-                const todoList = get(TodoListState)
-                const newTodoList = todoList.map(todo => {
-                    if (todo.id !== payload.todoId) {
-                        return todo
-                    }
-                    return {
-                        ...todo,
-                        content: payload.content
-                    }
-                })
+                const todo = query(listWidget.query.ItemQuery(payload.todoId))
 
-                return TodoListState(newTodoList)
+                return emit(listWidget.event.updateItem({
+                    ...todo,
+                    content: payload.content
+                }))
             }
         })
 
         const toggleTodo = domain.command({
             name: 'toggleTodo',
-            impl: ({ get }, todoId: number) => {
-                const todoList = get(TodoListState)
-                const newTodoList = todoList.map(todo => {
-                    if (todo.id !== todoId) {
-                        return todo
-                    }
-                    return {
-                        ...todo,
-                        completed: !todo.completed
-                    }
-                })
+            impl: ({ query, emit }, todoId: string) => {
+                const todo = query(listWidget.query.ItemQuery(todoId))
 
-                return TodoListState(newTodoList)
+                return emit(listWidget.event.updateItem({
+                    ...todo,
+                    completed: !todo.completed
+                }))
             }
         })
 
         const toggleAllTodos = domain.command({
             name: 'toggleAllTodos',
-            impl: ({ get }) => {
-                const todoList = get(TodoListState)
-                const isAllCompleted = get(IsAllCompletedQuery())
+            impl: ({ get, set, emit, query }) => {
+                const isAllCompleted = query(IsAllCompletedQuery())
+                const todoList = query(listWidget.query.ItemListQuery())
 
-                const newTodoList = todoList.map(todo => {
-                    return {
+                return todoList.map(todo => {
+                    return emit(listWidget.event.updateItem({
                         ...todo,
                         completed: !isAllCompleted
-                    }
+                    }))
                 })
-
-                return TodoListState(newTodoList)
-            }
-        })
-
-        const TodoListQuery = domain.query({
-            name: 'TodoListQuery',
-            impl: ({ get }) => {
-                return get(TodoListState)
             }
         })
 
         const TodoSortedListQuery = domain.query({
             name: 'TodoSortedListQuery',
-            impl: ({ get }) => {
-                const todoList = get(TodoListState)
+            impl: ({ query }) => {
+                const todoList = query(listWidget.query.ItemListQuery())
                 const activeTodoList: Todo[] = []
                 const completedTodoList: Todo[] = []
 
@@ -173,8 +143,8 @@ export const TodoListDomain = Remesh.domain({
 
         const IsAllCompletedQuery = domain.query({
             name: 'IsAllCompletedQuery',
-            impl: ({ get }) => {
-                const { activeTodoList, completedTodoList } = get(TodoSortedListQuery())
+            impl: ({ query }) => {
+                const { activeTodoList, completedTodoList } = query(TodoSortedListQuery())
 
                 return activeTodoList.length === 0 && completedTodoList.length > 0
             }
@@ -182,8 +152,8 @@ export const TodoListDomain = Remesh.domain({
 
         const TodoItemLeftCountQuery = domain.query({
             name: 'TodoItemLeftCountQuery',
-            impl: ({ get }) => {
-                const { activeTodoList } = get(TodoSortedListQuery())
+            impl: ({ query }) => {
+                const { activeTodoList } = query(TodoSortedListQuery())
                 return activeTodoList.length
             }
         })
@@ -207,21 +177,11 @@ export const TodoListDomain = Remesh.domain({
                     map(updateTodoPayload => updateTodo(updateTodoPayload))
                 )
 
-                const removeTodo$ = fromEvent(removeTodo.Event).pipe(
-                    map(todoId => removeTodo(todoId))
-                )
-
-                const setTodoList$ = fromEvent(setTodoList.Event).pipe(
-                    map(todoList => setTodoList(todoList))
-                )
-
                 return merge(
                     addTodo$,
                     updateTodo$,
-                    removeTodo$,
                     toggleAllTodos$,
-                    toggleTodo$,
-                    setTodoList$
+                    toggleTodo$
                 )
             }
         })
@@ -239,18 +199,20 @@ export const TodoListDomain = Remesh.domain({
             event: {
                 AddTodoFailedEvent,
                 AddTodoSuccessEvent,
-                SetTodoListEvent: setTodoList.Event,
+                SetTodoListEvent: listWidget.event.setLIst,
                 AddTodoEvent: addTodo.Event,
                 ToggleAllTodosEvent: toggleAllTodos.Event,
                 UpdateTodoEvent: updateTodo.Event,
-                RemoveTodoEvent: removeTodo.Event,
+                RemoveTodoEvent: listWidget.event.removeItem,
                 ToggleTodoEvent: toggleTodo.Event
             },
             query: {
-                TodoListQuery,
+                TodoKeyListQuery: listWidget.query.KeyListQuery,
+                TodoListQuery: listWidget.query.ItemListQuery,
                 IsAllCompletedQuery,
                 TodoSortedListQuery,
-                TodoItemLeftCountQuery
+                TodoItemLeftCountQuery,
+                TodoItemQuery: listWidget.query.ItemQuery
             }
         }
     }
@@ -261,7 +223,7 @@ export const TodoListExtern = Remesh.extern({
     default: [] as Todo[],
     impl: ({ getEvent }, todos: Todo[]) => {
         return {
-            preload: (): RemeshEventPayload<Todo[]> => {
+            preload: (): RemeshEventItem<Todo[]> => {
                 return getEvent(TodoListDomain).SetTodoListEvent(todos)
             }
         }
