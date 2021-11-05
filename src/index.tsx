@@ -8,7 +8,7 @@ import { TodoAppRoot } from './todo-app';
 
 const initialTodoList: Todo[] = [
   {
-    id: -1,
+    id: '-1',
     content: 'learn remesh',
     completed: true,
   },

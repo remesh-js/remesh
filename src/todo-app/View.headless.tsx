@@ -55,17 +55,17 @@ export const TodoHeader = remise(function TodoHeader() {
 
 export const TodoList = remise(function TodoList() {
   const todoListDomain = useRemeshDomain(TodoAppMainDomain);
-  const matchedTodoIdList = useRemeshQuery(
-    todoListDomain.query.TodoIdListQuery()
+  const matchedTodoKeyList = useRemeshQuery(
+    todoListDomain.query.TodoMatchedKeyListQuery()
   );
 
   return {
-    matchedTodoIdList,
+    matchedTodoKeyList,
   };
 });
 
 type TodoItemProps = {
-  todoId: number;
+  todoId: string;
 };
 
 export const TodoItem = remise(function TodoItem(props: TodoItemProps) {

@@ -14,14 +14,14 @@ export const TodoFilterDomain = Remesh.domain({
         const TodoFilterQuery = domain.query({
             name: 'TodoFilterQuery',
             impl: ({ get }) => {
-                return get(TodoFilterState)
+                return get(TodoFilterState())
             }
         })
 
         const updateTodoFilter = domain.command({
             name: 'changeTodoFilter',
-            impl: ({ }, newTodoFilter: TodoFilter) => {
-                return TodoFilterState(newTodoFilter)
+            impl: ({ set }, newTodoFilter: TodoFilter) => {
+                return set(TodoFilterState().new(newTodoFilter))
             }
         })
 
