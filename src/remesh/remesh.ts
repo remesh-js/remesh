@@ -3,10 +3,7 @@ import { noop, Observable, Subject, Subscription } from "rxjs"
 import shallowEqual from 'shallowequal'
 
 type RemeshInjectedContext = {
-  query: <T, U>(payload: RemeshQueryPayload<T, U>) => U
-  get: <T, U>(stateItem: RemeshStateItem<T, U>) => U
-  set: <T, U>(newStateItem: RemeshNewStateItem<T, U>) => RemeshStateSetterPayload<T, U>
-  emit: <T, U>(eventItem: RemeshEventItem<T, U>) => RemeshEventPayload<T, U>
+  get: <T, U>(input: RemeshStateItem<T, U> | RemeshQueryPayload<T, U>) => U
   fromEvent: <T, U>(Event: RemeshEvent<T, U>) => Observable<U>
   fromTask: <T>(Task: RemeshTaskPayload<T>) => Observable<RemeshTaskOutput>
 }
@@ -20,20 +17,16 @@ export type RemeshEvent<T, U> = {
   eventId: number
   eventName: string
   impl?: (context: RemeshEventContext, arg: T) => U
-  (arg: T): RemeshEventItem<T, U>
+  (arg: T): RemeshEventPayload<T, U>
   Domain?: RemeshDomain<any>
 }
 
-export type RemeshEventItem<T, U = T> = {
-  type: "RemeshEventItem"
+export type RemeshEventPayload<T, U = T> = {
+  type: "RemeshEventPayload"
   arg: T
   Event: RemeshEvent<T, U>
 }
 
-export type RemeshEventPayload<T, U = T> = {
-  type: 'RemeshEventPayload',
-  eventItem: RemeshEventItem<T, U>
-}
 
 export type RemeshEventOptions<T, U> = {
   name: string
@@ -49,7 +42,7 @@ export const RemeshEvent = <U, T = U>(
 
   const Event = ((arg) => {
     return {
-      type: "RemeshEventItem",
+      type: "RemeshEventPayload",
       arg,
       Event: Event,
     }
@@ -79,14 +72,7 @@ export type RemeshStateItem<T, U> = {
   type: "RemeshStateItem",
   arg: T,
   State: RemeshState<T, U>
-  new: (newState: U) => RemeshNewStateItem<T, U>
-}
-
-export type RemeshNewStateItem<T, U> = {
-  type: "RemeshNewStateItem",
-  arg: T,
-  State: RemeshState<T, U>
-  newState: U
+  new: (newState: U) => RemeshStatePayload<T, U>
 }
 
 export type RemeshDefaultStateOptions<T> = {
@@ -98,13 +84,15 @@ export type RemeshDefaultStateOptions<T> = {
 export const RemeshDefaultState = <T>(options: RemeshDefaultStateOptions<T>): RemeshState<void, T> => {
   return RemeshState({
     name: options.name,
-    impl: () => options.default
+    impl: () => options.default,
+    compare: options.compare
   })
 }
 
-export type RemeshStateSetterPayload<T, U> = {
+export type RemeshStatePayload<T, U> = {
   type: 'RemeshStateSetterPayload',
-  newStateItem: RemeshNewStateItem<T, U>
+  stateItem: RemeshStateItem<T, U>
+  newState: U
 }
 
 export type RemeshStateOptions<T, U> = {
@@ -132,9 +120,8 @@ export const RemeshState = <U, T = void>(options: RemeshStateOptions<T, U>): Rem
       State,
       new: (newState) => {
         return {
-          type: 'RemeshNewStateItem',
-          arg,
-          State,
+          type: 'RemeshStateSetterPayload',
+          stateItem,
           newState
         }
       }
@@ -158,7 +145,6 @@ export const RemeshState = <U, T = void>(options: RemeshStateOptions<T, U>): Rem
 
 export type RemeshQueryContext = {
   get: RemeshInjectedContext['get']
-  query: RemeshInjectedContext['query']
 }
 
 export type RemeshQuery<T, U> = {
@@ -221,13 +207,10 @@ export const RemeshQuery = <U, T = void>(options: RemeshQueryOptions<T, U>): Rem
 
 export type RemeshCommandContext = {
   get: RemeshInjectedContext['get']
-  query: RemeshInjectedContext['query']
-  set: RemeshInjectedContext['set'],
-  emit: RemeshInjectedContext['emit']
 }
 
 export type RemeshCommandOutput =
-  | RemeshStateSetterPayload<any, any>
+  | RemeshStatePayload<any, any>
   | RemeshEventPayload<any, any>
   | RemeshCommandPayload<any>
   | RemeshCommandOutput[]
@@ -293,7 +276,7 @@ export type RemeshTaskPayload<T> = {
 
 export type RemeshTaskOutput =
   | RemeshCommandPayload<any>
-  | RemeshEventItem<any, any>
+  | RemeshEventPayload<any, any>
   | RemeshTaskOutput[]
 
 export type RemeshTask<T> = {
@@ -633,7 +616,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     return getTaskExternStorage(Extern).currentValue
   }
 
-  const getStateStorageKey = <T, U>(stateItem: RemeshStateItem<T, U> | RemeshNewStateItem<T, U>): string => {
+  const getStateStorageKey = <T, U>(stateItem: RemeshStateItem<T, U>): string => {
     return `State(${stateItem.State.stateId}):${stateItem.State.stateName}(${JSON.stringify(stateItem.arg)})`
   }
 
@@ -641,7 +624,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     return `State(${queryPayload.Query.queryId}):${queryPayload.Query.queryName}(${JSON.stringify(queryPayload.arg)})`
   }
 
-  const getStateStorage = <T, U>(stateItem: RemeshStateItem<T, U> | RemeshNewStateItem<T, U>): RemeshStateStorage<T, U> => {
+  const getStateStorage = <T, U>(stateItem: RemeshStateItem<T, U>): RemeshStateStorage<T, U> => {
     const domainStorage = getDomainStorage(stateItem.State.Domain ?? DefaultDomain)
     const key = getStateStorageKey(stateItem)
     const stateStorage = domainStorage.stateMap.get(key)
@@ -728,15 +711,20 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     const { Query } = queryPayload
 
     const queryContext: RemeshQueryContext = {
-      get: (stateItem) => {
-        const upstreamStateStorage = getStateStorage(stateItem)
-        upstreamSet.add(upstreamStateStorage)
-        return remeshInjectedContext.get(stateItem)
-      },
-      query: (queryPayload) => {
-        const upstreamQueryStorage = getQueryStorage(queryPayload)
-        upstreamSet.add(upstreamQueryStorage)
-        return remeshInjectedContext.query(queryPayload)
+      get: (input) => {
+        if (input.type === 'RemeshStateItem') {
+          const upstreamStateStorage = getStateStorage(input)
+          upstreamSet.add(upstreamStateStorage)
+          return remeshInjectedContext.get(input)
+        }
+
+        if (input.type === 'RemeshQueryPayload') {
+          const upstreamQueryStorage = getQueryStorage(input)
+          upstreamSet.add(upstreamQueryStorage)
+          return remeshInjectedContext.get(input)
+        }
+
+        throw new Error(`Unexpected input in ctx.get(..): ${input}`)
       }
     }
 
@@ -1015,24 +1003,18 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
   }
 
   const remeshInjectedContext: RemeshInjectedContext = {
-    get: (stateItem) => {
-      return getCurrentState(stateItem)
-    },
-    set: (newStateItem) => {
-      return {
-        type: 'RemeshStateSetterPayload',
-        newStateItem
+    get: (input) => {
+      if (input.type === 'RemeshStateItem') {
+        return getCurrentState(input)
       }
-    },
-    emit: (eventItem) => {
-      return {
-        type: 'RemeshEventPayload',
-        eventItem
+
+      if (input.type === 'RemeshQueryPayload') {
+        return getCurrentQueryValue(input)
       }
+
+      throw new Error(`Unexpected input in ctx.get(..): ${input}`)
     },
-    query: (queryPayload) => {
-      return getCurrentQueryValue(queryPayload)
-    },
+
     fromTask: taskPayload => {
       return handleTaskPayload(taskPayload)
     },
@@ -1055,17 +1037,24 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     queryStorage.upstreamSet.clear()
 
     const queryContext: RemeshQueryContext = {
-      get: (stateItem) => {
-        const upstreamStateStorage = getStateStorage(stateItem)
-        queryStorage.upstreamSet.add(upstreamStateStorage)
-        upstreamStateStorage.downstreamSet.add(queryStorage)
-        return remeshInjectedContext.get(stateItem)
-      },
-      query: (queryPayload) => {
-        const upstreamQueryStorage = getQueryStorage(queryPayload)
-        queryStorage.upstreamSet.add(upstreamQueryStorage)
-        upstreamQueryStorage.downstreamSet.add(queryStorage)
-        return remeshInjectedContext.query(queryPayload)
+      get: (input) => {
+        if (input.type === 'RemeshStateItem') {
+          const stateItem = input
+          const upstreamStateStorage = getStateStorage(stateItem)
+          queryStorage.upstreamSet.add(upstreamStateStorage)
+          upstreamStateStorage.downstreamSet.add(queryStorage)
+          return remeshInjectedContext.get(stateItem)
+        }
+
+        if (input.type === 'RemeshQueryPayload') {
+          const queryPayload = input
+          const upstreamQueryStorage = getQueryStorage(queryPayload)
+          queryStorage.upstreamSet.add(upstreamQueryStorage)
+          upstreamQueryStorage.downstreamSet.add(queryStorage)
+          return remeshInjectedContext.get(queryPayload)
+        }
+
+        throw new Error(`Unexpected input in ctx.get(..): ${input}`)
       }
     }
 
@@ -1146,18 +1135,18 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     tick.commit()
   }
 
-  const handleStatePayload = (statePayload: RemeshStateSetterPayload<any, any>) => {
-    const stateStorage = getStateStorage(statePayload.newStateItem)
-    const isEqual = statePayload.newStateItem.State.compare(stateStorage.currentState, statePayload.newStateItem.newState)
+  const handleStatePayload = (statePayload: RemeshStatePayload<any, any>) => {
+    const stateStorage = getStateStorage(statePayload.stateItem)
+    const isEqual = statePayload.stateItem.State.compare(stateStorage.currentState, statePayload.newState)
 
 
     if (isEqual) {
       return
     }
 
-    stateStorage.currentArg = statePayload.newStateItem.arg
-    stateStorage.currentKey = getStateStorageKey(statePayload.newStateItem)
-    stateStorage.currentState = statePayload.newStateItem.newState
+    stateStorage.currentArg = statePayload.stateItem.arg
+    stateStorage.currentKey = getStateStorageKey(statePayload.stateItem)
+    stateStorage.currentState = statePayload.newState
 
     /**
      * updateQueryStorage may update upstream.downstreamSet
@@ -1171,7 +1160,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
   }
 
   const handleEventPayload = <T, U = T>(eventPayload: RemeshEventPayload<T, U>) => {
-    const { Event, arg } = eventPayload.eventItem
+    const { Event, arg } = eventPayload
     const eventStorage = getEventStorage(Event)
 
     if (Event.impl) {
@@ -1211,9 +1200,6 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     const { Command, arg } = commandPayload
     const commandContext: RemeshCommandContext = {
       get: remeshInjectedContext.get,
-      set: remeshInjectedContext.set,
-      query: remeshInjectedContext.query,
-      emit: remeshInjectedContext.emit
     }
     const commandOutput = Command.impl(commandContext, arg)
 
@@ -1265,8 +1251,8 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     if (taskOutput.type === 'RemeshCommandPayload') {
       handleCommandOutput(taskOutput)
       return
-    } else if (taskOutput.type === 'RemeshEventItem') {
-      handleEventPayload(remeshInjectedContext.emit(taskOutput))
+    } else if (taskOutput.type === 'RemeshEventPayload') {
+      handleEventPayload(taskOutput)
       return
     }
 
@@ -1363,8 +1349,8 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     dirtySet.clear()
   }
 
-  const emit = <T, U>(eventItem: RemeshEventItem<T, U>) => {
-    handleEventPayload(remeshInjectedContext.emit(eventItem))
+  const emit = <T, U>(eventItem: RemeshEventPayload<T, U>) => {
+    handleEventPayload(eventItem)
   }
 
 

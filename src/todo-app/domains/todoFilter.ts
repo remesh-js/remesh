@@ -20,8 +20,8 @@ export const TodoFilterDomain = Remesh.domain({
 
         const updateTodoFilter = domain.command({
             name: 'changeTodoFilter',
-            impl: ({ set }, newTodoFilter: TodoFilter) => {
-                return set(TodoFilterState().new(newTodoFilter))
+            impl: ({  }, newTodoFilter: TodoFilter) => {
+                return (TodoFilterState().new(newTodoFilter))
             }
         })
 
