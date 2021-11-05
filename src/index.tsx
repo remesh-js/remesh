@@ -1,31 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import { RemeshRoot } from './remesh/react';
-
-import { TodoListExtern } from './todo-app/domains/todoList';
-import { Todo } from './todo-app/domains/todoApp';
-import { TodoAppRoot } from './todo-app';
-
-const initialTodoList: Todo[] = [
-  {
-    id: '-1',
-    content: 'learn remesh',
-    completed: true,
-  },
-];
 
 ReactDOM.render(
-  <React.StrictMode>
-    <RemeshRoot
-      options={{
-        name: 'TodoAppStore',
-        externs: [TodoListExtern(initialTodoList)],
-      }}
-    >
-      <TodoAppRoot />
-    </RemeshRoot>
-  </React.StrictMode>,
+  <React.StrictMode>Hello React</React.StrictMode>,
   document.getElementById('root')
 );
-
-window.ReactDOM = ReactDOM;
