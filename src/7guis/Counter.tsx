@@ -61,7 +61,14 @@ export const CounterApp = () => {
   };
 
   return (
-    <div>
+    <div
+      style={{
+        width: 400,
+        border: '1px solid #eaeaea',
+        boxSizing: 'border-box',
+        padding: 10,
+      }}
+    >
       <h2>Counter</h2>
       <input type="number" readOnly value={count} />
       <label>

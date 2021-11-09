@@ -133,7 +133,13 @@ export const TemperatureConverterApp = () => {
   };
 
   return (
-    <div>
+    <div
+      style={{
+        border: '1px solid #eaeaea',
+        boxSizing: 'border-box',
+        padding: 10,
+      }}
+    >
       <h2>Temperature Converter</h2>
       <div>
         <input type="text" value={celsius} onChange={handleCelsius} />

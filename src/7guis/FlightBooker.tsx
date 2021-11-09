@@ -228,7 +228,14 @@ export const FlightBookerApp = () => {
   };
 
   return (
-    <div>
+    <div
+      style={{
+        width: 400,
+        border: '1px solid #eaeaea',
+        boxSizing: 'border-box',
+        padding: 10,
+      }}
+    >
       <h2>Flight Booker</h2>
       <div>
         <select value={option} onChange={handleOptionChange}>
