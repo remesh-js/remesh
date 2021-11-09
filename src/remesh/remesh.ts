@@ -35,7 +35,7 @@ export type RemeshEventOptions<T, U> = {
 
 let eventUid = 0
 
-export const RemeshEvent = <U, T = U>(
+export const RemeshEvent = <T = void, U = T>(
   options: RemeshEventOptions<T, U>
 ): RemeshEvent<T, U> => {
   const eventId = eventUid++
@@ -642,8 +642,6 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
       downstreamSet: new Set(),
     })
 
-    console.log('create', key)
-
     return getStateStorage(stateItem)
   }
 
@@ -899,10 +897,6 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
   const clearStateStorage = <T, U>(stateStorage: RemeshStateStorage<T, U>) => {
     const domainStorage = getDomainStorage(stateStorage.State.Domain ?? DefaultDomain)
-
-    if (domainStorage.stateMap.has(stateStorage.currentKey)) {
-      console.log('delete', stateStorage.currentKey)
-    }
 
     domainStorage.stateMap.delete(stateStorage.currentKey)
   }
