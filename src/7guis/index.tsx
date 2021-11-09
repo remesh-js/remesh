@@ -1,15 +1,38 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 
-import { Remesh } from '../remesh';
+import { RemeshRoot } from '../remesh/react';
+
+import { CounterApp } from './Counter';
+import { TemperatureConverterApp } from './TemperatureConverter';
+import { FlightBookerApp } from './FlightBooker';
+import { TimerApp } from './Timer';
 
 const Root = () => {
-  return <>Hello 7guis</>;
+  return (
+    <div>
+      <h1>7GUIs in React/TypeScript/Remesh</h1>
+      <p>
+        This is a live version of an implementation (source) of 7GUIs with
+        React, TypeScript and Remesh.
+      </p>
+      <hr />
+      <CounterApp />
+      <hr />
+      <TemperatureConverterApp />
+      <hr />
+      <FlightBookerApp />
+      <hr />
+      <TimerApp />
+    </div>
+  );
 };
 
 ReactDOM.render(
   <React.StrictMode>
-    <Root />
+    <RemeshRoot>
+      <Root />
+    </RemeshRoot>
   </React.StrictMode>,
   document.getElementById('root')
 );
