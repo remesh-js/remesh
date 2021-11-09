@@ -7,6 +7,7 @@ import { CounterApp } from './Counter';
 import { TemperatureConverterApp } from './TemperatureConverter';
 import { FlightBookerApp } from './FlightBooker';
 import { TimerApp } from './Timer';
+import { CRUDApp } from './CRUD';
 
 const Root = () => {
   return (
@@ -24,6 +25,8 @@ const Root = () => {
       <FlightBookerApp />
       <hr />
       <TimerApp />
+      <hr />
+      <CRUDApp />
     </div>
   );
 };
