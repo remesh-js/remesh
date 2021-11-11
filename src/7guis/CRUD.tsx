@@ -1,4 +1,4 @@
-import React, { ComponentPropsWithoutRef, useEffect } from 'react';
+import React from 'react';
 
 import { Remesh } from '../remesh';
 import {
@@ -8,6 +8,7 @@ import {
 } from '../remesh/react';
 
 import { ListWidget } from '../remesh/widgets/list';
+import { OuterClickWrapper } from './OuterClickWrapper';
 
 type Name = {
   name: string;
@@ -187,36 +188,8 @@ export const CRUD = Remesh.domain({
   },
 });
 
-type OuterClickWrapperProps = ComponentPropsWithoutRef<'div'> & {
-  onOuterClick?: (event: MouseEvent) => void;
-};
-
-const OuterClickWrapper = (props: OuterClickWrapperProps) => {
-  const { onOuterClick, ...restProps } = props;
-
-  const containerRef = React.useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClick = (event: MouseEvent) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
-        onOuterClick?.(event);
-      }
-    };
-    document.addEventListener('click', handleClick);
-    return () => {
-      document.removeEventListener('click', handleClick);
-    };
-  }, []);
-
-  return <div ref={containerRef} {...restProps}></div>;
-};
-
 export const CRUDApp = () => {
   const domain = useRemeshDomain(CRUD);
-  const emit = useRemeshEmit();
   const filteredList = useRemeshQuery(domain.query.FilteredListQuery());
   const filter = useRemeshQuery(domain.query.FilterPrefixQuery());
   const created = useRemeshQuery(domain.query.CreatedQuery());

@@ -80,7 +80,6 @@ const FlightBooker = Remesh.domain({
     const EndDateQuery = domain.query({
       name: 'EndDateQuery',
       impl: ({ get }) => {
-        console.log('EndDateQuery');
         const endDateInput = get(EndDateInputState());
         return getDate(endDateInput);
       },

@@ -8,6 +8,7 @@ import { TemperatureConverterApp } from './TemperatureConverter';
 import { FlightBookerApp } from './FlightBooker';
 import { TimerApp } from './Timer';
 import { CRUDApp } from './CRUD';
+import { CircleDrawerApp } from './CircleDrawer';
 
 const Root = () => {
   return (
@@ -27,6 +28,8 @@ const Root = () => {
       <TimerApp />
       <hr />
       <CRUDApp />
+      <hr />
+      <CircleDrawerApp />
     </div>
   );
 };
