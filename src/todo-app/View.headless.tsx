@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 
 import {
-  useRemeshEmit,
   useRemeshEvent,
   useRemeshQuery,
   useRemeshDomain,
@@ -18,8 +17,6 @@ import {
 import { TodoFilter } from './domains/todoFilter';
 
 export const TodoHeader = remise(function TodoHeader() {
-  const emit = useRemeshEmit();
-
   const todoAppHeaderDomain = useRemeshDomain(TodoAppHeaderDomain);
 
   const todoInput = useRemeshQuery(todoAppHeaderDomain.query.TodoInputQuery());
@@ -29,15 +26,15 @@ export const TodoHeader = remise(function TodoHeader() {
   );
 
   const handleChange = (value: string) => {
-    emit(todoAppHeaderDomain.event.TodoInputEvent(value));
+    todoAppHeaderDomain.command.updateTodoInput(value);
   };
 
   const handleAdd = () => {
-    emit(todoAppHeaderDomain.event.AddTodoEvent(todoInput));
+    todoAppHeaderDomain.command.addTodo(todoInput);
   };
 
   const handleToggleAllTodos = () => {
-    emit(todoAppHeaderDomain.event.ToggleAllTodosEvent());
+    todoAppHeaderDomain.command.toggleAllTodos();
   };
 
   useRemeshEvent(todoAppHeaderDomain.event.AddTodoFailedEvent, (event) => {
@@ -70,7 +67,6 @@ type TodoItemProps = {
 
 export const TodoItem = remise(function TodoItem(props: TodoItemProps) {
   const todoListDomain = useRemeshDomain(TodoAppMainDomain);
-  const emit = useRemeshEmit();
 
   const todo = useRemeshQuery(todoListDomain.query.TodoItemQuery(props.todoId));
 
@@ -85,12 +81,10 @@ export const TodoItem = remise(function TodoItem(props: TodoItemProps) {
     if (text === todo.content) {
       setEdit(false);
     } else {
-      emit(
-        todoListDomain.event.UpdateTodoEvent({
-          todoId: todo.id,
-          content: text,
-        })
-      );
+      todoListDomain.command.updateTodo({
+        todoId: todo.id,
+        content: text,
+      });
       setText('');
       setEdit(false);
     }
@@ -102,11 +96,11 @@ export const TodoItem = remise(function TodoItem(props: TodoItemProps) {
   };
 
   const handleRemove = () => {
-    emit(todoListDomain.event.RemoveTodoEvent(props.todoId));
+    todoListDomain.command.removeTodo(props.todoId);
   };
 
   const handleToggle = () => {
-    emit(todoListDomain.event.ToggleTodoEvent(props.todoId));
+    todoListDomain.command.toggleTodo(props.todoId);
   };
 
   return {
@@ -122,8 +116,6 @@ export const TodoItem = remise(function TodoItem(props: TodoItemProps) {
 });
 
 export const TodoFooter = remise(function TodoFooter() {
-  const emit = useRemeshEmit();
-
   const todoAppFooterDomain = useRemeshDomain(TodoAppFooterDomain);
 
   const itemLeft = useRemeshQuery(
@@ -134,7 +126,7 @@ export const TodoFooter = remise(function TodoFooter() {
   );
 
   const handleSwitchTodoFilter = (todoFilter: TodoFilter) => {
-    emit(todoAppFooterDomain.event.ChangeTodoFilterEvent(todoFilter));
+    todoAppFooterDomain.command.updateTodoFilter(todoFilter);
   };
 
   return {

@@ -1,5 +1,3 @@
-import { merge } from 'rxjs';
-import { map } from 'rxjs/operators';
 import { Remesh } from '../remesh';
 
 export type ListWidgetOptions<T> = {
@@ -22,30 +20,16 @@ export const ListWidget = <T>(options: ListWidgetOptions<T>) => {
       },
     });
 
-    const KeyListQuery = domain.query({
-      name: `${options.name}.KeyListQuery`,
-      impl: ({ get }) => {
-        return get(KeyListState());
-      },
-    });
-
-    const ItemQuery = domain.query({
-      name: `${options.name}.ItemQuery`,
-      impl: ({ get }, key: string) => {
-        return get(ItemState(key));
-      },
-    });
-
     const ItemListQuery = domain.query({
       name: `${options.name}.ItemListQuery`,
       impl: ({ get }) => {
-        return get(KeyListQuery()).map((key) => get(ItemQuery(key)));
+        return get(KeyListState()).map((key) => get(ItemState(key)));
       },
     });
 
     const setList = domain.command({
       name: `${options.name}.setList`,
-      impl: ({}, list: T[]) => {
+      impl: ({ }, list: T[]) => {
         const keyList = list.map(options.getKey);
 
         return [
@@ -58,7 +42,7 @@ export const ListWidget = <T>(options: ListWidgetOptions<T>) => {
     const addItem = domain.command({
       name: `${options.name}.addItem`,
       impl: ({ get }, newItem: T) => {
-        const keyList = get(KeyListQuery());
+        const keyList = get(KeyListState());
         const newKey = options.getKey(newItem);
 
         if (keyList.includes(newKey)) {
@@ -96,41 +80,17 @@ export const ListWidget = <T>(options: ListWidgetOptions<T>) => {
       },
     });
 
-    const autorun = domain.task({
-      name: `${options.name}.autorun`,
-      impl: ({ fromEvent }) => {
-        const setList$ = fromEvent(setList.Event).pipe(
-          map((todoContent) => setList(todoContent))
-        );
-
-        const addItem$ = fromEvent(addItem.Event).pipe(
-          map((todoContent) => addItem(todoContent))
-        );
-
-        const removeItem$ = fromEvent(removeItem.Event).pipe(
-          map((todoContent) => removeItem(todoContent))
-        );
-
-        const updateItem$ = fromEvent(updateItem.Event).pipe(
-          map((todoContent) => updateItem(todoContent))
-        );
-
-        return merge(setList$, addItem$, removeItem$, updateItem$);
-      },
-    });
-
     return {
-      autorun: [autorun],
-      event: {
-        setLIst: setList.Event,
-        addItem: addItem.Event,
-        removeItem: removeItem.Event,
-        updateItem: updateItem.Event,
+      command: {
+        setList,
+        addItem,
+        removeItem,
+        updateItem,
       },
       query: {
-        KeyListQuery,
+        KeyListQuery: KeyListState.Query,
+        ItemQuery: ItemState.Query,
         ItemListQuery,
-        ItemQuery,
       },
     };
   })();

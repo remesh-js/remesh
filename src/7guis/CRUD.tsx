@@ -1,6 +1,4 @@
 import React, { ComponentPropsWithoutRef, useEffect } from 'react';
-import { merge } from 'rxjs';
-import { map } from 'rxjs/operators';
 
 import { Remesh } from '../remesh';
 import {
@@ -148,7 +146,7 @@ export const CRUD = Remesh.domain({
           return [];
         }
 
-        return nameListDomain.event.updateItem(selected);
+        return nameListDomain.command.updateItem(selected);
       },
     });
 
@@ -162,64 +160,13 @@ export const CRUD = Remesh.domain({
         };
 
         return [
-          nameListDomain.event.addItem(newItem),
+          nameListDomain.command.addItem(newItem),
           updateCreated({ name: '', surname: '' }),
         ];
       },
     });
 
-    const mainTask = domain.task({
-      name: 'MainTask',
-      impl: ({ fromEvent }) => {
-        const updateFilterPrefix$ = fromEvent(updateFilterPrefix.Event).pipe(
-          map((prefix) => {
-            return updateFilterPrefix(prefix);
-          })
-        );
-
-        const updateCreated$ = fromEvent(updateCreated.Event).pipe(
-          map((name) => {
-            return updateCreated(name);
-          })
-        );
-
-        const select$ = fromEvent(selectItem.Event).pipe(
-          map((item) => {
-            return selectItem(item);
-          })
-        );
-
-        const updateSelectedName$ = fromEvent(updateSelectedName.Event).pipe(
-          map((name) => {
-            return updateSelectedName(name);
-          })
-        );
-
-        const createNameItem$ = fromEvent(createNameItem.Event).pipe(
-          map((name) => {
-            return createNameItem(name);
-          })
-        );
-
-        const syncSelected$ = fromEvent(syncSelected.Event).pipe(
-          map(() => {
-            return syncSelected();
-          })
-        );
-
-        return merge(
-          updateFilterPrefix$,
-          updateCreated$,
-          select$,
-          updateSelectedName$,
-          createNameItem$,
-          syncSelected$
-        );
-      },
-    });
-
     return {
-      autorun: [mainTask],
       query: {
         ...nameListDomain.query,
         FilteredListQuery,
@@ -227,14 +174,14 @@ export const CRUD = Remesh.domain({
         FilterPrefixQuery,
         CreatedQuery,
       },
-      event: {
-        ...nameListDomain.event,
-        updateFilterPrefix: updateFilterPrefix.Event,
-        selectItem: selectItem.Event,
-        updateCreated: updateCreated.Event,
-        updateSelectedName: updateSelectedName.Event,
-        createNameItem: createNameItem.Event,
-        syncSelected: syncSelected.Event,
+      command: {
+        ...nameListDomain.command,
+        updateFilterPrefix: updateFilterPrefix,
+        selectItem: selectItem,
+        updateCreated: updateCreated,
+        updateSelectedName: updateSelectedName,
+        createNameItem: createNameItem,
+        syncSelected: syncSelected,
       },
     };
   },
@@ -276,53 +223,49 @@ export const CRUDApp = () => {
   const selected = useRemeshQuery(domain.query.SelectedQuery());
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    emit(domain.event.updateFilterPrefix(e.target.value));
+    domain.command.updateFilterPrefix(e.target.value);
   };
 
   const handleSelect = (itemId: string | null) => {
-    emit(domain.event.selectItem(itemId));
+    domain.command.selectItem(itemId);
   };
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (selected) {
-      emit(
-        domain.event.updateSelectedName({
-          name: e.target.value,
-        })
-      );
+      domain.command.updateSelectedName({
+        name: e.target.value,
+      });
     } else {
-      emit(domain.event.updateCreated({ name: e.target.value }));
+      domain.command.updateCreated({ name: e.target.value });
     }
   };
 
   const handleSurnameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (selected) {
-      emit(
-        domain.event.updateSelectedName({
-          surname: e.target.value,
-        })
-      );
+      domain.command.updateSelectedName({
+        surname: e.target.value,
+      });
     } else {
-      emit(domain.event.updateCreated({ surname: e.target.value }));
+      domain.command.updateCreated({ surname: e.target.value });
     }
   };
 
   const handleCreate = () => {
     if (selected === null) {
-      emit(domain.event.createNameItem());
+      domain.command.createNameItem();
     }
   };
 
   const handleSync = () => {
     if (selected) {
-      emit(domain.event.syncSelected());
+      domain.command.syncSelected();
     }
   };
 
   const handleDelete = () => {
     if (selected) {
-      emit(domain.event.removeItem(selected.id));
-      emit(domain.event.selectItem(null));
+      domain.command.removeItem(selected.id);
+      domain.command.selectItem(null);
     }
   };
 

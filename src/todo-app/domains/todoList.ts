@@ -55,7 +55,7 @@ export const TodoListDomain = Remesh.domain({
 
     const addTodo = domain.command({
       name: 'addTodo',
-      impl: ({}, todoContent: string) => {
+      impl: ({ }, todoContent: string) => {
         if (todoContent.length === 0) {
           return AddTodoFailedEvent({
             message: `Unexpected empty todo input`,
@@ -69,7 +69,7 @@ export const TodoListDomain = Remesh.domain({
         };
 
         return [
-          listWidget.event.addItem(newTodo),
+          listWidget.command.addItem(newTodo),
           AddTodoSuccessEvent({ newTodo }),
         ];
       },
@@ -79,12 +79,12 @@ export const TodoListDomain = Remesh.domain({
       name: 'updateTodo',
       impl: ({ get }, payload: UpdateTodoPayload) => {
         if (payload.content.length === 0) {
-          return listWidget.event.removeItem(payload.todoId);
+          return listWidget.command.removeItem(payload.todoId);
         }
 
         const todo = get(listWidget.query.ItemQuery(payload.todoId));
 
-        return listWidget.event.updateItem({
+        return listWidget.command.updateItem({
           ...todo,
           content: payload.content,
         });
@@ -96,7 +96,7 @@ export const TodoListDomain = Remesh.domain({
       impl: ({ get }, todoId: string) => {
         const todo = get(listWidget.query.ItemQuery(todoId));
 
-        return listWidget.event.updateItem({
+        return listWidget.command.updateItem({
           ...todo,
           completed: !todo.completed,
         });
@@ -110,7 +110,7 @@ export const TodoListDomain = Remesh.domain({
         const todoList = get(listWidget.query.ItemListQuery());
 
         return todoList.map((todo) => {
-          return listWidget.event.updateItem({
+          return listWidget.command.updateItem({
             ...todo,
             completed: !isAllCompleted,
           });
@@ -159,48 +159,25 @@ export const TodoListDomain = Remesh.domain({
       },
     });
 
-    const TodoListAutorunTask = domain.task({
-      name: 'TodoListAutorunTask',
-      impl: ({ fromEvent }) => {
-        const addTodo$ = fromEvent(addTodo.Event).pipe(
-          map((todoContent) => addTodo(todoContent))
-        );
-
-        const toggleAllTodos$ = fromEvent(toggleAllTodos.Event).pipe(
-          map(() => toggleAllTodos())
-        );
-
-        const toggleTodo$ = fromEvent(toggleTodo.Event).pipe(
-          map((todoId) => toggleTodo(todoId))
-        );
-
-        const updateTodo$ = fromEvent(updateTodo.Event).pipe(
-          map((updateTodoPayload) => updateTodo(updateTodoPayload))
-        );
-
-        return merge(addTodo$, updateTodo$, toggleAllTodos$, toggleTodo$);
-      },
-    });
-
-    const TodoListPreloadTask = domain.task({
+    domain.command$({
       name: 'TodoListPreloadTask',
-      impl: ({ getExtern }) => {
-        const todoListExtern = getExtern(TodoListExtern);
-        return of(todoListExtern.preload());
+      impl: ({ }) => {
+        const todoList = domain.getExtern(TodoListExtern);
+        return of(todoList.map(listWidget.command.addItem))
       },
     });
 
     return {
-      autorun: [TodoListAutorunTask, TodoListPreloadTask],
       event: {
         AddTodoFailedEvent,
         AddTodoSuccessEvent,
-        SetTodoListEvent: listWidget.event.setLIst,
-        AddTodoEvent: addTodo.Event,
-        ToggleAllTodosEvent: toggleAllTodos.Event,
-        UpdateTodoEvent: updateTodo.Event,
-        RemoveTodoEvent: listWidget.event.removeItem,
-        ToggleTodoEvent: toggleTodo.Event,
+      },
+      command: {
+        addTodo,
+        updateTodo,
+        removeTodo: listWidget.command.removeItem,
+        toggleTodo,
+        toggleAllTodos,
       },
       query: {
         TodoKeyListQuery: listWidget.query.KeyListQuery,
@@ -216,12 +193,5 @@ export const TodoListDomain = Remesh.domain({
 
 export const TodoListExtern = Remesh.extern({
   name: 'TodoListExtern',
-  default: [] as Todo[],
-  impl: ({ getEvent }, todos: Todo[]) => {
-    return {
-      preload: (): RemeshEventPayload<Todo[]> => {
-        return getEvent(TodoListDomain).SetTodoListEvent(todos);
-      },
-    };
-  },
+  default: [] as Todo[]
 });
