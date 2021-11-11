@@ -14,29 +14,31 @@ const TodoAppHeaderWidget = Remesh.widget((domain) => {
   const todoInputDomain = domain.get(TodoInputDomain);
   const todoListDomain = domain.get(TodoListDomain);
 
-  const TodoHeaderTask = domain.task({
+  domain.command$({
     name: 'TodoHeaderTask',
     impl: ({ fromEvent }) => {
       const clearTodoInput$ = fromEvent(
         todoListDomain.event.AddTodoSuccessEvent
-      ).pipe(map(() => todoInputDomain.event.TodoInputEvent('')));
+      ).pipe(map(() => todoInputDomain.command.updateTodoInput('')));
 
       return merge(clearTodoInput$);
     },
   });
 
   return {
-    autorun: [TodoHeaderTask],
     query: {
       IsAllCompletedQuery: todoListDomain.query.IsAllCompletedQuery,
       ...todoInputDomain.query,
     },
-    event: {
-      AddTodoEvent: todoListDomain.event.AddTodoEvent,
-      ToggleAllTodosEvent: todoListDomain.event.ToggleAllTodosEvent,
-      AddTodoFailedEvent: todoListDomain.event.AddTodoFailedEvent,
-      ...todoInputDomain.event,
+    command: {
+      updateTodoInput: todoInputDomain.command.updateTodoInput,
+      addTodo: todoListDomain.command.addTodo,
+      toggleAllTodos: todoListDomain.command.toggleAllTodos,
     },
+    event: {
+      AddTodoFailedEvent: todoListDomain.event.AddTodoFailedEvent,
+      AddTodoSuccessEvent: todoListDomain.event.AddTodoSuccessEvent,
+    }
   };
 });
 
@@ -90,15 +92,14 @@ const TodoAppMainWidget = Remesh.widget((domain) => {
   });
 
   return {
-    autorun: [],
     query: {
       ...todoListDomain.query,
       TodoMatchedListQuery,
       TodoFilteredListQuery,
       TodoMatchedKeyListQuery,
     },
-    event: {
-      ...todoListDomain.event,
+    command: {
+      ...todoListDomain.command,
     },
   };
 });
@@ -112,8 +113,8 @@ const TodoAppFooterWidget = Remesh.widget((domain) => {
       TodoItemLeftCountQuery: todoListDomain.query.TodoItemLeftCountQuery,
       ...todoFilterDomain.query,
     },
-    event: {
-      ...todoFilterDomain.event,
+    command: {
+      ...todoFilterDomain.command,
     },
   };
 });
@@ -126,9 +127,12 @@ export const TodoAppHeaderDomain = Remesh.domain({
       query: {
         ...header.query,
       },
+      command: {
+        ...header.command,
+      },
       event: {
         ...header.event,
-      },
+      }
     };
   },
 });
@@ -141,8 +145,8 @@ export const TodoAppMainDomain = Remesh.domain({
       query: {
         ...main.query,
       },
-      event: {
-        ...main.event,
+      command: {
+        ...main.command,
       },
     };
   },
@@ -156,8 +160,8 @@ export const TodoAppFooterDomain = Remesh.domain({
       query: {
         ...footer.query,
       },
-      event: {
-        ...footer.event,
+      command: {
+        ...footer.command,
       },
     };
   },

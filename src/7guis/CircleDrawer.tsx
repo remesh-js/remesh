@@ -1,4 +1,4 @@
-import React, { ComponentPropsWithoutRef, useEffect } from 'react';
+import React from 'react';
 import { merge } from 'rxjs';
 import { map } from 'rxjs/operators';
 
@@ -52,14 +52,6 @@ const CircleDrawer = Remesh.domain({
       default: [],
     });
 
-    const HistoryQuery = domain.query({
-      name: 'HistoryQuery',
-      impl: ({ get }) => {
-        const history = get(HistoryState());
-        return history;
-      },
-    });
-
     const HistoryIndexState = domain.state<number>({
       name: 'HistoryIndexState',
       default: 0,
@@ -81,14 +73,6 @@ const CircleDrawer = Remesh.domain({
       name: 'DrawState',
       default: {
         circles: [],
-      },
-    });
-
-    const DrawQuery = domain.query({
-      name: 'DrawQuery',
-      impl: ({ get }) => {
-        const state = get(DrawState());
-        return state;
       },
     });
 
@@ -142,14 +126,6 @@ const CircleDrawer = Remesh.domain({
       default: -1,
     });
 
-    const SelectedIndexQuery = domain.query({
-      name: 'SelectedIndexQuery',
-      impl: ({ get }) => {
-        const index = get(SelectedIndexState());
-        return index;
-      },
-    });
-
     const setSelectedIndex = domain.command({
       name: 'setSelectedIndex',
       impl: ({}, index: number) => {
@@ -200,14 +176,6 @@ const CircleDrawer = Remesh.domain({
       },
     });
 
-    const TooltipsQuery = domain.query({
-      name: 'TooltipsQuery',
-      impl: ({ get }) => {
-        const state = get(TooltipsState());
-        return state;
-      },
-    });
-
     const updateTooltips = domain.command({
       name: 'updateTooltips',
       impl: ({}, newState: TooltipsState) => {
@@ -215,51 +183,20 @@ const CircleDrawer = Remesh.domain({
       },
     });
 
-    const mainTask = domain.task({
-      name: 'mainTask',
-      impl: ({ fromEvent }) => {
-        const draw$ = fromEvent(draw.Event).pipe(map((action) => draw(action)));
-
-        const adjust$ = fromEvent(adjust.Event).pipe(
-          map((action) => adjust(action))
-        );
-        const updateTooltips$ = fromEvent(updateTooltips.Event).pipe(
-          map((tooltipsState) => updateTooltips(tooltipsState))
-        );
-
-        const undo$ = fromEvent(undo.Event).pipe(map(() => undo()));
-        const redo$ = fromEvent(redo.Event).pipe(map(() => redo()));
-
-        const setSelectedIndex$ = fromEvent(setSelectedIndex.Event).pipe(
-          map((index) => setSelectedIndex(index))
-        );
-
-        return merge(
-          draw$,
-          adjust$,
-          undo$,
-          redo$,
-          setSelectedIndex$,
-          updateTooltips$
-        );
-      },
-    });
-
     return {
-      autorun: [mainTask],
       query: {
-        HistoryQuery,
-        DrawQuery,
-        TooltipsQuery,
-        SelectedIndexQuery,
+        HistoryQuery: HistoryState.Query,
+        DrawQuery: DrawState.Query,
+        TooltipsQuery: TooltipsState.Query,
+        SelectedIndexQuery: SelectedIndexState.Query,
       },
-      event: {
-        draw: draw.Event,
-        adjust: adjust.Event,
-        updateTooltips: updateTooltips.Event,
-        undo: undo.Event,
-        redo: redo.Event,
-        setSelectedIndex: setSelectedIndex.Event,
+      command: {
+        draw: draw,
+        adjust: adjust,
+        updateTooltips: updateTooltips,
+        undo: undo,
+        redo: redo,
+        setSelectedIndex: setSelectedIndex,
       },
     };
   },
@@ -280,8 +217,6 @@ export const CircleDrawerApp = () => {
   const domain = useRemeshDomain(CircleDrawer);
   const drawState = useRemeshQuery(domain.query.DrawQuery());
   const tooltipsState = useRemeshQuery(domain.query.TooltipsQuery());
-
-  const emit = useRemeshEmit();
 
   const getCircleInfo = (position: Position) => {
     const circle = drawState.circles.find((circle) => {
@@ -310,12 +245,10 @@ export const CircleDrawerApp = () => {
     const circleInfo = getCircleInfo(position);
 
     if (circleInfo) {
-      emit(
-        domain.event.updateTooltips({
-          type: 'show-tips',
-          index: circleInfo.index,
-        })
-      );
+      domain.command.updateTooltips({
+        type: 'show-tips',
+        index: circleInfo.index,
+      });
     }
   };
 
@@ -325,9 +258,9 @@ export const CircleDrawerApp = () => {
     const circleInfo = getCircleInfo(position);
 
     if (circleInfo) {
-      emit(domain.event.setSelectedIndex(circleInfo.index));
+      domain.command.setSelectedIndex(circleInfo.index);
     } else {
-      emit(domain.event.draw({ position, diameter: 15 }));
+      domain.command.draw({ position, diameter: 15 });
     }
   };
 
@@ -339,13 +272,11 @@ export const CircleDrawerApp = () => {
     const circleInfo = getCircleInfo(position);
 
     if (circleInfo) {
-      emit(
-        domain.event.updateTooltips({
-          type: 'open-slider',
-          index: circleInfo.index,
-          circle: circleInfo.circle,
-        })
-      );
+      domain.command.updateTooltips({
+        type: 'open-slider',
+        index: circleInfo.index,
+        circle: circleInfo.circle,
+      });
     }
   };
 
@@ -357,11 +288,9 @@ export const CircleDrawerApp = () => {
     const circleInfo = getCircleInfo(position);
 
     if (circleInfo) {
-      emit(
-        domain.event.updateTooltips({
-          type: 'default',
-        })
-      );
+      domain.command.updateTooltips({
+        type: 'default',
+      });
     }
   };
 };

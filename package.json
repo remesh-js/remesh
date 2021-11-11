@@ -19,6 +19,7 @@
     "rxjs": "^7.3.0"
   },
   "dependencies": {
+    "is-plain-object": "^5.0.0",
     "lru-cache": "^6.0.0",
     "shallowequal": "^1.1.0"
   },

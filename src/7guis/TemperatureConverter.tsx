@@ -22,20 +22,6 @@ const TemperatureConverter = Remesh.domain({
       default: '',
     });
 
-    const CelsiusQuery = domain.query({
-      name: 'CelsiusQuery',
-      impl: ({ get }) => {
-        return get(CelsiusState());
-      },
-    });
-
-    const FahrenheitQuery = domain.query({
-      name: 'FahrenheitQuery',
-      impl: ({ get }) => {
-        return get(FahrenheitState());
-      },
-    });
-
     const resetBoth = domain.command({
       name: 'resetBoth',
       impl: () => {
@@ -87,30 +73,14 @@ const TemperatureConverter = Remesh.domain({
       },
     });
 
-    const task = domain.task({
-      name: 'TemperatureConverterTask',
-      impl: ({ fromEvent }) => {
-        const updateCelsius$ = fromEvent(updateCelsius.Event).pipe(
-          map((input) => updateCelsius(input))
-        );
-
-        const updateFahrenheit$ = fromEvent(updateFahrenheit.Event).pipe(
-          map((input) => updateFahrenheit(input))
-        );
-
-        return merge(updateCelsius$, updateFahrenheit$);
-      },
-    });
-
     return {
-      autorun: [task],
       query: {
-        CelsiusQuery,
-        FahrenheitQuery,
+        CelsiusQuery: CelsiusState.Query,
+        FahrenheitQuery: FahrenheitState.Query,
       },
-      event: {
-        updateCelsius: updateCelsius.Event,
-        updateFahrenheit: updateFahrenheit.Event,
+      command: {
+        updateCelsius: updateCelsius,
+        updateFahrenheit: updateFahrenheit,
       },
     };
   },
@@ -122,14 +92,13 @@ export const TemperatureConverterApp = () => {
   const fahrenheit = useRemeshQuery(
     temperatureConverter.query.FahrenheitQuery()
   );
-  const emit = useRemeshEmit();
 
   const handleCelsius = (event: React.ChangeEvent<HTMLInputElement>) => {
-    emit(temperatureConverter.event.updateCelsius(event.target.value));
+    temperatureConverter.command.updateCelsius(event.target.value);
   };
 
   const handleFahrenheit = (event: React.ChangeEvent<HTMLInputElement>) => {
-    emit(temperatureConverter.event.updateFahrenheit(event.target.value));
+    temperatureConverter.command.updateFahrenheit(event.target.value);
   };
 
   return (

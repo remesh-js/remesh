@@ -1,11 +1,10 @@
-import { sign } from 'crypto';
 import React from 'react';
 import { merge, animationFrames, of, NEVER } from 'rxjs';
 import {
   distinctUntilChanged,
   map,
+  mapTo,
   pairwise,
-  startWith,
   switchMap,
   takeUntil,
 } from 'rxjs/operators';
@@ -31,32 +30,12 @@ const Timer = Remesh.domain({
       default: 0,
     });
 
-    const DurationQuery = domain.query({
-      name: 'duration',
-      impl: ({ get }) => {
-        return get(DurationState());
-      },
-    });
-
-    const ElapsedQuery = domain.query({
-      name: 'elapsed',
-      impl: ({ get }) => {
-        return get(ElapsedState());
-      },
-    });
-
     const StartEvent = domain.event({
       name: 'StartEvent',
-      impl: () => {
-        return 1 as const;
-      },
     });
 
     const StopEvent = domain.event({
       name: 'StopEvent',
-      impl: () => {
-        return 0 as const;
-      },
     });
 
     const updateElapsed = domain.command({
@@ -93,46 +72,40 @@ const Timer = Remesh.domain({
       },
     });
 
-    const task = domain.task({
-      name: 'task',
+    domain.command$({
+      name: 'updateElapsed$',
       impl: ({ fromEvent }) => {
-        const updateDuration$ = fromEvent(updateDuration.Event).pipe(
-          map((duration) => updateDuration(duration))
+        const event$ = merge(
+          fromEvent(StartEvent).pipe(mapTo(1)),
+          fromEvent(StopEvent).pipe(mapTo(0))
+        ).pipe(distinctUntilChanged());
+
+        const main$ = event$.pipe(
+          switchMap((signal) => {
+            if (signal === 0) {
+              return NEVER;
+            }
+            return animationFrames().pipe(
+              pairwise(),
+              map(([a, b]) => b.elapsed - a.elapsed),
+              map((increment) => updateElapsed(increment)),
+              takeUntil(fromEvent(StopEvent))
+            );
+          })
         );
 
-        const resetElapsed$ = fromEvent(resetElapsed.Event).pipe(
-          map(() => resetElapsed())
-        );
-
-        const main$ = merge(fromEvent(StartEvent), fromEvent(StopEvent))
-          .pipe(distinctUntilChanged())
-          .pipe(
-            switchMap((signal) => {
-              if (signal === 0) {
-                return NEVER;
-              }
-              return animationFrames().pipe(
-                pairwise(),
-                map(([a, b]) => b.elapsed - a.elapsed),
-                map((increment) => updateElapsed(increment)),
-                takeUntil(fromEvent(StopEvent))
-              );
-            })
-          );
-
-        return merge(main$, updateDuration$, resetElapsed$, of(StartEvent()));
+        return merge(main$, of(StartEvent()));
       },
     });
 
     return {
-      autorun: [task],
       query: {
-        DurationQuery,
-        ElapsedQuery,
+        DurationQuery: DurationState.Query,
+        ElapsedQuery: ElapsedState.Query,
       },
-      event: {
-        resetElapsed: resetElapsed.Event,
-        updateDuration: updateDuration.Event,
+      command: {
+        resetElapsed,
+        updateDuration,
       },
     };
   },
@@ -140,19 +113,18 @@ const Timer = Remesh.domain({
 
 export const TimerApp = () => {
   const timer = useRemeshDomain(Timer);
-  const emit = useRemeshEmit();
   const elapsed = useRemeshQuery(timer.query.ElapsedQuery());
   const duration = useRemeshQuery(timer.query.DurationQuery());
 
   const handleDurationChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const duration = parseInt(event.target.value, 10);
     if (!isNaN(duration)) {
-      emit(timer.event.updateDuration(duration));
+      timer.command.updateDuration(duration);
     }
   };
 
   const handleResetElapsed = () => {
-    emit(timer.event.resetElapsed());
+    timer.command.resetElapsed();
   };
 
   return (

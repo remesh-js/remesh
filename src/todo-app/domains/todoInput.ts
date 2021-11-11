@@ -1,4 +1,3 @@
-import { map } from 'rxjs/operators';
 import { Remesh } from '../../remesh';
 
 export const TodoInputDomain = Remesh.domain({
@@ -9,37 +8,19 @@ export const TodoInputDomain = Remesh.domain({
             default: '',
         });
 
-        const TodoInputQuery = domain.query({
-            name: 'TodoInputQuery',
-            impl: ({ get }) => {
-                const todoInput = get(TodoInputState());
-                return todoInput;
-            },
-        });
-
         const updateTodoInput = domain.command({
             name: 'updateTodoInput',
             impl: ({ }, newTodoInput: string) => {
                 return TodoInputState().new(newTodoInput);
-            },
-        });
-
-        const TodoInputTask = domain.task({
-            name: 'TodoInputTask',
-            impl: ({ fromEvent }) => {
-                return fromEvent(updateTodoInput.Event).pipe(
-                    map((newTodoInput) => updateTodoInput(newTodoInput))
-                );
-            },
-        });
+            }
+        })
 
         return {
-            autorun: [TodoInputTask],
             query: {
-                TodoInputQuery,
+                TodoInputQuery: TodoInputState.Query
             },
-            event: {
-                TodoInputEvent: updateTodoInput.Event,
+            command: {
+                updateTodoInput
             },
         };
     },

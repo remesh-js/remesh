@@ -16,35 +16,20 @@ const Counter = Remesh.domain({
       default: 0,
     });
 
-    const CounterQuery = domain.query({
-      name: 'CounterQuery',
-      impl: ({ get }) => {
-        return get(CounterState());
-      },
-    });
-
     const incre = domain.command({
       name: 'increCommand',
       impl: ({ get }) => {
-        const count = get(CounterQuery());
+        const count = get(CounterState());
         return CounterState().new(count + 1);
       },
     });
 
-    const CounterTask = domain.task({
-      name: 'CounterTask',
-      impl: ({ fromEvent }) => {
-        return fromEvent(incre.Event).pipe(map(() => incre()));
-      },
-    });
-
     return {
-      autorun: [CounterTask],
       query: {
-        CounterQuery,
+        CounterQuery: CounterState.Query,
       },
-      event: {
-        incre: incre.Event,
+      command: {
+        incre,
       },
     };
   },
@@ -54,10 +39,8 @@ export const CounterApp = () => {
   const counter = useRemeshDomain(Counter);
   const count = useRemeshQuery(counter.query.CounterQuery());
 
-  const emit = useRemeshEmit();
-
   const handleIncre = () => {
-    emit(counter.event.incre());
+    counter.command.incre();
   };
 
   return (
