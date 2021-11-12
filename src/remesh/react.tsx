@@ -88,12 +88,21 @@ export const useRemeshQuery = function <T, U>(
 
   const [state, setState] = useState(() => store.query(queryPayload));
 
+  const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null);
+
   useEffect(() => {
-    const subscription = store.subscribeQuery(queryPayload, setState);
     return () => {
-      subscription.unsubscribe();
+      subscriptionRef.current?.unsubscribe();
+      subscriptionRef.current = null;
     };
-  }, [queryPayload, store]);
+  }, [store, store.getKey(queryPayload)]);
+
+  useEffect(() => {
+    if (subscriptionRef.current !== null) {
+      return;
+    }
+    subscriptionRef.current = store.subscribeQuery(queryPayload, setState);
+  }, [store, queryPayload]);
 
   return state;
 };

@@ -9,11 +9,12 @@ import { FlightBookerApp } from './FlightBooker';
 import { TimerApp } from './Timer';
 import { CRUDApp } from './CRUD';
 import { CircleDrawerApp } from './CircleDrawer';
+import { CellsApp } from './Cells';
 
 const Root = () => {
   return (
     <div>
-      <h1>7GUIs in React/TypeScript/Remesh</h1>
+      <h1>7GUIs in React/Remesh/TypeScript</h1>
       <p>
         This is a live version of an implementation (source) of 7GUIs with
         React, TypeScript and Remesh.
@@ -30,6 +31,8 @@ const Root = () => {
       <CRUDApp />
       <hr />
       <CircleDrawerApp />
+      <hr />
+      <CellsApp />
     </div>
   );
 };
