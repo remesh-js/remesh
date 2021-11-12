@@ -45,32 +45,67 @@ type TooltipsState =
       pageY: number;
     };
 
+type HistoryStateItem =
+  | {
+      action: 'add-circle';
+      state: DrawState;
+    }
+  | {
+      action: 'adjust-circle';
+      index: number;
+      state: DrawState;
+    };
+
+type HistoryState = {
+  items: HistoryStateItem[];
+  currentIndex: number;
+};
+
 const CircleDrawer = Remesh.domain({
   name: 'CircleDrawer',
   impl: (domain) => {
-    const HistoryState = domain.state<DrawState[]>({
+    const HistoryState = domain.state<HistoryState>({
       name: 'HistoryState',
-      default: [],
+      default: {
+        items: [],
+        currentIndex: -1,
+      },
     });
 
-    const HistoryIndexState = domain.state<number>({
-      name: 'HistoryIndexState',
-      default: 0,
-    });
-
-    const addState = domain.command({
-      name: 'addState',
-      impl: ({ get }, state: DrawState) => {
+    const recordHistoryState = domain.command({
+      name: 'recordHistoryState',
+      impl: ({ get }, state: HistoryStateItem) => {
         const history = get(HistoryState());
-        const index = get(HistoryIndexState());
-        const currentList = history.slice(0, index + 1);
 
-        const newHistory = [...currentList, state];
+        const previousItems = history.items.slice(0, history.currentIndex + 1);
 
-        return [
-          HistoryState().new(newHistory),
-          HistoryIndexState().new(newHistory.length - 1),
-        ];
+        /**
+         * If the current state is the same as the last state,
+         * then we don't need to record it.
+         * This is because we are going to replace the last state
+         * with the current state.
+         *
+         * This is a bit of a hack, but it works.
+         *
+         * TODO: Find a better way to do this.
+         */
+        if (state.action === 'adjust-circle') {
+          const lastState = previousItems[previousItems.length - 1];
+          if (
+            lastState.action === 'adjust-circle' &&
+            lastState.index === state.index
+          ) {
+            previousItems.pop();
+          }
+        }
+
+        const newItems = [...previousItems, state];
+        const newIndex = newItems.length - 1;
+
+        return HistoryState().new({
+          items: newItems,
+          currentIndex: newIndex,
+        });
       },
     });
 
@@ -81,30 +116,31 @@ const CircleDrawer = Remesh.domain({
       },
     });
 
-    const replaceDrawState = domain.command({
-      name: 'replaceDrawState',
-      impl: ({}, state: DrawState) => {
-        return DrawState().new(state);
-      },
-    });
-
     const undo = domain.command({
       name: 'undo',
       impl: ({ get }) => {
         const history = get(HistoryState());
-        const index = get(HistoryIndexState());
-        const newIndex = index - 1;
+        const canUndo = get(CanUndoQuery());
+        const newIndex = history.currentIndex - 1;
 
-        if (newIndex < 0) {
+        if (!canUndo || newIndex < 0) {
           return [
-            replaceDrawState({ circles: [] }),
-            HistoryIndexState().new(-1),
+            DrawState().new({
+              circles: [],
+            }),
+            HistoryState().new({
+              items: history.items,
+              currentIndex: -1,
+            }),
           ];
         }
 
         return [
-          replaceDrawState(history[newIndex]),
-          HistoryIndexState().new(newIndex),
+          DrawState().new(history.items[newIndex].state),
+          HistoryState().new({
+            items: history.items,
+            currentIndex: newIndex,
+          }),
         ];
       },
     });
@@ -113,17 +149,20 @@ const CircleDrawer = Remesh.domain({
       name: 'redo',
       impl: ({ get }) => {
         const history = get(HistoryState());
-        const index = get(HistoryIndexState());
+        const canRedo = get(CanRedoQuery());
 
-        if (index === history.length - 1) {
+        if (!canRedo) {
           return [];
         }
 
-        const newIndex = index + 1;
+        const newIndex = history.currentIndex + 1;
 
         return [
-          replaceDrawState(history[newIndex]),
-          HistoryIndexState().new(newIndex),
+          DrawState().new(history.items[newIndex].state),
+          HistoryState().new({
+            items: history.items,
+            currentIndex: newIndex,
+          }),
         ];
       },
     });
@@ -131,8 +170,8 @@ const CircleDrawer = Remesh.domain({
     const CanUndoQuery = domain.query({
       name: 'CanUndoQuery',
       impl: ({ get }) => {
-        const index = get(HistoryIndexState());
-        return index >= 0;
+        const history = get(HistoryState());
+        return history.currentIndex >= 0;
       },
     });
 
@@ -140,9 +179,7 @@ const CircleDrawer = Remesh.domain({
       name: 'CanRedoQuery',
       impl: ({ get }) => {
         const history = get(HistoryState());
-        const index = get(HistoryIndexState());
-
-        return index < history.length - 1;
+        return history.currentIndex < history.items.length - 1;
       },
     });
 
@@ -185,7 +222,13 @@ const CircleDrawer = Remesh.domain({
             { position: action.position, diameter: action.diameter },
           ],
         };
-        return [DrawState().new(newState), addState(newState)];
+        return [
+          DrawState().new(newState),
+          recordHistoryState({
+            action: 'add-circle',
+            state: newState,
+          }),
+        ];
       },
     });
 
@@ -207,7 +250,14 @@ const CircleDrawer = Remesh.domain({
           circles,
         };
 
-        return [DrawState().new(newState), addState(newState)];
+        return [
+          DrawState().new(newState),
+          recordHistoryState({
+            action: 'adjust-circle',
+            index: action.index,
+            state: newState,
+          }),
+        ];
       },
     });
 
@@ -220,10 +270,7 @@ const CircleDrawer = Remesh.domain({
 
     const updateTooltips = domain.command({
       name: 'updateTooltips',
-      impl: ({ get }, newState: TooltipsState) => {
-        if (newState.type === 'open-slider') {
-          return [TooltipsState().new(newState), addState(get(DrawState()))];
-        }
+      impl: ({}, newState: TooltipsState) => {
         return TooltipsState().new(newState);
       },
     });
@@ -309,13 +356,30 @@ export const CircleDrawerApp = () => {
   };
 
   const handleLeftClick = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    if (tooltipsState.type !== 'default') {
+      return;
+    }
+
+    const position = { x: e.pageX, y: e.pageY };
+    const circleInfo = getCircleInfo(position);
+
+    if (!circleInfo) {
+      domain.command.draw({ position, diameter: 30 });
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    if (tooltipsState.type !== 'default') {
+      return;
+    }
+
     const position = { x: e.pageX, y: e.pageY };
     const circleInfo = getCircleInfo(position);
 
     if (circleInfo) {
       domain.command.setSelectedIndex(circleInfo.index);
     } else {
-      domain.command.draw({ position, diameter: 30 });
+      domain.command.setSelectedIndex(-1);
     }
   };
 
@@ -332,7 +396,6 @@ export const CircleDrawerApp = () => {
   };
 
   const handleCloseSlider = () => {
-    e.stopPropagation()
     domain.command.updateTooltips({
       type: 'default',
     });
@@ -389,9 +452,10 @@ export const CircleDrawerApp = () => {
           height: 400,
           border: '1px solid #eaeaea',
           boxSizing: 'border-box',
-          padding: 10,
+          overflow: 'hidden',
         }}
         onClick={handleLeftClick}
+        onMouseMove={handleMouseMove}
       >
         {drawState.circles.map((circle, index) => {
           return (
