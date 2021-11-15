@@ -11,8 +11,8 @@ import type { Todo } from './todoList';
 export type { Todo };
 
 const TodoAppHeaderWidget = Remesh.widget((domain) => {
-  const todoInputDomain = domain.get(TodoInputDomain);
-  const todoListDomain = domain.get(TodoListDomain);
+  const todoInputDomain = domain.getDomain(TodoInputDomain);
+  const todoListDomain = domain.getDomain(TodoListDomain);
 
   domain.command$({
     name: 'TodoHeaderTask',
@@ -43,9 +43,9 @@ const TodoAppHeaderWidget = Remesh.widget((domain) => {
 });
 
 const TodoAppMainWidget = Remesh.widget((domain) => {
-  const todoInputDomain = domain.get(TodoInputDomain);
-  const todoFilterDomain = domain.get(TodoFilterDomain);
-  const todoListDomain = domain.get(TodoListDomain);
+  const todoInputDomain = domain.getDomain(TodoInputDomain);
+  const todoFilterDomain = domain.getDomain(TodoFilterDomain);
+  const todoListDomain = domain.getDomain(TodoListDomain);
 
   const TodoFilteredListQuery = domain.query({
     name: 'TodoFilteredListQuery',
@@ -105,8 +105,8 @@ const TodoAppMainWidget = Remesh.widget((domain) => {
 });
 
 const TodoAppFooterWidget = Remesh.widget((domain) => {
-  const todoFilterDomain = domain.get(TodoFilterDomain);
-  const todoListDomain = domain.get(TodoListDomain);
+  const todoFilterDomain = domain.getDomain(TodoFilterDomain);
+  const todoListDomain = domain.getDomain(TodoListDomain);
 
   return {
     query: {
@@ -122,7 +122,7 @@ const TodoAppFooterWidget = Remesh.widget((domain) => {
 export const TodoAppHeaderDomain = Remesh.domain({
   name: 'TodoAppHeaderDomain',
   impl: (domain) => {
-    const header = domain.use(TodoAppHeaderWidget());
+    const header = domain.widget(TodoAppHeaderWidget);
     return {
       query: {
         ...header.query,
@@ -140,7 +140,7 @@ export const TodoAppHeaderDomain = Remesh.domain({
 export const TodoAppMainDomain = Remesh.domain({
   name: 'TodoAppMainDomain',
   impl: (domain) => {
-    const main = domain.use(TodoAppMainWidget());
+    const main = domain.widget(TodoAppMainWidget);
     return {
       query: {
         ...main.query,
@@ -155,7 +155,7 @@ export const TodoAppMainDomain = Remesh.domain({
 export const TodoAppFooterDomain = Remesh.domain({
   name: 'TodoAppFooterDomain',
   impl: (domain) => {
-    const footer = domain.use(TodoAppFooterWidget());
+    const footer = domain.widget(TodoAppFooterWidget);
     return {
       query: {
         ...footer.query,

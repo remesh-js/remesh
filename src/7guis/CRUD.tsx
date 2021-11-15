@@ -1,11 +1,7 @@
 import React from 'react';
 
 import { Remesh } from '../remesh';
-import {
-  useRemeshDomain,
-  useRemeshEmit,
-  useRemeshQuery,
-} from '../remesh/react';
+import { useRemeshDomain, useRemeshQuery } from '../remesh/react';
 
 import { ListWidget } from '../remesh/widgets/list';
 import { OuterClickWrapper } from './OuterClickWrapper';
@@ -24,7 +20,7 @@ export const CRUD = Remesh.domain({
   impl: (domain) => {
     let nameUid = 0;
 
-    const nameListDomain = domain.use(
+    const nameListDomain = domain.widget(
       ListWidget<NameItem>({
         name: 'Name',
         getKey: (item) => item.id,
@@ -43,13 +39,6 @@ export const CRUD = Remesh.domain({
       default: '',
     });
 
-    const FilterPrefixQuery = domain.query({
-      name: 'FilterPrefix',
-      impl: ({ get }) => {
-        return get(FilterPrefixState());
-      },
-    });
-
     const updateFilterPrefix = domain.command({
       name: 'UpdateFilterPrefix',
       impl: ({}, prefix: string) => {
@@ -62,13 +51,6 @@ export const CRUD = Remesh.domain({
       default: {
         name: '',
         surname: '',
-      },
-    });
-
-    const CreatedQuery = domain.query({
-      name: 'Created',
-      impl: ({ get }) => {
-        return get(CreatedState());
       },
     });
 
@@ -86,13 +68,6 @@ export const CRUD = Remesh.domain({
     const SelectedState = domain.state<NameItem | null>({
       name: 'Selected',
       default: null,
-    });
-
-    const SelectedQuery = domain.query({
-      name: 'Selected',
-      impl: ({ get }) => {
-        return get(SelectedState());
-      },
     });
 
     const selectItem = domain.command({
@@ -171,9 +146,9 @@ export const CRUD = Remesh.domain({
       query: {
         ...nameListDomain.query,
         FilteredListQuery,
-        SelectedQuery,
-        FilterPrefixQuery,
-        CreatedQuery,
+        SelectedQuery: SelectedState.Query,
+        FilterPrefixQuery: FilterPrefixState.Query,
+        CreatedQuery: CreatedState.Query,
       },
       command: {
         ...nameListDomain.command,

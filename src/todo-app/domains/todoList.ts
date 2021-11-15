@@ -1,9 +1,8 @@
-import { map } from 'rxjs/operators';
-import { Remesh, RemeshEventPayload } from '../../remesh';
+import { Remesh } from '../../remesh';
 
 import { ListWidget } from '../../remesh/widgets/list';
 
-import { merge, of } from 'rxjs';
+import { of } from 'rxjs';
 
 export type Todo = {
   id: string;
@@ -27,7 +26,7 @@ export type UpdateTodoPayload = {
 export const TodoListDomain = Remesh.domain({
   name: 'TodoListDomain',
   impl: (domain) => {
-    const listWidget = domain.use(
+    const todoListWidget = domain.widget(
       ListWidget({
         name: 'TodoList',
         getKey: (todo: Todo) => {
@@ -69,7 +68,7 @@ export const TodoListDomain = Remesh.domain({
         };
 
         return [
-          listWidget.command.addItem(newTodo),
+          todoListWidget.command.addItem(newTodo),
           AddTodoSuccessEvent({ newTodo }),
         ];
       },
@@ -79,12 +78,12 @@ export const TodoListDomain = Remesh.domain({
       name: 'updateTodo',
       impl: ({ get }, payload: UpdateTodoPayload) => {
         if (payload.content.length === 0) {
-          return listWidget.command.removeItem(payload.todoId);
+          return todoListWidget.command.removeItem(payload.todoId);
         }
 
-        const todo = get(listWidget.query.ItemQuery(payload.todoId));
+        const todo = get(todoListWidget.query.ItemQuery(payload.todoId));
 
-        return listWidget.command.updateItem({
+        return todoListWidget.command.updateItem({
           ...todo,
           content: payload.content,
         });
@@ -94,9 +93,9 @@ export const TodoListDomain = Remesh.domain({
     const toggleTodo = domain.command({
       name: 'toggleTodo',
       impl: ({ get }, todoId: string) => {
-        const todo = get(listWidget.query.ItemQuery(todoId));
+        const todo = get(todoListWidget.query.ItemQuery(todoId));
 
-        return listWidget.command.updateItem({
+        return todoListWidget.command.updateItem({
           ...todo,
           completed: !todo.completed,
         });
@@ -107,10 +106,10 @@ export const TodoListDomain = Remesh.domain({
       name: 'toggleAllTodos',
       impl: ({ get }) => {
         const isAllCompleted = get(IsAllCompletedQuery());
-        const todoList = get(listWidget.query.ItemListQuery());
+        const todoList = get(todoListWidget.query.ItemListQuery());
 
         return todoList.map((todo) => {
-          return listWidget.command.updateItem({
+          return todoListWidget.command.updateItem({
             ...todo,
             completed: !isAllCompleted,
           });
@@ -121,7 +120,7 @@ export const TodoListDomain = Remesh.domain({
     const TodoSortedListQuery = domain.query({
       name: 'TodoSortedListQuery',
       impl: ({ get }) => {
-        const todoList = get(listWidget.query.ItemListQuery());
+        const todoList = get(todoListWidget.query.ItemListQuery());
         const activeTodoList: Todo[] = [];
         const completedTodoList: Todo[] = [];
 
@@ -163,7 +162,7 @@ export const TodoListDomain = Remesh.domain({
       name: 'TodoListPreloadTask',
       impl: ({ }) => {
         const todoList = domain.getExtern(TodoListExtern);
-        return of(todoList.map(listWidget.command.addItem))
+        return of(todoList.map(todoListWidget.command.addItem))
       },
     });
 
@@ -175,17 +174,17 @@ export const TodoListDomain = Remesh.domain({
       command: {
         addTodo,
         updateTodo,
-        removeTodo: listWidget.command.removeItem,
+        removeTodo: todoListWidget.command.removeItem,
         toggleTodo,
         toggleAllTodos,
       },
       query: {
-        TodoKeyListQuery: listWidget.query.KeyListQuery,
-        TodoListQuery: listWidget.query.ItemListQuery,
+        TodoKeyListQuery: todoListWidget.query.KeyListQuery,
+        TodoListQuery: todoListWidget.query.ItemListQuery,
         IsAllCompletedQuery,
         TodoSortedListQuery,
         TodoItemLeftCountQuery,
-        TodoItemQuery: listWidget.query.ItemQuery,
+        TodoItemQuery: todoListWidget.query.ItemQuery,
       },
     };
   },
