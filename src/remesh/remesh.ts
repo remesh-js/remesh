@@ -386,35 +386,13 @@ export type RemeshDomainContext = {
   query: typeof RemeshQuery;
   command: typeof RemeshCommand;
   command$: typeof RemeshCommand$;
+  widget: <T>(widget: RemeshDomainWidget<T>) => T
   // methods
-  get: <T extends RemeshDomainDefinition>(
+  getDomain: <T extends RemeshDomainDefinition>(
     Domain: RemeshDomain<T>
-  ) => RemeshDomainExtract<T>;
-  use: <T extends RemeshDomainDefinition, U>(
-    payload: RemeshDomainWidgetPayload<T, U>
-  ) => RemeshDomainExtract<T>;
+  ) => T;
   getExtern: <T>(Extern: RemeshExtern<T>) => T;
 };
-
-export type RemeshDomainExtract<T extends RemeshDomainDefinition> = Pick<
-  T,
-  ('command' | 'query' | 'event') & keyof T
->;
-
-export type RemeshDomainResult<T extends RemeshDomainDefinition> = Pick<
-  {
-    query: T['query'];
-    event: T['event'];
-    command: {
-      [key in keyof T['command']]: T['command'][key] extends RemeshCommand<
-        infer U
-      >
-      ? (arg: U) => void
-      : never;
-    };
-  },
-  (keyof T & 'event') | 'query' | 'command'
->;
 
 export type RemeshDomainOutput = {
   event: {
@@ -430,25 +408,6 @@ export type RemeshDomainOutput = {
 
 export type RemeshDomainDefinition = Partial<RemeshDomainOutput>;
 
-const extractDomain = <T extends RemeshDomainDefinition>(
-  domainOutput: T
-): RemeshDomainExtract<T> => {
-  const result = {} as RemeshDomainExtract<T>;
-
-  if (domainOutput.query) {
-    result.query = domainOutput.query;
-  }
-
-  if (domainOutput.event) {
-    result.event = domainOutput.event;
-  }
-
-  if (domainOutput.command) {
-    result.command = domainOutput.command;
-  }
-
-  return result;
-};
 
 export type RemeshDomain<T extends RemeshDomainDefinition> = {
   type: 'RemeshDomain';
@@ -477,33 +436,13 @@ export const RemeshDomain = <T extends RemeshDomainDefinition>(
   return Domain;
 };
 
-export type RemeshDomainWidgetPayload<T extends RemeshDomainDefinition, U> = {
-  type: 'RemeshDomainWidgetPayload';
-  Widget: RemeshDomainWidget<T, U>;
-  arg: U;
-};
 
-export type RemeshDomainWidget<T extends RemeshDomainDefinition, U> = {
-  type: 'RemeshDomainWidget';
-  impl: (context: RemeshDomainContext, arg: U) => T;
-  (arg: U): RemeshDomainWidgetPayload<T, U>;
-};
+export type RemeshDomainWidget<T> = (context: RemeshDomainContext) => T
 
-export const RemeshDomainWidget = <T extends RemeshDomainDefinition, U = void>(
-  impl: RemeshDomainWidget<T, U>['impl']
-): RemeshDomainWidget<T, U> => {
-  const Widget = ((arg) => {
-    return {
-      type: 'RemeshDomainWidgetPayload',
-      Widget,
-      arg,
-    };
-  }) as RemeshDomainWidget<T, U>;
-
-  Widget.type = 'RemeshDomainWidget';
-  Widget.impl = impl;
-
-  return Widget;
+export const RemeshDomainWidget = <T>(
+  impl: RemeshDomainWidget<T>,
+) => {
+  return impl
 };
 
 export type RemeshStore = ReturnType<typeof RemeshStore>;
@@ -550,7 +489,6 @@ type RemeshDomainStorage<T extends RemeshDomainDefinition> = {
   type: 'RemeshDomainStorage';
   Domain: RemeshDomain<T>;
   domain: T;
-  extractedDomain: RemeshDomainExtract<T>;
   upstreamSet: Set<RemeshDomainStorage<any>>;
   downstreamSet: Set<RemeshDomainStorage<any>>;
   domainSubscriptionSet: Set<Subscription>;
@@ -870,6 +808,10 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
           | RemeshStateOptions<unknown, unknown>
           | RemeshDefaultStateOptions<unknown>
       ): any => {
+        if (isDomainInited) {
+          throw new Error(`Unexpected calling domain.state(..) asynchronously`)
+        }
+
         if ('default' in options) {
           const StaticState = RemeshDefaultState(options);
           StaticState.Domain = Domain;
@@ -881,42 +823,53 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
         return State;
       },
       query: (options) => {
+        if (isDomainInited) {
+          throw new Error(`Unexpected calling domain.query(..) asynchronously`)
+        }
         const Query = RemeshQuery(options);
         Query.Domain = Domain;
         return Query;
       },
       event: (options) => {
+        if (isDomainInited) {
+          throw new Error(`Unexpected calling domain.event(..) asynchronously`)
+        }
         const Event = RemeshEvent(options);
         Event.Domain = Domain;
         return Event;
       },
       command: (options) => {
+        if (isDomainInited) {
+          throw new Error(`Unexpected calling domain.command(..) asynchronously`)
+        }
         const Command = RemeshCommand(options);
         Command.Domain = Domain;
         return Command;
       },
       command$: (options) => {
+        if (isDomainInited) {
+          throw new Error(`Unexpected calling domain.command$(..) asynchronously`)
+        }
         const Command$ = RemeshCommand$(options);
         Command$.Domain = Domain;
         command$Set.add(Command$);
         return Command$;
       },
-      get: (UpstreamDomain) => {
+      widget: (implWidget) => {
+        if (isDomainInited) {
+          throw new Error(`Unexpected calling domain.widget(..) asynchronously`)
+        }
+
+        const widget = implWidget(domainContext)
+
+        return widget
+      },
+      getDomain: (UpstreamDomain) => {
         const upstreamDomainStorage = getDomainStorage(UpstreamDomain);
 
         upstreamSet.add(upstreamDomainStorage);
 
-        return upstreamDomainStorage.extractedDomain;
-      },
-      use: (widgetPayload) => {
-        const { Widget, arg } = widgetPayload;
-        const widget = Widget.impl(domainContext, arg);
-
-        if (isDomainInited) {
-          initCommand$Set(command$Set);
-        }
-
-        return extractDomain(widget);
+        return upstreamDomainStorage.domain;
       },
       getExtern: (Extern) => {
         return getExternCurrentValue(Extern);
@@ -930,7 +883,6 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
       type: 'RemeshDomainStorage',
       Domain,
       domain,
-      extractedDomain: extractDomain(domain),
       command$Set,
       upstreamSet,
       downstreamSet: new Set(),
@@ -1397,34 +1349,54 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     return subscription;
   };
 
-  const getDomain = <T extends RemeshDomainDefinition>(
+  type BindingCommand<T extends RemeshDomainDefinition['command']> = T extends {} ? {
+    [key in keyof T]: (...args: Parameters<T[key]>) => void
+  } : never
+
+  type BindingDomainOutput<T extends RemeshDomainDefinition> = T & {
+    command: BindingCommand<T["command"]> | undefined;
+  }
+
+  const getCommand = <T extends RemeshDomainDefinition>(
     Domain: RemeshDomain<T>
-  ): RemeshDomainResult<T> => {
+  ) => {
     const domainStorage = getDomainStorage(Domain);
-    const extractedDomain = domainStorage.extractedDomain;
-    const domain = {} as RemeshDomainResult<T>;
+    const domain = domainStorage.domain
 
-    if (extractedDomain.query) {
-      domain.query = extractedDomain.query;
-    }
+    if (domain.command) {
+      const command = {} as BindingCommand<T['command']>
 
-    if (extractedDomain.event) {
-      domain.event = extractedDomain.event;
-    }
-
-    if (extractedDomain.command) {
-      const command = {} as RemeshDomainResult<T>['command'];
-
-      for (const key in extractedDomain.command) {
-        const Command = extractedDomain.command[key];
+      for (const key in domain.command) {
+        const Command = domain.command[key];
         // @ts-ignore
         command[key] = (arg) => emitCommand(Command(arg));
       }
 
-      domain.command = command;
+      return command
+    }
+  }
+
+  const domainOutputWeakMap = new WeakMap<RemeshDomain<any>, BindingDomainOutput<any>>()
+
+  const getDomain = <T extends RemeshDomainDefinition>(
+    Domain: RemeshDomain<T>
+  ): BindingDomainOutput<T> => {
+    if (domainOutputWeakMap.has(Domain)) {
+      return domainOutputWeakMap.get(Domain)
     }
 
-    return domain;
+    const domainStorage = getDomainStorage(Domain);
+    const domain = domainStorage.domain
+    const command = getCommand(Domain);
+
+    const domainOutput = {
+      ...domain,
+      command,
+    }
+
+    domainOutputWeakMap.set(Domain, domainOutput)
+
+    return domainOutput
   };
 
   const initCommand$Set = (

@@ -93,5 +93,5 @@ export const ListWidget = <T>(options: ListWidgetOptions<T>) => {
         ItemListQuery,
       },
     };
-  })();
+  })
 };
