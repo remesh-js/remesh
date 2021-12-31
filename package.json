@@ -1,7 +1,7 @@
 {
-  "name": "@ctrip/vacation-biz-ui",
+  "name": "remesh",
   "version": "0.0.0",
-  "main": "lib/vacation-biz-ui.umd.js",
+  "main": "lib/remesh.umd.js",
   "types": "lib/index.d.ts",
   "scripts": {
     "dev": "vite --config vite.app.config.ts --host",
@@ -11,7 +11,7 @@
     "build:app": "vite build --config vite.app.config.ts",
     "prebuild": "rimraf lib dist",
     "serve": "vite preview",
-    "run": "ts-node src/remesh"
+    "run": "ts-node src/fess"
   },
   "peerDependencies": {
     "react": "^17.0.0",
