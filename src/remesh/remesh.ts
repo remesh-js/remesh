@@ -1,4 +1,4 @@
-import { noop, Observable, Subject, Subscription } from 'rxjs';
+import { Observable, Subject, Subscription } from 'rxjs';
 
 import shallowEqual from 'shallowequal';
 
@@ -20,7 +20,7 @@ export type RemeshEvent<T, U> = {
   eventName: string;
   impl?: (context: RemeshEventContext, arg: T) => U;
   (arg: T): RemeshEventPayload<T, U>;
-  Domain?: RemeshDomain<any>;
+  ownerDomain?: RemeshDomain<any>;
 };
 
 export type RemeshEventPayload<T, U = T> = {
@@ -65,7 +65,7 @@ export type RemeshState<T, U> = {
   stateName: string;
   impl: (arg: T) => U;
   (arg: T): RemeshStateItem<T, U>;
-  Domain?: RemeshDomain<any>;
+  ownerDomain?: RemeshDomain<any>;
   Query: RemeshQuery<T, U>;
   compare: CompareFn<U>;
 };
@@ -181,7 +181,7 @@ export type RemeshQuery<T, U> = {
   queryName: string;
   impl: (context: RemeshQueryContext, arg: T) => U;
   (arg: T): RemeshQueryPayload<T, U>;
-  Domain?: RemeshDomain<any>;
+  ownerDomain?: RemeshDomain<any>;
   compare: CompareFn<U>;
 };
 
@@ -386,7 +386,7 @@ export type RemeshDomainContext = {
   query: typeof RemeshQuery;
   command: typeof RemeshCommand;
   command$: typeof RemeshCommand$;
-  widget: <T>(widget: RemeshDomainWidget<T>) => T
+  module: <T>(module: RemeshModule<T>) => T
   // methods
   getDomain: <T extends RemeshDomainDefinition>(
     Domain: RemeshDomain<T>
@@ -407,7 +407,6 @@ export type RemeshDomainOutput = {
 };
 
 export type RemeshDomainDefinition = Partial<RemeshDomainOutput>;
-
 
 export type RemeshDomain<T extends RemeshDomainDefinition> = {
   type: 'RemeshDomain';
@@ -437,10 +436,10 @@ export const RemeshDomain = <T extends RemeshDomainDefinition>(
 };
 
 
-export type RemeshDomainWidget<T> = (context: RemeshDomainContext) => T
+export type RemeshModule<T> = (context: RemeshDomainContext) => T
 
-export const RemeshDomainWidget = <T>(
-  impl: RemeshDomainWidget<T>,
+export const RemeshModule = <T>(
+  impl: RemeshModule<T>,
 ) => {
   return impl
 };
@@ -629,7 +628,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     stateItem: RemeshStateItem<T, U>
   ): RemeshStateStorage<T, U> => {
     const domainStorage = getDomainStorage(
-      stateItem.State.Domain ?? DefaultDomain
+      stateItem.State.ownerDomain ?? DefaultDomain
     );
     const key = getStateStorageKey(stateItem);
     const stateStorage = domainStorage.stateMap.get(key);
@@ -655,7 +654,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
   const getEventStorage = <T, U = T>(
     Event: RemeshEvent<T, U>
   ): RemeshEventStorage<T, U> => {
-    const domainStorage = getDomainStorage(Event.Domain ?? DefaultDomain);
+    const domainStorage = getDomainStorage(Event.ownerDomain ?? DefaultDomain);
     const eventStorage = domainStorage.eventMap.get(Event);
 
     if (eventStorage) {
@@ -692,7 +691,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     queryPayload: RemeshQueryPayload<T, U>
   ): RemeshQueryStorage<T, U> => {
     const domainStorage = getDomainStorage(
-      queryPayload.Query.Domain ?? DefaultDomain
+      queryPayload.Query.ownerDomain ?? DefaultDomain
     );
     const key = getQueryStorageKey(queryPayload);
     const queryStorage = domainStorage.queryMap.get(key);
@@ -814,12 +813,12 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
         if ('default' in options) {
           const StaticState = RemeshDefaultState(options);
-          StaticState.Domain = Domain;
+          StaticState.ownerDomain = Domain;
           return StaticState;
         }
 
         const State = RemeshState(options);
-        State.Domain = Domain;
+        State.ownerDomain = Domain;
         return State;
       },
       query: (options) => {
@@ -827,7 +826,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
           throw new Error(`Unexpected calling domain.query(..) asynchronously`)
         }
         const Query = RemeshQuery(options);
-        Query.Domain = Domain;
+        Query.ownerDomain = Domain;
         return Query;
       },
       event: (options) => {
@@ -835,7 +834,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
           throw new Error(`Unexpected calling domain.event(..) asynchronously`)
         }
         const Event = RemeshEvent(options);
-        Event.Domain = Domain;
+        Event.ownerDomain = Domain;
         return Event;
       },
       command: (options) => {
@@ -855,14 +854,14 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
         command$Set.add(Command$);
         return Command$;
       },
-      widget: (implWidget) => {
+      module: (remeshModule) => {
         if (isDomainInited) {
-          throw new Error(`Unexpected calling domain.widget(..) asynchronously`)
+          throw new Error(`Unexpected calling domain.module(..) asynchronously`)
         }
 
-        const widget = implWidget(domainContext)
+        const module = remeshModule(domainContext)
 
-        return widget
+        return module
       },
       getDomain: (UpstreamDomain) => {
         const upstreamDomainStorage = getDomainStorage(UpstreamDomain);
@@ -907,7 +906,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
   const clearQueryStorage = <T, U>(queryStorage: RemeshQueryStorage<T, U>) => {
     const domainStorage = getDomainStorage(
-      queryStorage.Query.Domain ?? DefaultDomain
+      queryStorage.Query.ownerDomain ?? DefaultDomain
     );
 
     queryStorage.subject.complete();
@@ -944,7 +943,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
   const clearStateStorage = <T, U>(stateStorage: RemeshStateStorage<T, U>) => {
     const domainStorage = getDomainStorage(
-      stateStorage.State.Domain ?? DefaultDomain
+      stateStorage.State.ownerDomain ?? DefaultDomain
     );
     if (domainStorage.stateMap.has(stateStorage.currentKey)) {
       console.log('delete', stateStorage.currentKey);
@@ -965,7 +964,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
   const clearEventStorage = <T, U>(eventStorage: RemeshEventStorage<T, U>) => {
     const domainStorage = getDomainStorage(
-      eventStorage.Event.Domain ?? DefaultDomain
+      eventStorage.Event.ownerDomain ?? DefaultDomain
     );
 
     eventStorage.subject.complete();
@@ -1481,7 +1480,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
 export const Remesh = {
   domain: RemeshDomain,
-  widget: RemeshDomainWidget,
+  module: RemeshModule,
   extern: RemeshExtern,
   store: RemeshStore,
 };

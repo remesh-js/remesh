@@ -5,5 +5,5 @@
     "noEmit": false,
     "sourceMap": true
   },
-  "include": ["./components"]
+  "include": ["./src/remesh"]
 }
