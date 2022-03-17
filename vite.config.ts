@@ -7,7 +7,8 @@ import { resolve } from 'path';
 export default defineConfig({
   plugins: [reactRefresh(), vanillaExtractPlugin()],
   build: {
-    outDir: resolve(__dirname, '../dist'),
+    base: '/remesh/dist',
+    outDir: resolve(__dirname, 'dist'),
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
