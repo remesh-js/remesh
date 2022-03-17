@@ -10,8 +10,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
-        'todo-app': resolve(__dirname, 'todo-app/index.html')
-      }
-    }
-  }
+        '7guis': resolve(__dirname, '7guis/index.html'),
+      },
+    },
+  },
 });

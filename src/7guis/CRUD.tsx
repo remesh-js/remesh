@@ -3,7 +3,7 @@ import React from 'react';
 import { Remesh } from '../remesh';
 import { useRemeshDomain, useRemeshQuery } from '../remesh/react';
 
-import { ListWidget } from '../remesh/widgets/list';
+import { ListModule } from '../remesh/modules/list';
 import { OuterClickWrapper } from './OuterClickWrapper';
 
 type Name = {
@@ -20,8 +20,8 @@ export const CRUD = Remesh.domain({
   impl: (domain) => {
     let nameUid = 0;
 
-    const nameListDomain = domain.widget(
-      ListWidget<NameItem>({
+    const nameListDomain = domain.module(
+      ListModule<NameItem>({
         name: 'Name',
         getKey: (item) => item.id,
         createItem: (key) => {
@@ -40,7 +40,7 @@ export const CRUD = Remesh.domain({
     });
 
     const updateFilterPrefix = domain.command({
-      name: 'UpdateFilterPrefix',
+      name: 'updateFilterPrefix',
       impl: ({}, prefix: string) => {
         return FilterPrefixState().new(prefix);
       },

@@ -1,13 +1,13 @@
 import { Remesh } from '../remesh';
 
-export type ListWidgetOptions<T> = {
+export type ListModuleOptions<T> = {
   name: string;
   getKey: (item: T) => string;
   createItem: (key: string) => T;
 };
 
-export const ListWidget = <T>(options: ListWidgetOptions<T>) => {
-  return Remesh.widget((domain) => {
+export const ListModule = <T>(options: ListModuleOptions<T>) => {
+  return Remesh.module((domain) => {
     const KeyListState = domain.state<string[]>({
       name: `${options.name}.KeyListState`,
       default: [],
@@ -29,7 +29,7 @@ export const ListWidget = <T>(options: ListWidgetOptions<T>) => {
 
     const setList = domain.command({
       name: `${options.name}.setList`,
-      impl: ({ }, list: T[]) => {
+      impl: ({}, list: T[]) => {
         const keyList = list.map(options.getKey);
 
         return [
@@ -93,5 +93,5 @@ export const ListWidget = <T>(options: ListWidgetOptions<T>) => {
         ItemListQuery,
       },
     };
-  })
+  });
 };
