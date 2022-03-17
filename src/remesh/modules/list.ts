@@ -1,4 +1,4 @@
-import { Remesh } from '../remesh';
+import { Remesh } from '../index';
 
 export type ListModuleOptions<T> = {
   name: string;

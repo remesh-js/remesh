@@ -1,7 +1,7 @@
 {
   "name": "remesh",
-  "version": "0.0.0",
-  "main": "lib/remesh.umd.js",
+  "version": "0.1.0",
+  "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "scripts": {
     "dev": "vite --host",
