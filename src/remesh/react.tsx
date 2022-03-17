@@ -11,10 +11,10 @@ import {
   RemeshDomainDefinition,
   RemeshQueryPayload,
   RemeshEvent,
-  RemeshStore,
-  RemeshStoreOptions,
   RemeshDomain,
 } from './remesh';
+
+import { RemeshStore, RemeshStoreOptions } from './store';
 
 export type RemeshReactContext = {
   remeshStore: RemeshStore;
