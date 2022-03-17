@@ -8,7 +8,7 @@
     "build": "npm run build:lib & npm run build:app",
     "build:lib": "tsc -b tsconfig.lib.json",
     "build:app": "vite build",
-    "prebuild": "rimraf lib dist",
+    "prebuild": "rimraf lib ./*.js ./*.js.map ./*.d.ts",
     "serve": "vite preview --host"
   },
   "peerDependencies": {
