@@ -17,5 +17,5 @@
     "noEmit": true,
     "jsx": "react"
   },
-  "include": ["./src", "./remesh"]
+  "include": ["./src"]
 }
