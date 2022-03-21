@@ -81,7 +81,6 @@ export type RemeshDefaultStateOptions<T> = {
   name: RemeshState<void, T>['stateName'];
   default: T;
   compare?: RemeshState<void, T>['compare'];
-  cacheOptions?: CacheOptions;
 };
 
 export const RemeshDefaultState = <T>(
@@ -91,7 +90,6 @@ export const RemeshDefaultState = <T>(
     name: options.name,
     impl: () => options.default,
     compare: options.compare,
-    cacheOptions: options.cacheOptions,
   });
 };
 
@@ -101,15 +99,10 @@ export type RemeshStatePayload<T, U> = {
   newState: U;
 };
 
-export type CacheOptions = {
-  max: number;
-};
-
 export type RemeshStateOptions<T, U> = {
   name: RemeshState<T, U>['stateName'];
   impl: RemeshState<T, U>['impl'];
   compare?: RemeshState<T, U>['compare'];
-  cacheOptions?: CacheOptions;
 };
 
 let stateUid = 0;
