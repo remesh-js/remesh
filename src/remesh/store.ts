@@ -32,8 +32,8 @@ export type RemeshStore = ReturnType<typeof RemeshStore>;
 type RemeshStateStorage<T, U> = {
   type: 'RemeshStateStorage';
   State: RemeshState<T, U>;
-  currentArg: U;
-  currentKey: string;
+  arg: U;
+  key: string;
   currentState: U;
   downstreamSet: Set<RemeshQueryStorage<any, any>>;
 };
@@ -41,8 +41,8 @@ type RemeshStateStorage<T, U> = {
 type RemeshQueryStorage<T, U> = {
   type: 'RemeshQueryStorage';
   Query: RemeshQuery<T, U>;
-  currentArg: T;
-  currentKey: string;
+  arg: T;
+  key: string;
   currentValue: U;
   upstreamSet: Set<RemeshQueryStorage<any, any> | RemeshStateStorage<any, any>>;
   downstreamSet: Set<RemeshQueryStorage<any, any>>;
@@ -170,9 +170,9 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
       return key;
     }
 
-    const keyString = `State(${stateItem.State.stateId}):${
-      stateItem.State.stateName
-    }(${JSON.stringify(stateItem.arg) ?? ''})`;
+    const stateName = stateItem.State.stateName;
+    const argString = JSON.stringify(stateItem.arg) ?? '';
+    const keyString = `State/${stateItem.State.stateId}/${stateName}/${argString}`;
 
     storageKeyWeakMap.set(stateItem, keyString);
 
@@ -188,16 +188,16 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
       return key;
     }
 
-    const keyString = `Query(${queryPayload.Query.queryId}):${
-      queryPayload.Query.queryName
-    }(${JSON.stringify(queryPayload.arg) ?? ''})`;
+    const queryName = queryPayload.Query.queryName;
+    const argString = JSON.stringify(queryPayload.arg) ?? '';
+    const keyString = `Query/${queryPayload.Query.queryId}/${queryName}/${argString}`;
 
     storageKeyWeakMap.set(queryPayload, keyString);
 
     return keyString;
   };
 
-  const getKey = <T, U>(
+  const getStorageKey = <T, U>(
     stateItem: RemeshStateItem<T, U> | RemeshQueryPayload<T, U>
   ): string => {
     if (stateItem.type === 'RemeshStateItem') {
@@ -223,13 +223,11 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     domainStorage.stateMap.set(key, {
       type: 'RemeshStateStorage',
       State: stateItem.State,
-      currentArg: stateItem.arg,
-      currentKey: key,
+      arg: stateItem.arg,
+      key: key,
       currentState: stateItem.State.impl(stateItem.arg),
       downstreamSet: new Set(),
     });
-
-    console.log('create', key);
 
     return getStateStorage(stateItem);
   };
@@ -326,9 +324,9 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     const currentQueryStorage: RemeshQueryStorage<T, U> = {
       type: 'RemeshQueryStorage',
       Query: queryPayload.Query,
-      currentArg: queryPayload.arg,
+      arg: queryPayload.arg,
       currentValue,
-      currentKey: key,
+      key: key,
       upstreamSet,
       downstreamSet,
       subject,
@@ -448,9 +446,9 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
           );
         }
 
-        const module = remeshModule(domainContext);
+        const moduleResult = remeshModule(domainContext);
 
-        return module;
+        return moduleResult;
       },
       getDomain: (UpstreamDomain) => {
         const upstreamDomainStorage = getDomainStorage(UpstreamDomain);
@@ -499,7 +497,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     );
 
     queryStorage.subject.complete();
-    domainStorage.queryMap.delete(queryStorage.currentKey);
+    domainStorage.queryMap.delete(queryStorage.key);
 
     for (const upstreamStorage of queryStorage.upstreamSet) {
       upstreamStorage.downstreamSet.delete(queryStorage);
@@ -534,11 +532,11 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     const domainStorage = getDomainStorage(
       stateStorage.State.ownerDomain ?? DefaultDomain
     );
-    if (domainStorage.stateMap.has(stateStorage.currentKey)) {
-      console.log('delete', stateStorage.currentKey);
+    if (domainStorage.stateMap.has(stateStorage.key)) {
+      console.log('delete', stateStorage.key);
     }
 
-    domainStorage.stateMap.delete(stateStorage.currentKey);
+    domainStorage.stateMap.delete(stateStorage.key);
   };
 
   const clearStateStorageIfNeeded = <T, U>(
@@ -710,7 +708,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
       },
     };
 
-    const newValue = Query.impl(queryContext, queryStorage.currentArg);
+    const newValue = Query.impl(queryContext, queryStorage.arg);
 
     const isEqual = Query.compare(queryStorage.currentValue, newValue);
 
@@ -798,8 +796,8 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
       return;
     }
 
-    stateStorage.currentArg = statePayload.stateItem.arg;
-    stateStorage.currentKey = getStateStorageKey(statePayload.stateItem);
+    stateStorage.arg = statePayload.stateItem.arg;
+    stateStorage.key = getStateStorageKey(statePayload.stateItem);
     stateStorage.currentState = statePayload.newState;
 
     /**
@@ -1070,7 +1068,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     subscribeQuery,
     subscribeEvent,
     subscribeDomain,
-    getKey,
+    getKey: getStorageKey,
   };
 };
 
