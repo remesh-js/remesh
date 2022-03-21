@@ -20,7 +20,7 @@ export type RemeshEvent<T, U> = {
   eventName: string;
   impl?: (context: RemeshEventContext, arg: T) => U;
   (arg: T): RemeshEventPayload<T, U>;
-  ownerDomain?: RemeshDomain<any>;
+  owner?: RemeshDomainPayload<any, any>;
 };
 
 export type RemeshEventPayload<T, U = T> = {
@@ -65,7 +65,7 @@ export type RemeshState<T, U> = {
   stateName: string;
   impl: (arg: T) => U;
   (arg: T): RemeshStateItem<T, U>;
-  ownerDomain?: RemeshDomain<any>;
+  owner?: RemeshDomainPayload<any, any>;
   Query: RemeshQuery<T, U>;
   compare: CompareFn<U>;
 };
@@ -173,7 +173,7 @@ export type RemeshQuery<T, U> = {
   queryName: string;
   impl: (context: RemeshQueryContext, arg: T) => U;
   (arg: T): RemeshQueryPayload<T, U>;
-  ownerDomain?: RemeshDomain<any>;
+  owner?: RemeshDomainPayload<any, any>;
   compare: CompareFn<U>;
 };
 
@@ -250,7 +250,7 @@ export type RemeshCommand<T = unknown> = {
   commandName: string;
   impl: (context: RemeshCommandContext, arg: T) => RemeshCommandOutput;
   (arg: T): RemeshCommandPayload<T>;
-  Domain?: RemeshDomain<any>;
+  owner?: RemeshDomainPayload<any, any>;
 };
 
 export type RemeshCommandOptions<T> = {
@@ -302,7 +302,7 @@ export type RemeshCommand$<T> = {
     arg$: Observable<T>
   ) => Observable<RemeshCommandOutput>;
   (arg: T): RemeshCommand$Payload<T>;
-  Domain?: RemeshDomain<any>;
+  owner?: RemeshDomainPayload<any, any>;
 };
 
 export type RemeshCommand$Options<T> = {
@@ -380,7 +380,9 @@ export type RemeshDomainContext = {
   command$: typeof RemeshCommand$;
   module: <T>(module: RemeshModule<T>) => T;
   // methods
-  getDomain: <T extends RemeshDomainDefinition>(Domain: RemeshDomain<T>) => T;
+  getDomain: <T extends RemeshDomainDefinition, Arg>(
+    domainPayload: RemeshDomainPayload<T, Arg>
+  ) => T;
   getExtern: <T>(Extern: RemeshExtern<T>) => T;
 };
 
@@ -398,29 +400,61 @@ export type RemeshDomainOutput = {
 
 export type RemeshDomainDefinition = Partial<RemeshDomainOutput>;
 
-export type RemeshDomain<T extends RemeshDomainDefinition> = {
+export type RemeshDomain<T extends RemeshDomainDefinition, Arg> = {
   type: 'RemeshDomain';
   domainName: string;
   domainId: number;
-  impl: (context: RemeshDomainContext) => T;
+  impl: (context: RemeshDomainContext, arg: Arg) => T;
+  (arg: Arg): RemeshDomainPayload<T, Arg>;
 };
 
-export type RemeshDomainOptions<T> = {
-  name: RemeshDomain<T>['domainName'];
-  impl: RemeshDomain<T>['impl'];
+export type RemeshDomainPayload<T extends RemeshDomainDefinition, Arg> = {
+  type: 'RemeshDomainPayload';
+  Domain: RemeshDomain<T, Arg>;
+  arg: Arg;
+};
+
+export type RemeshDomainOptions<T extends RemeshDomainDefinition, Arg> = {
+  name: RemeshDomain<T, Arg>['domainName'];
+  impl: RemeshDomain<T, Arg>['impl'];
 };
 
 let domainUid = 0;
 
-export const RemeshDomain = <T extends RemeshDomainDefinition>(
-  options: RemeshDomainOptions<T>
-): RemeshDomain<T> => {
-  const Domain: RemeshDomain<T> = {
+export const RemeshDomain = <T extends RemeshDomainDefinition, Arg = void>(
+  options: RemeshDomainOptions<T, Arg>
+): RemeshDomain<T, Arg> => {
+  /**
+   * optimize for nullary domain
+   */
+  let cacheForNullary: RemeshDomainPayload<T, Arg> | null = null;
+
+  const Domain: RemeshDomain<T, Arg> = ((arg) => {
+    if (arg === undefined) {
+      if (cacheForNullary) {
+        return cacheForNullary;
+      }
+    }
+
+    const result: RemeshDomainPayload<T, Arg> = {
+      type: 'RemeshDomainPayload',
+      Domain,
+      arg,
+    };
+
+    if (arg === undefined) {
+      cacheForNullary = result;
+    }
+
+    return result;
+  }) as RemeshDomain<T, Arg>;
+
+  Object.assign(Domain, {
     type: 'RemeshDomain',
     domainId: domainUid++,
     domainName: options.name,
     impl: options.impl,
-  };
+  });
 
   return Domain;
 };

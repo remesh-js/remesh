@@ -11,7 +11,7 @@ import {
   RemeshDomainDefinition,
   RemeshQueryPayload,
   RemeshEvent,
-  RemeshDomain,
+  RemeshDomainPayload,
 } from './remesh';
 
 import { RemeshStore, RemeshStoreOptions } from './store';
@@ -134,18 +134,18 @@ export const useRemeshEmit = function () {
   return store.emitEvent;
 };
 
-export const useRemeshDomain = function <T extends RemeshDomainDefinition>(
-  Domain: RemeshDomain<T>
+export const useRemeshDomain = function <T extends RemeshDomainDefinition, Arg>(
+  domainPayload: RemeshDomainPayload<T, Arg>
 ) {
   const store = useRemeshStore();
-  const domain = store.getDomain(Domain);
+  const domain = store.getDomain(domainPayload);
 
   useEffect(() => {
-    const subscription = store.subscribeDomain(Domain);
+    const subscription = store.subscribeDomain(domainPayload);
     return () => {
       subscription.unsubscribe();
     };
-  }, [store, Domain]);
+  }, [store, domainPayload]);
 
   return domain;
 };

@@ -309,7 +309,7 @@ const positionInCircle = (position: Position, circle: Circle): boolean => {
 };
 
 export const CircleDrawerApp = () => {
-  const domain = useRemeshDomain(CircleDrawer);
+  const domain = useRemeshDomain(CircleDrawer());
   const drawState = useRemeshQuery(domain.query.DrawQuery());
   const tooltipsState = useRemeshQuery(domain.query.TooltipsQuery());
   const selectedCircleInfo = useRemeshQuery(

@@ -13,7 +13,6 @@ import { Remesh } from '../remesh';
 
 import {
   useRemeshDomain,
-  useRemeshEmit,
   useRemeshQuery,
 } from '../remesh/react';
 
@@ -112,7 +111,7 @@ const Timer = Remesh.domain({
 });
 
 export const TimerApp = () => {
-  const timer = useRemeshDomain(Timer);
+  const timer = useRemeshDomain(Timer());
   const elapsed = useRemeshQuery(timer.query.ElapsedQuery());
   const duration = useRemeshQuery(timer.query.DurationQuery());
 
