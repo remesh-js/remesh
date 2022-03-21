@@ -164,7 +164,7 @@ export const CRUD = Remesh.domain({
 });
 
 export const CRUDApp = () => {
-  const domain = useRemeshDomain(CRUD);
+  const domain = useRemeshDomain(CRUD());
   const filteredList = useRemeshQuery(domain.query.FilteredListQuery());
   const filter = useRemeshQuery(domain.query.FilterPrefixQuery());
   const created = useRemeshQuery(domain.query.CreatedQuery());

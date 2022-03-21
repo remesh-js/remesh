@@ -1,13 +1,7 @@
 import React from 'react';
-import { merge } from 'rxjs';
-import { map } from 'rxjs/operators';
 
 import { Remesh } from '../remesh';
-import {
-  useRemeshDomain,
-  useRemeshEmit,
-  useRemeshQuery,
-} from '../remesh/react';
+import { useRemeshDomain, useRemeshQuery } from '../remesh/react';
 
 const TemperatureConverter = Remesh.domain({
   name: 'TemperatureConverter',
@@ -87,7 +81,7 @@ const TemperatureConverter = Remesh.domain({
 });
 
 export const TemperatureConverterApp = () => {
-  const temperatureConverter = useRemeshDomain(TemperatureConverter);
+  const temperatureConverter = useRemeshDomain(TemperatureConverter());
   const celsius = useRemeshQuery(temperatureConverter.query.CelsiusQuery());
   const fahrenheit = useRemeshQuery(
     temperatureConverter.query.FahrenheitQuery()

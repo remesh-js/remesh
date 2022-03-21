@@ -139,7 +139,7 @@ export const Cells = Remesh.domain({
 });
 
 export const CellsApp = () => {
-  const cells = useRemeshDomain(Cells);
+  const cells = useRemeshDomain(Cells());
   const columnKeyList = useRemeshQuery(cells.query.ColumnKeyListQuery());
   const rowKeyList = useRemeshQuery(cells.query.RowKeyListQuery());
 
@@ -193,7 +193,7 @@ type RowViewProps = {
 };
 
 const RowView = ({ columnKeyList, rowKey }: RowViewProps) => {
-  const cells = useRemeshDomain(Cells);
+  const cells = useRemeshDomain(Cells());
 
   return (
     <>
@@ -230,7 +230,7 @@ const RowView = ({ columnKeyList, rowKey }: RowViewProps) => {
 };
 
 const CellView = ({ cellKey }: { cellKey: string }) => {
-  const cells = useRemeshDomain(Cells);
+  const cells = useRemeshDomain(Cells());
   const cell = useRemeshQuery(cells.query.CellQuery(cellKey));
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -153,11 +153,8 @@ const FlightBooker = Remesh.domain({
 });
 
 export const FlightBookerApp = () => {
-  const flightBooker = useRemeshDomain(FlightBooker);
-  const emit = useRemeshEmit();
+  const flightBooker = useRemeshDomain(FlightBooker());
   const option = useRemeshQuery(flightBooker.query.OptionQuery());
-  const startDate = useRemeshQuery(flightBooker.query.StartDateQuery());
-  const endDate = useRemeshQuery(flightBooker.query.EndDateQuery());
   const status = useRemeshQuery(flightBooker.query.StatusQuery());
 
   const startDateInput = useRemeshQuery(flightBooker.query.StartDateInput());
