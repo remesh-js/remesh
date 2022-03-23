@@ -1,10 +1,16 @@
 # remesh
 
-<div style="display:block;margin:10px auto; text-align:center;">
-  <img src="./assets/Remesh-logos.jpeg" width=400  />
-</div>
+<p align="center">
+  <img width="400" src="./assets/Remesh-logos.jpeg">
+</p>
 
-## Remesh: A DDD framework for TypeScript/JavaScript
+[![npm version](https://img.shields.io/npm/v/remesh.svg?style=flat)](https://www.npmjs.com/package/remesh)
+[![Documentation](https://img.shields.io/badge/documentation-yes-brightgreen.svg)](https://github.com/Lucifier129/remesh#readme)
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/Lucifier129/remesh/graphs/commit-activity)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/Lucifier129/remesh/blob/master/LICENSE)
+[![Twitter: guyingjie129](https://img.shields.io/twitter/follow/guyingjie129.svg?style=social)](https://twitter.com/guyingjie129)
+
+> Remesh: A DDD framework for TypeScript/JavaScript
 
 **Work in process, not ready to use!**
 
