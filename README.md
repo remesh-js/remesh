@@ -1,6 +1,10 @@
 # remesh
 
-A DDD framework for TypeScript/JavaScript
+<img src="./assets/Remesh-logos.jpeg" width=400 style="display:block;margin:10px auto" />
+
+## Remesh: A DDD framework for TypeScript/JavaScript
+
+<hr />
 
 **Work in process, not ready to use!**
 
