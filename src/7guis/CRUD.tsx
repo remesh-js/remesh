@@ -229,6 +229,7 @@ export const CRUDApp = () => {
         handleSelect(null);
       }}
     >
+      <h2>CRUD</h2>
       <div>
         <label htmlFor="">Filter prefix</label>
         <input type="text" value={filter} onChange={handleFilterChange} />
