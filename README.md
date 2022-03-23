@@ -1,10 +1,10 @@
 # remesh
 
-<img src="./assets/Remesh-logos.jpeg" width=400 style="display:block;margin:10px auto" />
+<div style="display:block;margin:10px auto; text-align:center;">
+  <img src="./assets/Remesh-logos.jpeg" width=400  />
+</div>
 
 ## Remesh: A DDD framework for TypeScript/JavaScript
-
-<hr />
 
 **Work in process, not ready to use!**
 
