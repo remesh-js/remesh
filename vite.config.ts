@@ -5,9 +5,9 @@ import { resolve } from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  base: '/remesh/dist',
   plugins: [reactRefresh(), vanillaExtractPlugin()],
   build: {
-    base: '/remesh/dist',
     outDir: resolve(__dirname, 'dist'),
     rollupOptions: {
       input: {
