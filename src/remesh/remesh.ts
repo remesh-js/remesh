@@ -1,4 +1,4 @@
-import { Observable } from 'rxjs';
+import { Observable, switchMap, concatMap, mergeMap, exhaustMap } from 'rxjs';
 
 import shallowEqual from 'shallowequal';
 
@@ -332,6 +332,41 @@ export const RemeshCommand$ = <T = void>(
   return Command$;
 };
 
+export type RemeshCommandAsyncOptions<T> = {
+  name: RemeshCommand$<T>['command$Name'];
+  mode?: 'switch' | 'merge' | 'exhaust' | 'concat';
+  impl: (domain: RemeshCommand$Context, arg: T) => Promise<RemeshCommandOutput>;
+};
+
+export const RemeshCommandAsync = <T = void>(
+  options: RemeshCommandAsyncOptions<T>
+) => {
+  const Command$ = RemeshCommand$<T>({
+    name: options.name,
+    impl: (context, arg$) => {
+      if (!options.mode || options.mode === 'switch') {
+        return arg$.pipe(switchMap((arg) => options.impl(context, arg)));
+      }
+
+      if (options.mode === 'merge') {
+        return arg$.pipe(mergeMap((arg) => options.impl(context, arg)));
+      }
+
+      if (options.mode === 'concat') {
+        return arg$.pipe(concatMap((arg) => options.impl(context, arg)));
+      }
+
+      if (options.mode === 'exhaust') {
+        return arg$.pipe(exhaustMap((arg) => options.impl(context, arg)));
+      }
+
+      throw new Error(`RemeshCommandAsync: invalid mode: ${options.mode}`);
+    },
+  });
+
+  return Command$;
+};
+
 export type RemeshExternPayload<T> = {
   type: 'RemeshExternPayload';
   Extern: RemeshExtern<T>;
@@ -378,6 +413,7 @@ export type RemeshDomainContext = {
   query: typeof RemeshQuery;
   command: typeof RemeshCommand;
   command$: typeof RemeshCommand$;
+  commandAsync: typeof RemeshCommandAsync;
   module: <T>(module: RemeshModule<T>) => T;
   // methods
   getDomain: <T extends RemeshDomainDefinition, Arg>(

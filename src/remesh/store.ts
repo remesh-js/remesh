@@ -5,6 +5,7 @@ import {
   RemeshCommand$,
   RemeshCommand$Context,
   RemeshCommand$Payload,
+  RemeshCommandAsync,
   RemeshCommandContext,
   RemeshCommandOutput,
   RemeshCommandPayload,
@@ -476,6 +477,17 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
           );
         }
         const Command$ = RemeshCommand$(options);
+        Command$.owner = domainPayload;
+        command$Set.add(Command$);
+        return Command$;
+      },
+      commandAsync: (options) => {
+        if (isDomainInited) {
+          throw new Error(
+            `Unexpected calling domain.command$(..) asynchronously`
+          );
+        }
+        const Command$ = RemeshCommandAsync(options);
         Command$.owner = domainPayload;
         command$Set.add(Command$);
         return Command$;
