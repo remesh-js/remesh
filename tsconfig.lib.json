@@ -3,6 +3,7 @@
   "compilerOptions": {
     "outDir": "./lib",
     "noEmit": false,
+    "module": "commonjs",
     "sourceMap": true
   },
   "include": ["./src/remesh"],
