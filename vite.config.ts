@@ -5,7 +5,7 @@ import { resolve } from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: '/remesh/dist',
+  base: '/remesh/dist/',
   plugins: [reactRefresh(), vanillaExtractPlugin()],
   build: {
     outDir: resolve(__dirname, 'dist'),
