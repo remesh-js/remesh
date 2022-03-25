@@ -2,13 +2,16 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "rootDir": "./src",
-    "outDir": "./dist",
+    "outDir": "./lib",
     "composite": true,
-    "module": "CommonJS"
+    "module": "commonjs"
   },
   "references": [
     {
-      "path": "../remesh/tsconfig.json"
+      "path": "../../packages/remesh/tsconfig.json"
+    },
+    {
+      "path": "../../packages/remesh-react/tsconfig.json"
     }
   ],
   "include": ["src"]

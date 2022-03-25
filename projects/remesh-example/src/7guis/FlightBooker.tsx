@@ -1,55 +1,49 @@
-import React from 'react';
-import { merge } from 'rxjs';
-import { map } from 'rxjs/operators';
+import React from 'react'
 
-import { Remesh } from 'remesh';
-import {
-  useRemeshDomain,
-  useRemeshEmit,
-  useRemeshQuery,
-} from "remesh-react";
+import { Remesh } from 'remesh'
+import { useRemeshDomain, useRemeshQuery } from 'remesh-react'
 
-type FlightBookerOption = 'one-way' | 'return';
+type FlightBookerOption = 'one-way' | 'return'
 
 type FlightBookerStatus = {
-  startDate: 'valid' | 'invalid';
-  endDate: 'valid' | 'invalid' | 'disabled' | 'enabled';
-  bookButton: 'disabled' | 'enabled';
-};
+  startDate: 'valid' | 'invalid'
+  endDate: 'valid' | 'invalid' | 'disabled' | 'enabled'
+  bookButton: 'disabled' | 'enabled'
+}
 
 const getDate = (dateInput: string) => {
-  const list = dateInput.split('.');
+  const list = dateInput.split('.')
 
   if (list.length !== 3) {
-    return null;
+    return null
   }
 
-  const date = new Date(`${list[2]}.${list[1]}.${list[0]}`);
+  const date = new Date(`${list[2]}.${list[1]}.${list[0]}`)
 
   if (date.toString() === 'Invalid Date') {
-    return null;
+    return null
   }
 
-  return date;
-};
+  return date
+}
 
 const toDateInput = (date: Date) => {
-  const list = date.toLocaleDateString().split('/');
+  const list = date.toLocaleDateString().split('/')
 
-  return `${list[2]}.${list[1]}.${list[0]}`;
-};
+  return `${list[2]}.${list[1]}.${list[0]}`
+}
 
 const compareDate = (date1: Date, date2: Date) => {
   if (date1.getFullYear() !== date2.getFullYear()) {
-    return date1.getFullYear() - date2.getFullYear();
+    return date1.getFullYear() - date2.getFullYear()
   }
 
   if (date1.getMonth() !== date2.getMonth()) {
-    return date1.getMonth() - date2.getMonth();
+    return date1.getMonth() - date2.getMonth()
   }
 
-  return date1.getDate() - date2.getDate();
-};
+  return date1.getDate() - date2.getDate()
+}
 
 const FlightBooker = Remesh.domain({
   name: 'FlightBooker',
@@ -57,65 +51,64 @@ const FlightBooker = Remesh.domain({
     const OptionState = domain.state<FlightBookerOption>({
       name: 'OptionState',
       default: 'one-way',
-    });
+    })
 
     const StartDateInputState = domain.state({
       name: 'StartDateInputState',
       default: toDateInput(new Date()),
-    });
+    })
 
     const EndDateInputState = domain.state({
       name: 'EndDateInputState',
       default: toDateInput(new Date()),
-    });
+    })
 
     const StartDateQuery = domain.query({
       name: 'StartDateQuery',
       impl: ({ get }) => {
-        const startDateInput = get(StartDateInputState());
-        return getDate(startDateInput);
+        const startDateInput = get(StartDateInputState())
+        return getDate(startDateInput)
       },
-    });
+    })
 
     const EndDateQuery = domain.query({
       name: 'EndDateQuery',
       impl: ({ get }) => {
-        const endDateInput = get(EndDateInputState());
-        return getDate(endDateInput);
+        const endDateInput = get(EndDateInputState())
+        return getDate(endDateInput)
       },
-    });
+    })
 
     const updateOption = domain.command({
       name: 'updateOption',
       impl: ({}, option: FlightBookerOption) => {
-        return OptionState().new(option);
+        return OptionState().new(option)
       },
-    });
+    })
 
     const updateStartDate = domain.command({
       name: 'updateStartDate',
       impl: ({}, dateInput: string) => {
-        return StartDateInputState().new(dateInput);
+        return StartDateInputState().new(dateInput)
       },
-    });
+    })
 
     const updateEndDate = domain.command({
       name: 'updateEndDate',
       impl: ({}, dateInput: string) => {
-        return EndDateInputState().new(dateInput);
+        return EndDateInputState().new(dateInput)
       },
-    });
+    })
 
     const StatusQuery = domain.query({
       name: 'StatusQuery',
       impl: ({ get }): FlightBookerStatus => {
-        const option = get(OptionState());
-        const startDate = get(StartDateQuery());
-        const endDate = get(EndDateQuery());
+        const option = get(OptionState())
+        const startDate = get(StartDateQuery())
+        const endDate = get(EndDateQuery())
 
-        const startDateStatus = !!startDate ? 'valid' : 'invalid';
-        const endDateStatus =
-          option === 'return' ? (!!endDate ? 'valid' : 'invalid') : 'disabled';
+        const startDateStatus = !!startDate ? 'valid' : 'invalid'
+        const endDateStatus = option === 'return' ? (!!endDate ? 'valid' : 'invalid') : 'disabled'
 
         const bookButtonStatus =
           option === 'one-way'
@@ -124,15 +117,15 @@ const FlightBooker = Remesh.domain({
               : 'disabled'
             : !!startDate && !!endDate && compareDate(startDate, endDate) <= 0
             ? 'enabled'
-            : 'disabled';
+            : 'disabled'
 
         return {
           startDate: startDateStatus,
           endDate: endDateStatus,
           bookButton: bookButtonStatus,
-        };
+        }
       },
-    });
+    })
 
     return {
       query: {
@@ -148,43 +141,39 @@ const FlightBooker = Remesh.domain({
         updateStartDate: updateStartDate,
         updateEndDate: updateEndDate,
       },
-    };
+    }
   },
-});
+})
 
 export const FlightBookerApp = () => {
-  const flightBooker = useRemeshDomain(FlightBooker());
-  const option = useRemeshQuery(flightBooker.query.OptionQuery());
-  const status = useRemeshQuery(flightBooker.query.StatusQuery());
+  const flightBooker = useRemeshDomain(FlightBooker())
+  const option = useRemeshQuery(flightBooker.query.OptionQuery())
+  const status = useRemeshQuery(flightBooker.query.StatusQuery())
 
-  const startDateInput = useRemeshQuery(flightBooker.query.StartDateInput());
-  const endDateInput = useRemeshQuery(flightBooker.query.EndDateInput());
+  const startDateInput = useRemeshQuery(flightBooker.query.StartDateInput())
+  const endDateInput = useRemeshQuery(flightBooker.query.EndDateInput())
 
   const handleOptionChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    flightBooker.command.updateOption(event.target.value as FlightBookerOption);
-  };
+    flightBooker.command.updateOption(event.target.value as FlightBookerOption)
+  }
 
-  const handleStartDateChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    flightBooker.command.updateStartDate(event.target.value);
-  };
+  const handleStartDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    flightBooker.command.updateStartDate(event.target.value)
+  }
 
   const handleEndDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    flightBooker.command.updateEndDate(event.target.value);
-  };
+    flightBooker.command.updateEndDate(event.target.value)
+  }
 
   const handleBookButtonClick = () => {
     if (status.bookButton === 'enabled') {
       if (option === 'one-way') {
-        alert(`You have booked a one-way flight on ${startDateInput}`);
+        alert(`You have booked a one-way flight on ${startDateInput}`)
       } else {
-        alert(
-          `You have booked return flight from ${startDateInput} to ${endDateInput}`
-        );
+        alert(`You have booked return flight from ${startDateInput} to ${endDateInput}`)
       }
     }
-  };
+  }
 
   return (
     <div
@@ -224,13 +213,10 @@ export const FlightBookerApp = () => {
         />
       </div>
       <div>
-        <button
-          disabled={status.bookButton === 'disabled'}
-          onClick={handleBookButtonClick}
-        >
+        <button disabled={status.bookButton === 'disabled'} onClick={handleBookButtonClick}>
           Book
         </button>
       </div>
     </div>
-  );
-};
+  )
+}

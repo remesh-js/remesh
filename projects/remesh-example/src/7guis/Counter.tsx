@@ -1,10 +1,8 @@
 import React from 'react';
-import { map } from 'rxjs/operators';
 
 import { Remesh } from 'remesh';
 import {
   useRemeshDomain,
-  useRemeshEmit,
   useRemeshQuery,
 } from "remesh-react";
 

@@ -7,7 +7,7 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "importHelpers": true,
-    "module": "ESNext",
+    "module": "esnext",
     "moduleResolution": "node",
     "newLine": "LF",
     "allowJs": true,

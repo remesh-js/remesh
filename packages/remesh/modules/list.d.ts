@@ -1,1 +1,1 @@
-export * from '../lib/modules/list'
+export * from '../dist/modules/list'

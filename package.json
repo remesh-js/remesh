@@ -11,6 +11,7 @@
     "build": "run-s clean:build build:source clean:tests",
     "build:dist": "tsc -b ./tsconfig.dist.json",
     "build:source": "run-p build:dist",
+    "build:example": "cd projects/remesh-example && npm run build",
     "clean": "run-p clean:build clean:deps",
     "clean:build": "shx rm -rf ./packages/*/*.tsbuildinfo && shx rm -rf ./packages/*/{dist,esm}",
     "clean:deps": "shx rm -rf ./{packages,examples}/*/node_modules && rm -rf node_modules",

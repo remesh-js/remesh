@@ -7,6 +7,13 @@ import { resolve } from 'path';
 export default defineConfig({
   base: '/remesh/dist/',
   plugins: [reactRefresh(), vanillaExtractPlugin()],
+  resolve: {
+    alias: {
+      "remesh": resolve(__dirname, '../../packages/remesh/src'),
+      "remesh/modules": resolve(__dirname, '../../packages/remesh/src/modules'),
+      "remesh-react": resolve(__dirname, '../../packages/remesh-react/src'),
+    }
+  },
   build: {
     outDir: resolve(__dirname, '../../dist'),
     rollupOptions: {

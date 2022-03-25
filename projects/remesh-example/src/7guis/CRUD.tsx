@@ -3,7 +3,7 @@ import React from 'react';
 import { Remesh } from 'remesh';
 import { useRemeshDomain, useRemeshQuery } from "remesh-react";
 
-import { ListModule } from '../remesh/modules/list';
+import { ListModule } from 'remesh/modules/list';
 import { OuterClickWrapper } from './OuterClickWrapper';
 
 type Name = {

@@ -2,11 +2,14 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "noEmit": true,
-    "module": "CommonJS",
+    "module": "CommonJS"
   },
   "references": [
     {
       "path": "./packages/remesh/tsconfig.json"
+    },
+    {
+      "path": "./packages/remesh-react/tsconfig.json"
     }
   ]
 }

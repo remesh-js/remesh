@@ -9,6 +9,9 @@
     "serve": "vite preview --host"
   },
   "dependencies": {
+    "tslib": "^2.3.1",
+    "react": "^17.0.0",
+    "react-dom": "^17.0.0",
     "remesh": "^1.0.0",
     "remesh-react": "^1.0.0",
     "rxjs": "^7.3.0"
