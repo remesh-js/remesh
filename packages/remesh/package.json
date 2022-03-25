@@ -1,0 +1,23 @@
+{
+  "name": "remesh",
+  "version": "1.0.0",
+  "description": "A DDD framework for TypeScript/JavaScript",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "scripts": {
+  },
+  "peerDependencies": {
+    "rxjs": "^7.3.0"
+  },
+  "dependencies": {
+    "is-plain-object": "^5.0.0",
+    "shallowequal": "^1.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^16.7.2",
+    "@types/shallowequal": "^1.1.1",
+    "rimraf": "^3.0.2",
+    "rxjs": "^7.3.0",
+    "typescript": "^4.3.2"
+  }
+}
