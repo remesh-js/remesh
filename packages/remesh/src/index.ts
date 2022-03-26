@@ -1,4 +1,13 @@
-import { RemeshDomain, RemeshModule, RemeshExtern } from './remesh'
+import {
+  RemeshDomain,
+  RemeshModule,
+  RemeshExtern,
+  RemeshState,
+  RemeshCommand,
+  RemeshCommand$,
+  RemeshCommandAsync,
+} from './remesh'
+
 import { RemeshStore } from './store'
 
 export * from './remesh'
@@ -9,4 +18,8 @@ export const Remesh = {
   module: RemeshModule,
   extern: RemeshExtern,
   store: RemeshStore,
+  state: RemeshState,
+  command: RemeshCommand,
+  command$: RemeshCommand$,
+  commandAsync: RemeshCommandAsync,
 }
