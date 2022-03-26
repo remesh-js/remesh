@@ -10,7 +10,6 @@ export default defineConfig({
   resolve: {
     alias: {
       "remesh": resolve(__dirname, '../../packages/remesh/src'),
-      "remesh/modules": resolve(__dirname, '../../packages/remesh/src/modules'),
       "remesh-react": resolve(__dirname, '../../packages/remesh-react/src'),
     }
   },

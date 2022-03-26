@@ -4,11 +4,11 @@ import shallowEqual from 'shallowequal'
 
 import { isPlainObject } from 'is-plain-object'
 
-type Undefined2Void<T> = undefined extends T ? Exclude<T, undefined> | void : T
+export type Undefined2Void<T> = undefined extends T ? Exclude<T, undefined> | void : T
 
-type ExtractFirstArg<T extends (...args: any) => any> = Undefined2Void<Parameters<T>[0]>
+export type ExtractFirstArg<T extends (...args: any) => any> = Undefined2Void<Parameters<T>[0]>
 
-type ExtractSecondArg<T extends (...args: any) => any> = Undefined2Void<Parameters<T>[1]>
+export type ExtractSecondArg<T extends (...args: any) => any> = Undefined2Void<Parameters<T>[1]>
 
 export type RemeshInjectedContext = {
   get: <T, U>(input: RemeshStateItem<T, U> | RemeshQueryPayload<T, U>) => U
@@ -26,7 +26,7 @@ export type RemeshEvent<T, U> = {
   eventName: string
   impl?: (context: RemeshEventContext, arg: T) => U
   (arg: T): RemeshEventPayload<T, U>
-  owner?: RemeshDomainPayload<any, any>
+  owner: RemeshDomainPayload<any, any>
 }
 
 export type RemeshEventPayload<T, U = T> = {
@@ -60,6 +60,7 @@ export function RemeshEvent(options: RemeshEventOptions<unknown, unknown> | { na
   Event.type = 'RemeshEvent'
   Event.eventId = eventId
   Event.eventName = options.name
+  Event.owner = DefaultDomain()
 
   if ('impl' in options) {
     Event.impl = options.impl
@@ -76,7 +77,7 @@ export type RemeshState<T, U> = {
   stateName: string
   impl: (arg: T) => U
   (arg: T): RemeshStateItem<T, U>
-  owner?: RemeshDomainPayload<any, any>
+  owner: RemeshDomainPayload<any, any>
   Query: RemeshQuery<T, U>
   compare: CompareFn<U>
 }
@@ -161,6 +162,7 @@ export const RemeshState = <T extends RemeshStateOptions<any, any>>(
   State.stateName = options.name
   State.impl = options.impl
   State.compare = options.compare ?? defaultCompare
+  State.owner = DefaultDomain()
 
   State.Query = RemeshQuery({
     name: `Query(${options.name})`,
@@ -182,7 +184,7 @@ export type RemeshQuery<T, U> = {
   queryName: string
   impl: (context: RemeshQueryContext, arg: T) => U
   (arg: T): RemeshQueryPayload<T, U>
-  owner?: RemeshDomainPayload<any, any>
+  owner: RemeshDomainPayload<any, any>
   compare: CompareFn<U>
 }
 
@@ -232,6 +234,7 @@ export const RemeshQuery = <T extends RemeshQueryOptions<any, any>>(
   Query.queryName = options.name
   Query.impl = options.impl
   Query.compare = options.compare ?? defaultCompare
+  Query.owner = DefaultDomain()
 
   return Query
 }
@@ -260,7 +263,7 @@ export type RemeshCommand<T = unknown> = {
   commandName: string
   impl: (context: RemeshCommandContext, arg: T) => RemeshCommandOutput
   (arg: T): RemeshCommandPayload<T>
-  owner?: RemeshDomainPayload<any, any>
+  owner: RemeshDomainPayload<any, any>
 }
 
 export type RemeshCommandOptions<T> = {
@@ -287,6 +290,7 @@ export const RemeshCommand = <T extends RemeshCommandOptions<any>>(
   Command.commandId = commandId
   Command.commandName = options.name
   Command.impl = options.impl
+  Command.owner = DefaultDomain()
 
   return Command
 }
@@ -309,7 +313,7 @@ export type RemeshCommand$<T> = {
   command$Name: string
   impl: (context: RemeshCommand$Context, arg$: Observable<T>) => Observable<RemeshCommandOutput>
   (arg: T): RemeshCommand$Payload<T>
-  owner?: RemeshDomainPayload<any, any>
+  owner: RemeshDomainPayload<any, any>
 }
 
 export type RemeshCommand$Options<T> = {
@@ -333,6 +337,7 @@ export const RemeshCommand$ = <T = void>(options: RemeshCommand$Options<T>): Rem
   Command$.command$Id = command$Id
   Command$.command$Name = options.name
   Command$.impl = options.impl
+  Command$.owner = DefaultDomain()
 
   return Command$
 }
@@ -496,7 +501,7 @@ export const RemeshDomain = <T extends RemeshDomainOptions<any, any>>(
   return Domain
 }
 
-export const DefaultDomain = RemeshDomain({
+export const DefaultDomain: RemeshDomain<any, void> = RemeshDomain({
   name: 'DefaultDomain',
   impl: () => {
     return {}

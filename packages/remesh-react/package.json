@@ -19,7 +19,6 @@
   },
   "devDependencies": {
     "@types/node": "^16.7.2",
-    "@types/shallowequal": "^1.1.1",
     "rimraf": "^3.0.2",
     "react": "^17.0.0",
     "react-dom": "^17.0.0",

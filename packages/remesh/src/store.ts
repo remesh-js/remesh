@@ -1,7 +1,6 @@
 import { Observable, Subject, Subscription } from 'rxjs'
 
 import {
-  DefaultDomain,
   RemeshCommand,
   RemeshCommand$,
   RemeshCommand$Context,
@@ -264,7 +263,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
   }
 
   const getStateStorage = <T, U>(stateItem: RemeshStateItem<T, U>): RemeshStateStorage<T, U> => {
-    const domainStorage = getDomainStorage(stateItem.State.owner ?? DefaultDomain())
+    const domainStorage = getDomainStorage(stateItem.State.owner)
     const key = getStateStorageKey(stateItem)
     const stateStorage = domainStorage.stateMap.get(key)
 
@@ -297,7 +296,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
   }
 
   const getEventStorage = <T, U = T>(Event: RemeshEvent<T, U>): RemeshEventStorage<T, U> => {
-    const domainStorage = getDomainStorage(Event.owner ?? DefaultDomain())
+    const domainStorage = getDomainStorage(Event.owner)
     const eventStorage = domainStorage.eventMap.get(Event)
 
     if (eventStorage) {
@@ -331,7 +330,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
   }
 
   const getQueryStorage = <T, U>(queryPayload: RemeshQueryPayload<T, U>): RemeshQueryStorage<T, U> => {
-    const domainStorage = getDomainStorage(queryPayload.Query.owner ?? DefaultDomain())
+    const domainStorage = getDomainStorage(queryPayload.Query.owner)
     const key = getQueryStorageKey(queryPayload)
     const queryStorage = domainStorage.queryMap.get(key)
 
@@ -402,7 +401,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
   }
 
   const getCommand$Storage = <T>(Command$: RemeshCommand$<T>): RemeshCommand$Storage<T> => {
-    const domainStorage = getDomainStorage(Command$.owner ?? DefaultDomain())
+    const domainStorage = getDomainStorage(Command$.owner)
     const command$Storage = domainStorage.command$Map.get(Command$)
 
     if (command$Storage) {
@@ -466,11 +465,13 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
         if ('default' in options) {
           const StaticState = RemeshDefaultState(options)
           StaticState.owner = domainPayload
+          StaticState.Query.owner = domainPayload
           return StaticState
         }
 
         const State = RemeshState(options)
         State.owner = domainPayload
+        State.Query.owner = domainPayload
         return State
       },
       query: (options) => {
@@ -569,7 +570,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
   }
 
   const clearQueryStorage = <T, U>(queryStorage: RemeshQueryStorage<T, U>) => {
-    const domainStorage = getDomainStorage(queryStorage.Query.owner ?? DefaultDomain())
+    const domainStorage = getDomainStorage(queryStorage.Query.owner)
 
     queryStorage.subject.complete()
     domainStorage.queryMap.delete(queryStorage.key)
@@ -600,7 +601,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
   }
 
   const clearStateStorage = <T, U>(stateStorage: RemeshStateStorage<T, U>) => {
-    const domainStorage = getDomainStorage(stateStorage.State.owner ?? DefaultDomain())
+    const domainStorage = getDomainStorage(stateStorage.State.owner)
 
     domainStorage.stateMap.delete(stateStorage.key)
 
@@ -624,7 +625,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
   }
 
   const clearEventStorage = <T, U>(eventStorage: RemeshEventStorage<T, U>) => {
-    const domainStorage = getDomainStorage(eventStorage.Event.owner ?? DefaultDomain())
+    const domainStorage = getDomainStorage(eventStorage.Event.owner)
 
     eventStorage.subject.complete()
     domainStorage.eventMap.delete(eventStorage.Event)
@@ -639,7 +640,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
   }
 
   const clearCommand$Storage = <T>(command$Storage: RemeshCommand$Storage<T>) => {
-    const domainStorage = getDomainStorage(command$Storage.Command$.owner ?? DefaultDomain())
+    const domainStorage = getDomainStorage(command$Storage.Command$.owner)
 
     command$Storage.subject.complete()
     command$Storage.subscription?.unsubscribe()
@@ -712,6 +713,17 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     const queryStorage = getQueryStorage(queryPayload)
 
     return queryStorage.currentValue
+  }
+
+  const queryByKey = <T>(domainPayload: RemeshDomainPayload<any, any>, queryKey: string): T => {
+    const domainStorage = getDomainStorage(domainPayload)
+    const queryStorage = domainStorage.queryMap.get(queryKey)
+
+    if (queryStorage) {
+      return queryStorage.currentValue
+    }
+
+    throw new Error(`query key not found in ${domainPayload.Domain.domainName}`)
   }
 
   const remeshInjectedContext: RemeshInjectedContext = {
@@ -1088,6 +1100,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     name: options.name,
     getDomain,
     query: getCurrentQueryValue,
+    queryByKey,
     emitEvent,
     emitCommand,
     destroy,

@@ -20,7 +20,7 @@
     "sourceMap": true,
     "esModuleInterop": true,
     "stripInternal": true,
-    "lib": ["ESNext"]
+    "lib": ["ESNext", "DOM"]
   },
   "include": ["./packages"]
 }

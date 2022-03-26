@@ -1,0 +1,24 @@
+{
+  "name": "remesh-redux",
+  "version": "1.0.0",
+  "description": "Redux adapter for remesh",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {},
+  "peerDependencies": {
+    "remesh": "^1.0.0"
+  },
+  "dependencies": {
+    "tslib": "^2.3.1",
+    "@redux-devtools/extension": "^3.2.2"
+  },
+  "devDependencies": {
+    "@types/node": "^16.7.2",
+    "typescript": "^4.3.2",
+    "remesh": "^1.0.0"
+  }
+}
