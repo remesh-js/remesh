@@ -10,6 +10,9 @@
     },
     {
       "path": "./packages/remesh-react/tsconfig.json"
+    },
+    {
+      "path": "./packages/remesh-redux/tsconfig.json"
     }
   ]
 }

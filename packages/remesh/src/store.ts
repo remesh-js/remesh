@@ -1,4 +1,4 @@
-import { Observable, Subject, Subscription } from 'rxjs';
+import { Observable, Subject, Subscription } from 'rxjs'
 
 import {
   RemeshCommand,
@@ -16,6 +16,7 @@ import {
   RemeshDomainDefinition,
   RemeshDomainPayload,
   RemeshEvent,
+  RemeshEventOptions,
   RemeshEventPayload,
   RemeshExtern,
   RemeshExternPayload,
@@ -27,256 +28,293 @@ import {
   RemeshStateItem,
   RemeshStateOptions,
   RemeshStatePayload,
-} from './remesh';
+} from './remesh'
 
-export type RemeshStore = ReturnType<typeof RemeshStore>;
+export type RemeshStore = ReturnType<typeof RemeshStore>
 
 type RemeshStateStorage<T, U> = {
-  type: 'RemeshStateStorage';
-  State: RemeshState<T, U>;
-  arg: U;
-  key: string;
-  currentState: U;
-  downstreamSet: Set<RemeshQueryStorage<any, any>>;
-};
+  type: 'RemeshStateStorage'
+  State: RemeshState<T, U>
+  arg: T
+  key: string
+  currentState: U
+  downstreamSet: Set<RemeshQueryStorage<any, any>>
+}
 
 type RemeshQueryStorage<T, U> = {
-  type: 'RemeshQueryStorage';
-  Query: RemeshQuery<T, U>;
-  arg: T;
-  key: string;
-  currentValue: U;
-  upstreamSet: Set<RemeshQueryStorage<any, any> | RemeshStateStorage<any, any>>;
-  downstreamSet: Set<RemeshQueryStorage<any, any>>;
-  subject: Subject<U>;
-  observable: Observable<U>;
-  refCount: number;
-};
+  type: 'RemeshQueryStorage'
+  Query: RemeshQuery<T, U>
+  arg: T
+  key: string
+  currentValue: U
+  upstreamSet: Set<RemeshQueryStorage<any, any> | RemeshStateStorage<any, any>>
+  downstreamSet: Set<RemeshQueryStorage<any, any>>
+  subject: Subject<U>
+  observable: Observable<U>
+  refCount: number
+}
 
 type RemeshEventStorage<T = unknown, U = T> = {
-  type: 'RemeshEventStorage';
-  Event: RemeshEvent<T, U>;
-  subject: Subject<U>;
-  observable: Observable<U>;
-  refCount: number;
-};
+  type: 'RemeshEventStorage'
+  Event: RemeshEvent<T, U>
+  subject: Subject<U>
+  observable: Observable<U>
+  refCount: number
+}
 
 type RemeshCommand$Storage<T> = {
-  type: 'RemeshCommand$Storage';
-  Command$: RemeshCommand$<T>;
-  subject: Subject<T>;
-  observable: Observable<T>;
-  subscription?: Subscription;
-};
+  type: 'RemeshCommand$Storage'
+  Command$: RemeshCommand$<T>
+  subject: Subject<T>
+  observable: Observable<T>
+  subscription?: Subscription
+}
 
 type RemeshDomainStorage<T extends RemeshDomainDefinition, Arg> = {
-  type: 'RemeshDomainStorage';
-  Domain: RemeshDomain<T, Arg>;
-  arg: Arg;
-  key: string;
-  domain: T;
-  domainOutput?: BindingDomainOutput<T>;
-  domainPayload: RemeshDomainPayload<T, Arg>;
-  upstreamSet: Set<RemeshDomainStorage<any, any>>;
-  downstreamSet: Set<RemeshDomainStorage<any, any>>;
-  domainSubscriptionSet: Set<Subscription>;
-  upstreamSubscriptionSet: Set<Subscription>;
-  command$Set: Set<RemeshCommand$<any>>;
-  stateMap: Map<string, RemeshStateStorage<any, any>>;
-  queryMap: Map<string, RemeshQueryStorage<any, any>>;
-  eventMap: Map<RemeshEvent<any, any>, RemeshEventStorage<any, any>>;
-  command$Map: Map<RemeshCommand$<any>, RemeshCommand$Storage<any>>;
-  refCount: number;
-  running: boolean;
-};
+  type: 'RemeshDomainStorage'
+  Domain: RemeshDomain<T, Arg>
+  arg: Arg
+  key: string
+  domain: T
+  domainOutput?: BindingDomainOutput<T>
+  domainPayload: RemeshDomainPayload<T, Arg>
+  upstreamSet: Set<RemeshDomainStorage<any, any>>
+  downstreamSet: Set<RemeshDomainStorage<any, any>>
+  domainSubscriptionSet: Set<Subscription>
+  upstreamSubscriptionSet: Set<Subscription>
+  command$Set: Set<RemeshCommand$<any>>
+  stateMap: Map<string, RemeshStateStorage<any, any>>
+  queryMap: Map<string, RemeshQueryStorage<any, any>>
+  eventMap: Map<RemeshEvent<any, any>, RemeshEventStorage<any, any>>
+  command$Map: Map<RemeshCommand$<any>, RemeshCommand$Storage<any>>
+  refCount: number
+  running: boolean
+}
 
 type RemeshExternStorage<T> = {
-  type: 'RemeshExternStorage';
-  Extern: RemeshExtern<T>;
-  currentValue: T;
-};
+  type: 'RemeshExternStorage'
+  Extern: RemeshExtern<T>
+  currentValue: T
+}
+
+export type RemeshStateCreated<T, U> = {
+  type: 'RemeshStateCreated'
+  State: RemeshState<T, U>
+  key: string
+  arg: T
+  state: U
+}
+
+export type RemeshStateUpdated<T, U> = {
+  type: 'RemeshStateUpdated'
+  State: RemeshState<T, U>
+  key: string
+  arg: T
+  oldState: U
+  newState: U
+}
+
+export type RemeshStateDeleted<T, U> = {
+  type: 'RemeshStateDeleted'
+  State: RemeshState<T, U>
+  key: string
+  arg: T
+  state: U
+}
+
+export type RemeshStateAction<T, U> = RemeshStateCreated<T, U> | RemeshStateUpdated<T, U> | RemeshStateDeleted<T, U>
+
+export type RemeshStateInspector = {
+  type: 'RemeshStateInspector'
+  onStateAction: <T, U>(action: RemeshStateAction<T, U>) => unknown
+  onDestroy: () => unknown
+}
+
+export type RemeshInspector = RemeshStateInspector
 
 export type RemeshStoreOptions = {
-  name: string;
-  externs?: RemeshExternPayload<any>[];
-};
+  name: string
+  externs?: RemeshExternPayload<any>[]
+  inspectors?: (RemeshInspector | undefined)[]
+}
 
 type BindingCommand<T extends RemeshDomainDefinition['command']> = T extends {}
   ? {
-      [key in keyof T]: (...args: Parameters<T[key]>) => void;
+      [key in keyof T]: (...args: Parameters<T[key]>) => void
     }
-  : never;
+  : never
 
-type BindingDomainOutput<T extends RemeshDomainDefinition> = Omit<
-  T,
-  'command'
-> & {
-  command: BindingCommand<T['command']>;
-};
-
-const DefaultDomain = RemeshDomain<{}, void>({
-  name: 'DefaultDomain',
-  impl: () => {
-    return {};
-  },
-});
+type BindingDomainOutput<T extends RemeshDomainDefinition> = Omit<T, 'command'> & {
+  command: BindingCommand<T['command']>
+}
 
 export const RemeshStore = (options: RemeshStoreOptions) => {
-  const dirtySet = new Set<RemeshQueryStorage<any, any>>();
-  const domainStorageMap = new Map<string, RemeshDomainStorage<any, any>>();
-  const externStorageMap = new Map<
-    RemeshExtern<any>,
-    RemeshExternStorage<any>
-  >();
+  const dirtySet = new Set<RemeshQueryStorage<any, any>>()
+  const domainStorageMap = new Map<string, RemeshDomainStorage<any, any>>()
+  const externStorageMap = new Map<RemeshExtern<any>, RemeshExternStorage<any>>()
 
   type PendingClearItem =
     | RemeshStateStorage<any, any>
     | RemeshDomainStorage<any, any>
     | RemeshEventStorage<any, any>
-    | RemeshQueryStorage<any, any>;
+    | RemeshQueryStorage<any, any>
 
-  const pendingStorageSet = new Set<PendingClearItem>();
+  const pendingStorageSet = new Set<PendingClearItem>()
 
   const getExternValue = <T>(Extern: RemeshExtern<T>): T => {
     for (const payload of options.externs ?? []) {
       if (payload.Extern === Extern) {
-        return payload.value;
+        return payload.value
       }
     }
-    return Extern.default;
-  };
+    return Extern.default
+  }
 
-  const getExternStorage = <T>(
-    Extern: RemeshExtern<T>
-  ): RemeshExternStorage<T> => {
-    const externStorage = externStorageMap.get(Extern);
+  const getExternStorage = <T>(Extern: RemeshExtern<T>): RemeshExternStorage<T> => {
+    const externStorage = externStorageMap.get(Extern)
 
     if (externStorage) {
-      return externStorage;
+      return externStorage
     }
 
-    const currentValue = getExternValue(Extern);
+    const currentValue = getExternValue(Extern)
 
     const currentExternStorage: RemeshExternStorage<T> = {
       type: 'RemeshExternStorage',
       Extern,
       currentValue,
-    };
+    }
 
-    externStorageMap.set(Extern, currentExternStorage);
+    externStorageMap.set(Extern, currentExternStorage)
 
-    return getExternStorage(Extern);
-  };
+    return getExternStorage(Extern)
+  }
 
   const getExternCurrentValue = <T>(Extern: RemeshExtern<T>): T => {
-    return getExternStorage(Extern).currentValue;
-  };
+    return getExternStorage(Extern).currentValue
+  }
+
+  const onStateAction = <T, U>(stateAction: RemeshStateAction<T, U>) => {
+    if (options.inspectors) {
+      for (const inspector of options.inspectors) {
+        if (inspector) {
+          inspector.onStateAction(stateAction)
+        }
+      }
+    }
+  }
+
+  const onDestroyInspectors = () => {
+    if (options.inspectors) {
+      for (const inspector of options.inspectors) {
+        if (inspector) {
+          inspector.onDestroy()
+        }
+      }
+    }
+  }
 
   const storageKeyWeakMap = new WeakMap<
-    | RemeshQueryPayload<any, any>
-    | RemeshStateItem<any, any>
-    | RemeshDomainPayload<any, any>,
+    RemeshQueryPayload<any, any> | RemeshStateItem<any, any> | RemeshDomainPayload<any, any>,
     string
-  >();
+  >()
 
-  const getStateStorageKey = <T, U>(
-    stateItem: RemeshStateItem<T, U>
-  ): string => {
-    const key = storageKeyWeakMap.get(stateItem);
+  const getStateStorageKey = <T, U>(stateItem: RemeshStateItem<T, U>): string => {
+    const key = storageKeyWeakMap.get(stateItem)
 
     if (key) {
-      return key;
+      return key
     }
 
-    const stateName = stateItem.State.stateName;
-    const argString = JSON.stringify(stateItem.arg) ?? '';
-    const keyString = `State/${stateItem.State.stateId}/${stateName}/${argString}`;
+    const stateName = stateItem.State.stateName
+    const argString = JSON.stringify(stateItem.arg) ?? ''
+    const keyString = `State/${stateItem.State.stateId}/${stateName}/${argString}`
 
-    storageKeyWeakMap.set(stateItem, keyString);
+    storageKeyWeakMap.set(stateItem, keyString)
 
-    return keyString;
-  };
+    return keyString
+  }
 
-  const getQueryStorageKey = <T, U>(
-    queryPayload: RemeshQueryPayload<T, U>
-  ): string => {
-    const key = storageKeyWeakMap.get(queryPayload);
+  const getQueryStorageKey = <T, U>(queryPayload: RemeshQueryPayload<T, U>): string => {
+    const key = storageKeyWeakMap.get(queryPayload)
 
     if (key) {
-      return key;
+      return key
     }
 
-    const queryName = queryPayload.Query.queryName;
-    const argString = JSON.stringify(queryPayload.arg) ?? '';
-    const keyString = `Query/${queryPayload.Query.queryId}/${queryName}/${argString}`;
+    const queryName = queryPayload.Query.queryName
+    const argString = JSON.stringify(queryPayload.arg) ?? ''
+    const keyString = `Query/${queryPayload.Query.queryId}/${queryName}/${argString}`
 
-    storageKeyWeakMap.set(queryPayload, keyString);
+    storageKeyWeakMap.set(queryPayload, keyString)
 
-    return keyString;
-  };
+    return keyString
+  }
 
   const getStorageKey = <T, U>(
-    input:
-      | RemeshStateItem<T, U>
-      | RemeshQueryPayload<T, U>
-      | RemeshDomainPayload<T, U>
+    input: RemeshStateItem<T, U> | RemeshQueryPayload<T, U> | RemeshDomainPayload<T, U>,
   ): string => {
     if (input.type === 'RemeshStateItem') {
-      return getStateStorageKey(input);
+      return getStateStorageKey(input)
     } else if (input.type === 'RemeshQueryPayload') {
-      return getQueryStorageKey(input);
-    } else {
-      return getDomainStorageKey(input);
+      return getQueryStorageKey(input)
     }
-  };
+    return getDomainStorageKey(input)
+  }
 
-  const getStateStorage = <T, U>(
-    stateItem: RemeshStateItem<T, U>
-  ): RemeshStateStorage<T, U> => {
-    const domainStorage = getDomainStorage(
-      stateItem.State.owner ?? DefaultDomain()
-    );
-    const key = getStateStorageKey(stateItem);
-    const stateStorage = domainStorage.stateMap.get(key);
+  const getStateStorage = <T, U>(stateItem: RemeshStateItem<T, U>): RemeshStateStorage<T, U> => {
+    const domainStorage = getDomainStorage(stateItem.State.owner)
+    const key = getStateStorageKey(stateItem)
+    const stateStorage = domainStorage.stateMap.get(key)
 
     if (stateStorage) {
-      return stateStorage as RemeshStateStorage<T, U>;
+      return stateStorage as RemeshStateStorage<T, U>
     }
 
-    domainStorage.stateMap.set(key, {
+    const newStateStorage: RemeshStateStorage<T, U> = {
       type: 'RemeshStateStorage',
       State: stateItem.State,
       arg: stateItem.arg,
-      key: key,
+      key,
       currentState: stateItem.State.impl(stateItem.arg),
       downstreamSet: new Set(),
-    });
-
-    return getStateStorage(stateItem);
-  };
-
-  const getEventStorage = <T, U = T>(
-    Event: RemeshEvent<T, U>
-  ): RemeshEventStorage<T, U> => {
-    const domainStorage = getDomainStorage(Event.owner ?? DefaultDomain());
-    const eventStorage = domainStorage.eventMap.get(Event);
-
-    if (eventStorage) {
-      return eventStorage as RemeshEventStorage<T, U>;
     }
 
-    const subject = new Subject<U>();
+    domainStorage.stateMap.set(key, newStateStorage)
+
+    if (options.inspectors) {
+      onStateAction({
+        type: 'RemeshStateCreated',
+        State: stateItem.State,
+        arg: stateItem.arg,
+        key,
+        state: newStateStorage.currentState,
+      })
+    }
+
+    return getStateStorage(stateItem)
+  }
+
+  const getEventStorage = <T, U = T>(Event: RemeshEvent<T, U>): RemeshEventStorage<T, U> => {
+    const domainStorage = getDomainStorage(Event.owner)
+    const eventStorage = domainStorage.eventMap.get(Event)
+
+    if (eventStorage) {
+      return eventStorage as RemeshEventStorage<T, U>
+    }
+
+    const subject = new Subject<U>()
 
     const observable = new Observable<U>((subscriber) => {
-      const subscription = subject.subscribe(subscriber);
-      currentEventStorage.refCount += 1;
+      const subscription = subject.subscribe(subscriber)
+      currentEventStorage.refCount += 1
       return () => {
-        subscription.unsubscribe();
-        currentEventStorage.refCount -= 1;
-        pendingStorageSet.add(currentEventStorage);
-        commit();
-      };
-    });
+        subscription.unsubscribe()
+        currentEventStorage.refCount -= 1
+        pendingStorageSet.add(currentEventStorage)
+        commit()
+      }
+    })
 
     const currentEventStorage: RemeshEventStorage<T, U> = {
       type: 'RemeshEventStorage',
@@ -284,240 +322,224 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
       subject,
       observable,
       refCount: 0,
-    };
-
-    domainStorage.eventMap.set(Event, currentEventStorage);
-
-    return getEventStorage(Event);
-  };
-
-  const getQueryStorage = <T, U>(
-    queryPayload: RemeshQueryPayload<T, U>
-  ): RemeshQueryStorage<T, U> => {
-    const domainStorage = getDomainStorage(
-      queryPayload.Query.owner ?? DefaultDomain()
-    );
-    const key = getQueryStorageKey(queryPayload);
-    const queryStorage = domainStorage.queryMap.get(key);
-
-    if (queryStorage) {
-      return queryStorage;
     }
 
-    const subject = new Subject<U>();
+    domainStorage.eventMap.set(Event, currentEventStorage)
+
+    return getEventStorage(Event)
+  }
+
+  const getQueryStorage = <T, U>(queryPayload: RemeshQueryPayload<T, U>): RemeshQueryStorage<T, U> => {
+    const domainStorage = getDomainStorage(queryPayload.Query.owner)
+    const key = getQueryStorageKey(queryPayload)
+    const queryStorage = domainStorage.queryMap.get(key)
+
+    if (queryStorage) {
+      return queryStorage
+    }
+
+    const subject = new Subject<U>()
 
     const observable = new Observable<U>((subscriber) => {
-      const subscription = subject.subscribe(subscriber);
+      const subscription = subject.subscribe(subscriber)
 
-      currentQueryStorage.refCount += 1;
+      currentQueryStorage.refCount += 1
 
       return () => {
-        subscription.unsubscribe();
-        currentQueryStorage.refCount -= 1;
-        pendingStorageSet.add(currentQueryStorage);
-        commit();
-      };
-    });
+        subscription.unsubscribe()
+        currentQueryStorage.refCount -= 1
+        pendingStorageSet.add(currentQueryStorage)
+        commit()
+      }
+    })
 
-    const upstreamSet: RemeshQueryStorage<T, U>['upstreamSet'] = new Set();
-    const downstreamSet: RemeshQueryStorage<T, U>['downstreamSet'] = new Set();
+    const upstreamSet: RemeshQueryStorage<T, U>['upstreamSet'] = new Set()
+    const downstreamSet: RemeshQueryStorage<T, U>['downstreamSet'] = new Set()
 
-    const { Query } = queryPayload;
+    const { Query } = queryPayload
 
     const queryContext: RemeshQueryContext = {
       get: (input) => {
         if (input.type === 'RemeshStateItem') {
-          const upstreamStateStorage = getStateStorage(input);
-          upstreamSet.add(upstreamStateStorage);
-          return remeshInjectedContext.get(input);
+          const upstreamStateStorage = getStateStorage(input)
+          upstreamSet.add(upstreamStateStorage)
+          return remeshInjectedContext.get(input)
         }
 
         if (input.type === 'RemeshQueryPayload') {
-          const upstreamQueryStorage = getQueryStorage(input);
-          upstreamSet.add(upstreamQueryStorage);
-          return remeshInjectedContext.get(input);
+          const upstreamQueryStorage = getQueryStorage(input)
+          upstreamSet.add(upstreamQueryStorage)
+          return remeshInjectedContext.get(input)
         }
 
-        return remeshInjectedContext.get(input);
+        return remeshInjectedContext.get(input)
       },
-    };
+    }
 
-    const currentValue = Query.impl(queryContext, queryPayload.arg);
+    const currentValue = Query.impl(queryContext, queryPayload.arg)
 
     const currentQueryStorage: RemeshQueryStorage<T, U> = {
       type: 'RemeshQueryStorage',
       Query: queryPayload.Query,
       arg: queryPayload.arg,
       currentValue,
-      key: key,
+      key,
       upstreamSet,
       downstreamSet,
       subject,
       observable,
       refCount: 0,
-    };
+    }
 
     for (const upstream of upstreamSet) {
-      upstream.downstreamSet.add(currentQueryStorage);
+      upstream.downstreamSet.add(currentQueryStorage)
     }
 
-    domainStorage.queryMap.set(key, currentQueryStorage);
+    domainStorage.queryMap.set(key, currentQueryStorage)
 
-    return currentQueryStorage;
-  };
+    return currentQueryStorage
+  }
 
-  const getCommand$Storage = <T>(
-    Command$: RemeshCommand$<T>
-  ): RemeshCommand$Storage<T> => {
-    const domainStorage = getDomainStorage(Command$.owner ?? DefaultDomain());
-    const command$Storage = domainStorage.command$Map.get(Command$);
+  const getCommand$Storage = <T>(Command$: RemeshCommand$<T>): RemeshCommand$Storage<T> => {
+    const domainStorage = getDomainStorage(Command$.owner)
+    const command$Storage = domainStorage.command$Map.get(Command$)
 
     if (command$Storage) {
-      return command$Storage;
+      return command$Storage
     }
 
-    const subject = new Subject<T>();
-    const observable = subject.asObservable();
+    const subject = new Subject<T>()
+    const observable = subject.asObservable()
 
     const currentCommand$Storage: RemeshCommand$Storage<T> = {
       type: 'RemeshCommand$Storage',
       Command$,
       subject,
       observable,
-    };
+    }
 
-    domainStorage.command$Map.set(Command$, currentCommand$Storage);
+    domainStorage.command$Map.set(Command$, currentCommand$Storage)
 
-    return currentCommand$Storage;
-  };
+    return currentCommand$Storage
+  }
 
   const getDomainStorageKey = <T extends RemeshDomainDefinition, Arg>(
-    domainPayload: RemeshDomainPayload<T, Arg>
+    domainPayload: RemeshDomainPayload<T, Arg>,
   ): string => {
-    const key = storageKeyWeakMap.get(domainPayload);
+    const key = storageKeyWeakMap.get(domainPayload)
 
     if (key) {
-      return key;
+      return key
     }
 
-    const domainName = domainPayload.Domain.domainName;
-    const argString = JSON.stringify(domainPayload.arg) ?? '';
-    const keyString = `Domain/${domainPayload.Domain.domainId}/${domainName}/${argString}`;
+    const domainName = domainPayload.Domain.domainName
+    const argString = JSON.stringify(domainPayload.arg) ?? ''
+    const keyString = `Domain/${domainPayload.Domain.domainId}/${domainName}/${argString}`
 
-    storageKeyWeakMap.set(domainPayload, keyString);
+    storageKeyWeakMap.set(domainPayload, keyString)
 
-    return keyString;
-  };
+    return keyString
+  }
 
   const getDomainStorage = <T extends RemeshDomainDefinition, Arg>(
-    domainPayload: RemeshDomainPayload<T, Arg>
+    domainPayload: RemeshDomainPayload<T, Arg>,
   ): RemeshDomainStorage<T, Arg> => {
-    const key = getDomainStorageKey(domainPayload);
-    const domainStorage = domainStorageMap.get(key);
+    const key = getDomainStorageKey(domainPayload)
+    const domainStorage = domainStorageMap.get(key)
 
     if (domainStorage) {
-      return domainStorage;
+      return domainStorage
     }
 
-    let isDomainInited = false;
+    let isDomainInited = false
 
-    const upstreamSet: RemeshDomainStorage<T, Arg>['upstreamSet'] = new Set();
-    const command$Set: RemeshDomainStorage<T, Arg>['command$Set'] = new Set();
+    const upstreamSet: RemeshDomainStorage<T, Arg>['upstreamSet'] = new Set()
+    const command$Set: RemeshDomainStorage<T, Arg>['command$Set'] = new Set()
 
     const domainContext: RemeshDomainContext = {
-      state: (
-        options:
-          | RemeshStateOptions<unknown, unknown>
-          | RemeshDefaultStateOptions<unknown>
-      ): any => {
+      state: (options: RemeshStateOptions<unknown, unknown> | RemeshDefaultStateOptions<unknown>): any => {
         if (isDomainInited) {
-          throw new Error(`Unexpected calling domain.state(..) asynchronously`);
+          throw new Error(`Unexpected calling domain.state(..) asynchronously`)
         }
 
         if ('default' in options) {
-          const StaticState = RemeshDefaultState(options);
-          StaticState.owner = domainPayload;
-          return StaticState;
+          const StaticState = RemeshDefaultState(options)
+          StaticState.owner = domainPayload
+          StaticState.Query.owner = domainPayload
+          return StaticState
         }
 
-        const State = RemeshState(options);
-        State.owner = domainPayload;
-        return State;
+        const State = RemeshState(options)
+        State.owner = domainPayload
+        State.Query.owner = domainPayload
+        return State
       },
       query: (options) => {
         if (isDomainInited) {
-          throw new Error(`Unexpected calling domain.query(..) asynchronously`);
+          throw new Error(`Unexpected calling domain.query(..) asynchronously`)
         }
-        const Query = RemeshQuery(options);
-        Query.owner = domainPayload;
-        return Query;
+        const Query = RemeshQuery(options)
+        Query.owner = domainPayload
+        return Query
       },
-      event: (options) => {
+      event: (options: { name: string } | RemeshEventOptions<any, any>) => {
         if (isDomainInited) {
-          throw new Error(`Unexpected calling domain.event(..) asynchronously`);
+          throw new Error(`Unexpected calling domain.event(..) asynchronously`)
         }
-        const Event = RemeshEvent(options);
-        Event.owner = domainPayload;
-        return Event;
+        const Event = RemeshEvent(options)
+        Event.owner = domainPayload
+        return Event as RemeshEvent<any, any>
       },
       command: (options) => {
         if (isDomainInited) {
-          throw new Error(
-            `Unexpected calling domain.command(..) asynchronously`
-          );
+          throw new Error(`Unexpected calling domain.command(..) asynchronously`)
         }
-        const Command = RemeshCommand(options);
-        Command.owner = domainPayload;
-        return Command;
+        const Command = RemeshCommand(options)
+        Command.owner = domainPayload
+        return Command
       },
       command$: (options) => {
         if (isDomainInited) {
-          throw new Error(
-            `Unexpected calling domain.command$(..) asynchronously`
-          );
+          throw new Error(`Unexpected calling domain.command$(..) asynchronously`)
         }
-        const Command$ = RemeshCommand$(options);
-        Command$.owner = domainPayload;
-        command$Set.add(Command$);
-        return Command$;
+        const Command$ = RemeshCommand$(options)
+        Command$.owner = domainPayload
+        command$Set.add(Command$)
+        return Command$
       },
       commandAsync: (options) => {
         if (isDomainInited) {
-          throw new Error(
-            `Unexpected calling domain.command$(..) asynchronously`
-          );
+          throw new Error(`Unexpected calling domain.command$(..) asynchronously`)
         }
-        const Command$ = RemeshCommandAsync(options);
-        Command$.owner = domainPayload;
-        command$Set.add(Command$);
-        return Command$;
+        const Command$ = RemeshCommandAsync(options)
+        Command$.owner = domainPayload
+        command$Set.add(Command$)
+        return Command$
       },
       module: (remeshModule) => {
         if (isDomainInited) {
-          throw new Error(
-            `Unexpected calling domain.module(..) asynchronously`
-          );
+          throw new Error(`Unexpected calling domain.module(..) asynchronously`)
         }
 
-        const moduleResult = remeshModule(domainContext);
+        const moduleResult = remeshModule(domainContext)
 
-        return moduleResult;
+        return moduleResult
       },
       getDomain: (UpstreamDomain) => {
-        const upstreamDomainStorage = getDomainStorage(UpstreamDomain);
+        const upstreamDomainStorage = getDomainStorage(UpstreamDomain)
 
-        upstreamSet.add(upstreamDomainStorage);
+        upstreamSet.add(upstreamDomainStorage)
 
-        return upstreamDomainStorage.domain;
+        return upstreamDomainStorage.domain
       },
       getExtern: (Extern) => {
-        return getExternCurrentValue(Extern);
+        return getExternCurrentValue(Extern)
       },
-    };
+    }
 
-    const domain = domainPayload.Domain.impl(domainContext, domainPayload.arg);
+    const domain = domainPayload.Domain.impl(domainContext, domainPayload.arg)
 
-    isDomainInited = true;
+    isDomainInited = true
     const currentDomainStorage: RemeshDomainStorage<T, Arg> = {
       type: 'RemeshDomainStorage',
       Domain: domainPayload.Domain,
@@ -536,566 +558,549 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
       command$Map: new Map(),
       refCount: 0,
       running: false,
-    };
+    }
 
-    domainStorageMap.set(key, currentDomainStorage);
+    domainStorageMap.set(key, currentDomainStorage)
 
     for (const upstreamDomainStorage of upstreamSet) {
-      upstreamDomainStorage.downstreamSet.add(currentDomainStorage);
+      upstreamDomainStorage.downstreamSet.add(currentDomainStorage)
     }
 
-    return getDomainStorage(domainPayload);
-  };
+    return getDomainStorage(domainPayload)
+  }
 
   const clearQueryStorage = <T, U>(queryStorage: RemeshQueryStorage<T, U>) => {
-    const domainStorage = getDomainStorage(
-      queryStorage.Query.owner ?? DefaultDomain()
-    );
+    const domainStorage = getDomainStorage(queryStorage.Query.owner)
 
-    queryStorage.subject.complete();
-    domainStorage.queryMap.delete(queryStorage.key);
+    queryStorage.subject.complete()
+    domainStorage.queryMap.delete(queryStorage.key)
 
     for (const upstreamStorage of queryStorage.upstreamSet) {
-      upstreamStorage.downstreamSet.delete(queryStorage);
+      upstreamStorage.downstreamSet.delete(queryStorage)
 
       if (upstreamStorage.type === 'RemeshQueryStorage') {
-        clearQueryStorageIfNeeded(upstreamStorage);
+        clearQueryStorageIfNeeded(upstreamStorage)
       } else if (upstreamStorage.type === 'RemeshStateStorage') {
-        clearStateStorageIfNeeded(upstreamStorage);
+        clearStateStorageIfNeeded(upstreamStorage)
       } else {
-        throw new Error(
-          `Unknown upstream in clearQueryStorageIfNeeded(..): ${upstreamStorage}`
-        );
+        throw new Error(`Unknown upstream in clearQueryStorageIfNeeded(..): ${upstreamStorage}`)
       }
     }
-  };
+  }
 
-  const clearQueryStorageIfNeeded = <T, U>(
-    queryStorage: RemeshQueryStorage<T, U>
-  ) => {
+  const clearQueryStorageIfNeeded = <T, U>(queryStorage: RemeshQueryStorage<T, U>) => {
     if (queryStorage.refCount !== 0) {
-      return;
+      return
     }
 
     if (queryStorage.downstreamSet.size !== 0) {
-      return;
+      return
     }
 
-    clearQueryStorage(queryStorage);
-  };
+    clearQueryStorage(queryStorage)
+  }
 
   const clearStateStorage = <T, U>(stateStorage: RemeshStateStorage<T, U>) => {
-    const domainStorage = getDomainStorage(
-      stateStorage.State.owner ?? DefaultDomain()
-    );
-    if (domainStorage.stateMap.has(stateStorage.key)) {
-      console.log('delete', stateStorage.key);
+    const domainStorage = getDomainStorage(stateStorage.State.owner)
+
+    domainStorage.stateMap.delete(stateStorage.key)
+
+    if (options.inspectors) {
+      onStateAction({
+        type: 'RemeshStateDeleted',
+        State: stateStorage.State,
+        key: stateStorage.key,
+        arg: stateStorage.arg,
+        state: stateStorage.currentState,
+      })
     }
+  }
 
-    domainStorage.stateMap.delete(stateStorage.key);
-  };
-
-  const clearStateStorageIfNeeded = <T, U>(
-    stateStorage: RemeshStateStorage<T, U>
-  ) => {
+  const clearStateStorageIfNeeded = <T, U>(stateStorage: RemeshStateStorage<T, U>) => {
     if (stateStorage.downstreamSet.size !== 0) {
-      return;
+      return
     }
 
-    clearStateStorage(stateStorage);
-  };
+    clearStateStorage(stateStorage)
+  }
 
   const clearEventStorage = <T, U>(eventStorage: RemeshEventStorage<T, U>) => {
-    const domainStorage = getDomainStorage(
-      eventStorage.Event.owner ?? DefaultDomain()
-    );
+    const domainStorage = getDomainStorage(eventStorage.Event.owner)
 
-    eventStorage.subject.complete();
-    domainStorage.eventMap.delete(eventStorage.Event);
-  };
+    eventStorage.subject.complete()
+    domainStorage.eventMap.delete(eventStorage.Event)
+  }
 
-  const clearEventStorageIfNeeded = <T, U>(
-    eventStorage: RemeshEventStorage<T, U>
-  ) => {
+  const clearEventStorageIfNeeded = <T, U>(eventStorage: RemeshEventStorage<T, U>) => {
     if (eventStorage.refCount !== 0) {
-      return;
+      return
     }
 
-    clearEventStorage(eventStorage);
-  };
+    clearEventStorage(eventStorage)
+  }
 
-  const clearCommand$Storage = <T>(
-    command$Storage: RemeshCommand$Storage<T>
-  ) => {
-    const domainStorage = getDomainStorage(
-      command$Storage.Command$.owner ?? DefaultDomain()
-    );
+  const clearCommand$Storage = <T>(command$Storage: RemeshCommand$Storage<T>) => {
+    const domainStorage = getDomainStorage(command$Storage.Command$.owner)
 
-    command$Storage.subject.complete();
-    command$Storage.subscription?.unsubscribe();
-    domainStorage.command$Map.delete(command$Storage.Command$);
-  };
+    command$Storage.subject.complete()
+    command$Storage.subscription?.unsubscribe()
+    domainStorage.command$Map.delete(command$Storage.Command$)
+  }
 
-  const clearDomainStorage = <T extends RemeshDomainDefinition, Arg>(
-    domainStorage: RemeshDomainStorage<T, Arg>
-  ) => {
-    const upstreamList = [...domainStorage.upstreamSet];
+  const clearDomainStorage = <T extends RemeshDomainDefinition, Arg>(domainStorage: RemeshDomainStorage<T, Arg>) => {
+    const upstreamList = [...domainStorage.upstreamSet]
 
-    clearSubscriptionSet(domainStorage.domainSubscriptionSet);
-    clearSubscriptionSet(domainStorage.upstreamSubscriptionSet);
+    clearSubscriptionSet(domainStorage.domainSubscriptionSet)
+    clearSubscriptionSet(domainStorage.upstreamSubscriptionSet)
 
     for (const eventStorage of domainStorage.eventMap.values()) {
-      clearEventStorage(eventStorage);
+      clearEventStorage(eventStorage)
     }
 
     for (const queryStorage of domainStorage.queryMap.values()) {
-      clearQueryStorage(queryStorage);
+      clearQueryStorage(queryStorage)
     }
 
     for (const stateStorage of domainStorage.stateMap.values()) {
-      clearStateStorage(stateStorage);
+      clearStateStorage(stateStorage)
     }
 
     for (const command$Storage of domainStorage.command$Map.values()) {
-      clearCommand$Storage(command$Storage);
+      clearCommand$Storage(command$Storage)
     }
 
-    domainStorage.upstreamSubscriptionSet.clear();
-    domainStorage.domainSubscriptionSet.clear();
-    domainStorage.downstreamSet.clear();
-    domainStorage.upstreamSet.clear();
-    domainStorage.stateMap.clear();
-    domainStorage.queryMap.clear();
-    domainStorage.eventMap.clear();
+    domainStorage.upstreamSubscriptionSet.clear()
+    domainStorage.domainSubscriptionSet.clear()
+    domainStorage.downstreamSet.clear()
+    domainStorage.upstreamSet.clear()
+    domainStorage.stateMap.clear()
+    domainStorage.queryMap.clear()
+    domainStorage.eventMap.clear()
 
-    domainStorageMap.delete(domainStorage.key);
+    domainStorageMap.delete(domainStorage.key)
 
     for (const upstreamDomainStorage of upstreamList) {
-      upstreamDomainStorage.downstreamSet.delete(domainStorage);
-      clearDomainStorageIfNeeded(upstreamDomainStorage);
+      upstreamDomainStorage.downstreamSet.delete(domainStorage)
+      clearDomainStorageIfNeeded(upstreamDomainStorage)
     }
-  };
+  }
 
   const clearDomainStorageIfNeeded = <T extends RemeshDomainDefinition, Arg>(
-    domainStorage: RemeshDomainStorage<T, Arg>
+    domainStorage: RemeshDomainStorage<T, Arg>,
   ) => {
     if (domainStorage.refCount !== 0) {
-      return;
+      return
     }
 
     if (domainStorage.downstreamSet.size !== 0) {
-      return;
+      return
     }
 
     if (domainStorage.domainSubscriptionSet.size !== 0) {
-      return;
+      return
     }
 
-    clearDomainStorage(domainStorage);
-  };
+    clearDomainStorage(domainStorage)
+  }
 
   const getCurrentState = <T, U>(stateItem: RemeshStateItem<T, U>): U => {
-    const stateStorage = getStateStorage(stateItem);
+    const stateStorage = getStateStorage(stateItem)
 
-    return stateStorage.currentState;
-  };
+    return stateStorage.currentState
+  }
 
-  const getCurrentQueryValue = <T, U>(
-    queryPayload: RemeshQueryPayload<T, U>
-  ): U => {
-    const queryStorage = getQueryStorage(queryPayload);
+  const getCurrentQueryValue = <T, U>(queryPayload: RemeshQueryPayload<T, U>): U => {
+    const queryStorage = getQueryStorage(queryPayload)
 
-    return queryStorage.currentValue;
-  };
+    return queryStorage.currentValue
+  }
+
+  const queryByKey = <T>(domainPayload: RemeshDomainPayload<any, any>, queryKey: string): T => {
+    const domainStorage = getDomainStorage(domainPayload)
+    const queryStorage = domainStorage.queryMap.get(queryKey)
+
+    if (queryStorage) {
+      return queryStorage.currentValue
+    }
+
+    throw new Error(`query key not found in ${domainPayload.Domain.domainName}`)
+  }
 
   const remeshInjectedContext: RemeshInjectedContext = {
     get: (input) => {
       if (input.type === 'RemeshStateItem') {
-        return getCurrentState(input);
+        return getCurrentState(input)
       }
 
       if (input.type === 'RemeshQueryPayload') {
-        return getCurrentQueryValue(input);
+        return getCurrentQueryValue(input)
       }
 
-      throw new Error(`Unexpected input in ctx.get(..): ${input}`);
+      throw new Error(`Unexpected input in ctx.get(..): ${input}`)
     },
     fromEvent: (Event) => {
-      const eventStorage = getEventStorage(Event);
-      return eventStorage.observable;
+      const eventStorage = getEventStorage(Event)
+      return eventStorage.observable
     },
     fromQuery: (queryPayload) => {
-      const queryStorage = getQueryStorage(queryPayload);
-      return queryStorage.observable;
+      const queryStorage = getQueryStorage(queryPayload)
+      return queryStorage.observable
     },
-  };
+  }
 
   const updateQueryStorage = <T, U>(queryStorage: RemeshQueryStorage<T, U>) => {
-    const { Query } = queryStorage;
+    const { Query } = queryStorage
 
     for (const upstream of queryStorage.upstreamSet) {
-      upstream.downstreamSet.delete(queryStorage);
+      upstream.downstreamSet.delete(queryStorage)
       if (upstream.downstreamSet.size === 0) {
-        pendingStorageSet.add(upstream);
+        pendingStorageSet.add(upstream)
       }
     }
 
-    queryStorage.upstreamSet.clear();
+    queryStorage.upstreamSet.clear()
 
     const queryContext: RemeshQueryContext = {
       get: (input) => {
         if (input.type === 'RemeshStateItem') {
-          const stateItem = input;
-          const upstreamStateStorage = getStateStorage(stateItem);
-          queryStorage.upstreamSet.add(upstreamStateStorage);
-          upstreamStateStorage.downstreamSet.add(queryStorage);
-          return remeshInjectedContext.get(stateItem);
+          const stateItem = input
+          const upstreamStateStorage = getStateStorage(stateItem)
+          queryStorage.upstreamSet.add(upstreamStateStorage)
+          upstreamStateStorage.downstreamSet.add(queryStorage)
+          return remeshInjectedContext.get(stateItem)
         }
 
         if (input.type === 'RemeshQueryPayload') {
-          const queryPayload = input;
-          const upstreamQueryStorage = getQueryStorage(queryPayload);
-          queryStorage.upstreamSet.add(upstreamQueryStorage);
-          upstreamQueryStorage.downstreamSet.add(queryStorage);
-          return remeshInjectedContext.get(queryPayload);
+          const queryPayload = input
+          const upstreamQueryStorage = getQueryStorage(queryPayload)
+          queryStorage.upstreamSet.add(upstreamQueryStorage)
+          upstreamQueryStorage.downstreamSet.add(queryStorage)
+          return remeshInjectedContext.get(queryPayload)
         }
 
-        return remeshInjectedContext.get(input);
+        return remeshInjectedContext.get(input)
       },
-    };
-
-    const newValue = Query.impl(queryContext, queryStorage.arg);
-
-    const isEqual = Query.compare(queryStorage.currentValue, newValue);
-
-    if (isEqual) {
-      return;
     }
 
-    queryStorage.currentValue = newValue;
+    const newValue = Query.impl(queryContext, queryStorage.arg)
 
-    dirtySet.add(queryStorage);
+    const isEqual = Query.compare(queryStorage.currentValue, newValue)
+
+    if (isEqual) {
+      return
+    }
+
+    queryStorage.currentValue = newValue
+
+    dirtySet.add(queryStorage)
 
     /**
      * updateQueryStorage may update upstream.downstreamSet
      * so it should be converted to an array for avoiding infinite loop
      */
     for (const downstream of [...queryStorage.downstreamSet]) {
-      updateQueryStorage(downstream);
+      updateQueryStorage(downstream)
     }
-  };
+  }
 
   const clearPendingStorageSetIfNeeded = () => {
     if (pendingStorageSet.size === 0) {
-      return;
+      return
     }
 
-    const storageList = [...pendingStorageSet];
+    const storageList = [...pendingStorageSet]
 
-    pendingStorageSet.clear();
+    pendingStorageSet.clear()
 
     for (const storage of storageList) {
       if (storage.type === 'RemeshDomainStorage') {
-        clearDomainStorageIfNeeded(storage);
+        clearDomainStorageIfNeeded(storage)
       } else if (storage.type === 'RemeshEventStorage') {
-        clearEventStorageIfNeeded(storage);
+        clearEventStorageIfNeeded(storage)
       } else if (storage.type === 'RemeshQueryStorage') {
-        clearQueryStorageIfNeeded(storage);
+        clearQueryStorageIfNeeded(storage)
       } else if (storage.type === 'RemeshStateStorage') {
-        clearStateStorageIfNeeded(storage);
+        clearStateStorageIfNeeded(storage)
       }
     }
 
-    clearPendingStorageSetIfNeeded();
-  };
+    clearPendingStorageSetIfNeeded()
+  }
 
   const clearIfNeeded = () => {
-    clearDirtySetIfNeeded();
-    clearPendingStorageSetIfNeeded();
-  };
+    clearDirtySetIfNeeded()
+    clearPendingStorageSetIfNeeded()
+  }
 
   const clearDirtySetIfNeeded = () => {
     if (dirtySet.size === 0) {
-      return;
+      return
     }
 
-    const queryStorageList = [...dirtySet];
+    const queryStorageList = [...dirtySet]
 
-    dirtySet.clear();
+    dirtySet.clear()
 
     for (const queryStorage of queryStorageList) {
       if (!dirtySet.has(queryStorage)) {
-        queryStorage.subject.next(queryStorage.currentValue);
+        queryStorage.subject.next(queryStorage.currentValue)
       }
     }
 
     /**
      * recursively consuming dirty set unit it become empty.
      */
-    clearDirtySetIfNeeded();
-  };
+    clearDirtySetIfNeeded()
+  }
 
   const commit = () => {
-    clearIfNeeded();
-  };
+    clearIfNeeded()
+  }
 
-  const handleStatePayload = (
-    statePayload: RemeshStatePayload<unknown, unknown>
-  ) => {
-    const stateStorage = getStateStorage(statePayload.stateItem);
-    const isEqual = statePayload.stateItem.State.compare(
-      stateStorage.currentState,
-      statePayload.newState
-    );
+  const handleStatePayload = <T, U>(statePayload: RemeshStatePayload<T, U>) => {
+    const stateStorage = getStateStorage(statePayload.stateItem)
+    const isEqual = statePayload.stateItem.State.compare(stateStorage.currentState, statePayload.newState)
 
     if (isEqual) {
-      return;
+      return
     }
 
-    stateStorage.arg = statePayload.stateItem.arg;
-    stateStorage.key = getStateStorageKey(statePayload.stateItem);
-    stateStorage.currentState = statePayload.newState;
+    const oldState = stateStorage.currentState
+    const newState = statePayload.newState
+
+    stateStorage.currentState = newState
 
     /**
      * updateQueryStorage may update upstream.downstreamSet
      * so it should be converted to an array for avoiding infinite loop
      */
     for (const downstream of [...stateStorage.downstreamSet]) {
-      updateQueryStorage(downstream);
+      updateQueryStorage(downstream)
     }
 
-    commit();
-  };
+    commit()
 
-  const handleEventPayload = <T, U = T>(
-    eventPayload: RemeshEventPayload<T, U>
-  ) => {
-    const { Event, arg } = eventPayload;
-    const eventStorage = getEventStorage(Event);
+    if (options.inspectors) {
+      onStateAction({
+        type: 'RemeshStateUpdated',
+        State: stateStorage.State,
+        key: stateStorage.key,
+        arg: stateStorage.arg,
+        oldState,
+        newState,
+      })
+    }
+  }
+
+  const handleEventPayload = <T, U = T>(eventPayload: RemeshEventPayload<T, U>) => {
+    const { Event, arg } = eventPayload
+    const eventStorage = getEventStorage(Event)
 
     if (Event.impl) {
       const eventContext = {
         get: remeshInjectedContext.get,
-      };
-      const data = Event.impl(eventContext, arg);
-      eventStorage.subject.next(data);
+      }
+      const data = Event.impl(eventContext, arg)
+      eventStorage.subject.next(data)
     } else {
-      eventStorage.subject.next(arg as unknown as U);
+      eventStorage.subject.next(arg as unknown as U)
     }
-  };
+  }
 
   const handleCommandPayload = <T>(commandPayload: RemeshCommandPayload<T>) => {
-    const { Command, arg } = commandPayload;
+    const { Command, arg } = commandPayload
     const commandContext: RemeshCommandContext = {
       get: remeshInjectedContext.get,
-    };
-    const commandOutput = Command.impl(commandContext, arg);
+    }
+    const commandOutput = Command.impl(commandContext, arg)
 
-    handleCommandOutput(commandOutput);
-  };
+    handleCommandOutput(commandOutput)
+  }
 
-  const handleSubscription = (
-    subscriptionSet: Set<Subscription>,
-    subscription: Subscription
-  ) => {
-    subscriptionSet.add(subscription);
+  const handleSubscription = (subscriptionSet: Set<Subscription>, subscription: Subscription) => {
+    subscriptionSet.add(subscription)
 
     subscription.add(() => {
-      subscriptionSet.delete(subscription);
-    });
-  };
+      subscriptionSet.delete(subscription)
+    })
+  }
 
   const initCommand$IfNeeded = <T>(Command$: RemeshCommand$<T>) => {
-    const command$Storage = getCommand$Storage(Command$);
+    const command$Storage = getCommand$Storage(Command$)
 
     if (command$Storage.subscription) {
-      return;
+      return
     }
 
     const command$Context: RemeshCommand$Context = {
       get: remeshInjectedContext.get,
       fromEvent: remeshInjectedContext.fromEvent,
       fromQuery: remeshInjectedContext.fromQuery,
-    };
+    }
 
-    const subscription = Command$.impl(
-      command$Context,
-      command$Storage.observable
-    ).subscribe(handleCommandOutput);
-    command$Storage.subscription = subscription;
-  };
+    const subscription = Command$.impl(command$Context, command$Storage.observable).subscribe(handleCommandOutput)
+    command$Storage.subscription = subscription
+  }
 
   const handleCommandOutput = (commandOutput: RemeshCommandOutput) => {
+    if (commandOutput === null) {
+      return
+    }
+
     if (Array.isArray(commandOutput)) {
       for (const item of commandOutput) {
-        handleCommandOutput(item);
+        handleCommandOutput(item)
       }
-      return;
+      return
     }
 
     if (commandOutput.type === 'RemeshCommandPayload') {
-      handleCommandPayload(commandOutput);
-      return;
+      handleCommandPayload(commandOutput)
+      return
     } else if (commandOutput.type === 'RemeshEventPayload') {
-      handleEventPayload(commandOutput);
-      return;
+      handleEventPayload(commandOutput)
+      return
     } else if (commandOutput.type === 'RemeshStateSetterPayload') {
-      handleStatePayload(commandOutput);
-      return;
+      handleStatePayload(commandOutput)
+      return
     } else if (commandOutput.type === 'RemeshCommand$Payload') {
-      handleCommand$Payload(commandOutput);
-      return;
+      handleCommand$Payload(commandOutput)
+      return
     }
 
-    throw new Error(`Unknown command output of ${commandOutput}`);
-  };
+    throw new Error(`Unknown command output of ${commandOutput}`)
+  }
 
-  const handleCommand$Payload = <T>(
-    command$Payload: RemeshCommand$Payload<T>
-  ) => {
-    const { Command$, arg } = command$Payload;
-    const command$Storage = getCommand$Storage(Command$);
+  const handleCommand$Payload = <T>(command$Payload: RemeshCommand$Payload<T>) => {
+    const { Command$, arg } = command$Payload
+    const command$Storage = getCommand$Storage(Command$)
 
-    initCommand$IfNeeded(Command$);
-    command$Storage.subject.next(arg);
-  };
+    initCommand$IfNeeded(Command$)
+    command$Storage.subject.next(arg)
+  }
 
-  const addDomainSubscription = (
-    domainStorage: RemeshDomainStorage<any, any>,
-    domainSubscription: Subscription
-  ) => {
-    handleSubscription(domainStorage.domainSubscriptionSet, domainSubscription);
+  const addDomainSubscription = (domainStorage: RemeshDomainStorage<any, any>, domainSubscription: Subscription) => {
+    handleSubscription(domainStorage.domainSubscriptionSet, domainSubscription)
 
     domainSubscription.add(() => {
-      pendingStorageSet.add(domainStorage);
-      commit();
-    });
-  };
+      pendingStorageSet.add(domainStorage)
+      commit()
+    })
+  }
 
   const subscribeQuery = <T, U>(
     queryPayload: RemeshQueryPayload<T, U>,
-    subscriber: (data: U) => unknown
+    subscriber: (data: U) => unknown,
   ): Subscription => {
-    const queryStorage = getQueryStorage(queryPayload);
-    const subscription = queryStorage.observable.subscribe(subscriber);
+    const queryStorage = getQueryStorage(queryPayload)
+    const subscription = queryStorage.observable.subscribe(subscriber)
 
-    return subscription;
-  };
+    return subscription
+  }
 
-  const subscribeEvent = <T, U = T>(
-    Event: RemeshEvent<T, U>,
-    subscriber: (event: U) => unknown
-  ) => {
-    const eventStorage = getEventStorage(Event);
-    const subscription = eventStorage.observable.subscribe(subscriber);
+  const subscribeEvent = <T, U = T>(Event: RemeshEvent<T, U>, subscriber: (event: U) => unknown) => {
+    const eventStorage = getEventStorage(Event)
+    const subscription = eventStorage.observable.subscribe(subscriber)
 
-    return subscription;
-  };
+    return subscription
+  }
 
   const getBindingCommand = <T extends RemeshDomainDefinition>(domain: T) => {
-    const command = {} as BindingCommand<T['command']>;
+    const command = {}
 
     for (const key in domain.command) {
-      const Command = domain.command[key];
-      // @ts-ignore
-      command[key] = (arg) => emitCommand(Command(arg));
+      const Command = domain.command[key]
+      command[key] = (arg: any) => emitCommand(Command(arg))
     }
 
-    return command;
-  };
+    return command as BindingCommand<T['command']>
+  }
 
   const getDomain = <T extends RemeshDomainDefinition, Arg>(
-    domainPayload: RemeshDomainPayload<T, Arg>
+    domainPayload: RemeshDomainPayload<T, Arg>,
   ): BindingDomainOutput<T> => {
-    const domainStorage = getDomainStorage(domainPayload);
+    const domainStorage = getDomainStorage(domainPayload)
 
     if (domainStorage.domainOutput) {
-      return domainStorage.domainOutput;
+      return domainStorage.domainOutput
     }
 
-    const domain = domainStorage.domain;
-    const command = getBindingCommand(domain);
+    const domain = domainStorage.domain
+    const command = getBindingCommand(domain)
 
     const domainOutput = {
       ...domain,
       command,
-    };
-
-    domainStorage.domainOutput = domainOutput;
-
-    return domainOutput;
-  };
-
-  const initCommand$Set = (
-    command$Set: RemeshDomainStorage<any, any>['command$Set']
-  ) => {
-    for (const Command$ of command$Set) {
-      initCommand$IfNeeded(Command$);
     }
 
-    command$Set.clear();
-  };
+    domainStorage.domainOutput = domainOutput
+
+    return domainOutput
+  }
+
+  const initCommand$Set = (command$Set: RemeshDomainStorage<any, any>['command$Set']) => {
+    for (const Command$ of command$Set) {
+      initCommand$IfNeeded(Command$)
+    }
+
+    command$Set.clear()
+  }
 
   const runDomainStorageIfNeeded = <T extends RemeshDomainDefinition, Arg>(
-    domainStorage: RemeshDomainStorage<T, Arg>
+    domainStorage: RemeshDomainStorage<T, Arg>,
   ) => {
     if (domainStorage.running) {
-      return;
+      return
     }
 
-    domainStorage.running = true;
+    domainStorage.running = true
 
     for (const upstreamDomainStorage of domainStorage.upstreamSet) {
-      const upstreamDomainSubscription = subscribeDomain(
-        upstreamDomainStorage.domainPayload
-      );
-      handleSubscription(
-        domainStorage.upstreamSubscriptionSet,
-        upstreamDomainSubscription
-      );
+      const upstreamDomainSubscription = subscribeDomain(upstreamDomainStorage.domainPayload)
+      handleSubscription(domainStorage.upstreamSubscriptionSet, upstreamDomainSubscription)
     }
 
-    initCommand$Set(domainStorage.command$Set);
-  };
+    initCommand$Set(domainStorage.command$Set)
+  }
 
   const subscribeDomain = <T extends RemeshDomainDefinition, Arg>(
-    domainPayload: RemeshDomainPayload<T, Arg>
+    domainPayload: RemeshDomainPayload<T, Arg>,
   ): Subscription => {
-    const domainStorage = getDomainStorage(domainPayload);
-    const domainSubscription = new Subscription();
+    const domainStorage = getDomainStorage(domainPayload)
+    const domainSubscription = new Subscription()
 
-    addDomainSubscription(domainStorage, domainSubscription);
-    runDomainStorageIfNeeded(domainStorage);
+    addDomainSubscription(domainStorage, domainSubscription)
+    runDomainStorageIfNeeded(domainStorage)
 
-    return domainSubscription;
-  };
+    return domainSubscription
+  }
 
   const destroy = () => {
+    onDestroyInspectors()
     for (const domainStorage of domainStorageMap.values()) {
-      clearDomainStorage(domainStorage);
+      clearDomainStorage(domainStorage)
     }
-    domainStorageMap.clear();
-    dirtySet.clear();
-  };
+    domainStorageMap.clear()
+    dirtySet.clear()
+  }
 
   const emitEvent = <T, U>(eventPayload: RemeshEventPayload<T, U>) => {
-    handleEventPayload(eventPayload);
-  };
+    handleEventPayload(eventPayload)
+  }
 
-  const emitCommand = <T>(
-    input: RemeshCommandPayload<T> | RemeshCommand$Payload<T>
-  ) => {
+  const emitCommand = <T>(input: RemeshCommandPayload<T> | RemeshCommand$Payload<T>) => {
     if (input.type === 'RemeshCommandPayload') {
-      handleCommandPayload(input);
+      handleCommandPayload(input)
     } else if (input.type === 'RemeshCommand$Payload') {
-      handleCommand$Payload(input);
+      handleCommand$Payload(input)
     }
-  };
+  }
 
   return {
     name: options.name,
     getDomain,
     query: getCurrentQueryValue,
+    queryByKey,
     emitEvent,
     emitCommand,
     destroy,
@@ -1103,11 +1108,11 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     subscribeEvent,
     subscribeDomain,
     getKey: getStorageKey,
-  };
-};
+  }
+}
 
 const clearSubscriptionSet = (subscriptionSet: Set<Subscription>) => {
   for (const subscription of subscriptionSet) {
-    subscription.unsubscribe();
+    subscription.unsubscribe()
   }
-};
+}
