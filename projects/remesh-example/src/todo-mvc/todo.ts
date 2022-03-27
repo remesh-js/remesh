@@ -21,7 +21,7 @@ export const TodoDomain = Remesh.domain({
 
     const TodoListQuery = domain.query({
       name: 'TodoListQuery',
-      impl({ get }, status: 'all' | 'completed' | 'active') {
+      impl({ get }, status?: 'completed' | 'active') {
         const todoList = get(TodoListState())
         if (status === 'active') {
           return todoList.filter((todo) => !todo.completed)
