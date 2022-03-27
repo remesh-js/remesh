@@ -19,6 +19,7 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         '7guis': resolve(__dirname, '7guis/index.html'),
+        'todo-mvc': resolve(__dirname, 'todo-mvc/index.html'),
       },
     },
   },
