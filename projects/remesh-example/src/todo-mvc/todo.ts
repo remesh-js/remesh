@@ -43,15 +43,14 @@ export const TodoDomain = Remesh.domain({
     const ActiveTodoCountQuery = domain.query({
       name: 'ActiveTodoCountQuery',
       impl({ get }) {
-        const todoList = get(TodoListState())
-        return todoList.filter((todo) => !todo.completed).length
+        return get(TodoListQuery('active')).length
       },
     })
 
     const AllCompletedQuery = domain.query({
       name: 'AllCompletedQuery',
       impl({ get }) {
-        return !get(TodoListState()).some((todo) => todo.completed === false)
+        return get(ActiveTodoCountQuery()) === 0 && get(TodoListQuery()).length > 0
       },
     })
 
