@@ -27,6 +27,7 @@ export type RemeshEvent<T, U> = {
   impl?: (context: RemeshEventContext, arg: T) => U
   (arg: T): RemeshEventPayload<T, U>
   owner: RemeshDomainPayload<any, any>
+  inspectable: boolean
 }
 
 export type RemeshEventPayload<T, U = T> = {
@@ -37,6 +38,7 @@ export type RemeshEventPayload<T, U = T> = {
 
 export type RemeshEventOptions<T, U> = {
   name: string
+  inspectable?: boolean
   impl: (context: RemeshEventContext, arg: T) => U
 }
 
@@ -45,7 +47,7 @@ let eventUid = 0
 export function RemeshEvent<T extends RemeshEventOptions<any, any>>(
   options: T,
 ): RemeshEvent<ExtractSecondArg<T['impl']>, ReturnType<T['impl']>>
-export function RemeshEvent<T = void>(options: { name: string }): RemeshEvent<void, T>
+export function RemeshEvent<T = void>(options: { name: string }): RemeshEvent<T, T>
 export function RemeshEvent(options: RemeshEventOptions<unknown, unknown> | { name: string }): RemeshEvent<any, any> {
   const eventId = eventUid++
 
@@ -61,6 +63,7 @@ export function RemeshEvent(options: RemeshEventOptions<unknown, unknown> | { na
   Event.eventId = eventId
   Event.eventName = options.name
   Event.owner = DefaultDomain()
+  Event.inspectable = 'inspectable' in options ? options.inspectable ?? true : true
 
   if ('impl' in options) {
     Event.impl = options.impl
@@ -80,6 +83,7 @@ export type RemeshState<T, U> = {
   owner: RemeshDomainPayload<any, any>
   Query: RemeshQuery<T, U>
   compare: CompareFn<U>
+  inspectable: boolean
 }
 
 export type RemeshStateItem<T, U> = {
@@ -92,6 +96,7 @@ export type RemeshStateItem<T, U> = {
 export type RemeshDefaultStateOptions<T> = {
   name: RemeshState<void, T>['stateName']
   default: T
+  inspectable?: boolean
   compare?: RemeshState<void, T>['compare']
 }
 
@@ -99,6 +104,7 @@ export const RemeshDefaultState = <T>(options: RemeshDefaultStateOptions<T>): Re
   return RemeshState({
     name: options.name,
     impl: () => options.default,
+    inspectable: options.inspectable,
     compare: options.compare,
   })
 }
@@ -112,6 +118,7 @@ export type RemeshStatePayload<T, U> = {
 export type RemeshStateOptions<T, U> = {
   name: string
   impl: (arg?: T) => U
+  inspectable?: boolean
   compare?: CompareFn<U>
 }
 
@@ -163,9 +170,11 @@ export const RemeshState = <T extends RemeshStateOptions<any, any>>(
   State.impl = options.impl
   State.compare = options.compare ?? defaultCompare
   State.owner = DefaultDomain()
+  State.inspectable = options.inspectable ?? true
 
   State.Query = RemeshQuery({
     name: `Query(${options.name})`,
+    inspectable: false,
     impl: ({ get }: RemeshQueryContext, arg: T) => {
       return get(State(arg as ExtractFirstArg<T['impl']>))
     },
@@ -186,6 +195,7 @@ export type RemeshQuery<T, U> = {
   (arg: T): RemeshQueryPayload<T, U>
   owner: RemeshDomainPayload<any, any>
   compare: CompareFn<U>
+  inspectable: boolean
 }
 
 export type RemeshQueryPayload<T, U> = {
@@ -196,6 +206,7 @@ export type RemeshQueryPayload<T, U> = {
 
 export type RemeshQueryOptions<T, U> = {
   name: string
+  inspectable?: boolean
   impl: (context: RemeshQueryContext, arg?: T) => U
   compare?: CompareFn<U>
 }
@@ -235,6 +246,7 @@ export const RemeshQuery = <T extends RemeshQueryOptions<any, any>>(
   Query.impl = options.impl
   Query.compare = options.compare ?? defaultCompare
   Query.owner = DefaultDomain()
+  Query.inspectable = options.inspectable ?? true
 
   return Query
 }
@@ -264,10 +276,12 @@ export type RemeshCommand<T = unknown> = {
   impl: (context: RemeshCommandContext, arg: T) => RemeshCommandOutput
   (arg: T): RemeshCommandPayload<T>
   owner: RemeshDomainPayload<any, any>
+  inspectable: boolean
 }
 
 export type RemeshCommandOptions<T> = {
   name: string
+  inspectable?: boolean
   impl: (context: RemeshCommandContext, arg?: T) => RemeshCommandOutput
 }
 
@@ -291,6 +305,7 @@ export const RemeshCommand = <T extends RemeshCommandOptions<any>>(
   Command.commandName = options.name
   Command.impl = options.impl
   Command.owner = DefaultDomain()
+  Command.inspectable = options.inspectable ?? true
 
   return Command
 }
@@ -314,10 +329,12 @@ export type RemeshCommand$<T> = {
   impl: (context: RemeshCommand$Context, arg$: Observable<T>) => Observable<RemeshCommandOutput>
   (arg: T): RemeshCommand$Payload<T>
   owner: RemeshDomainPayload<any, any>
+  inspectable: boolean
 }
 
 export type RemeshCommand$Options<T> = {
   name: string
+  inspectable?: boolean
   impl: RemeshCommand$<T>['impl']
 }
 let command$Uid = 0
@@ -338,12 +355,14 @@ export const RemeshCommand$ = <T = void>(options: RemeshCommand$Options<T>): Rem
   Command$.command$Name = options.name
   Command$.impl = options.impl
   Command$.owner = DefaultDomain()
+  Command$.inspectable = options.inspectable ?? true
 
   return Command$
 }
 
 export type RemeshCommandAsyncOptions<T> = {
   name: string
+  inspectable?: boolean
   mode?: 'switch' | 'merge' | 'exhaust' | 'concat'
   impl: (domain: RemeshCommand$Context, arg?: T) => Promise<RemeshCommandOutput>
 }
@@ -351,6 +370,7 @@ export type RemeshCommandAsyncOptions<T> = {
 export const RemeshCommandAsync = <T extends RemeshCommandAsyncOptions<any>>(options: T) => {
   const Command$ = RemeshCommand$<ExtractSecondArg<T['impl']>>({
     name: options.name,
+    inspectable: options.inspectable,
     impl: (context, arg$) => {
       if (!options.mode || options.mode === 'switch') {
         return arg$.pipe(switchMap((arg) => options.impl(context, arg)))
@@ -448,6 +468,7 @@ export type RemeshDomain<T extends RemeshDomainDefinition, Arg> = {
   domainId: number
   impl: (context: RemeshDomainContext, arg: Arg) => T
   (arg: Arg): RemeshDomainPayload<T, Arg>
+  inspectable: boolean
 }
 
 export type RemeshDomainPayload<T extends RemeshDomainDefinition, Arg> = {
@@ -458,6 +479,7 @@ export type RemeshDomainPayload<T extends RemeshDomainDefinition, Arg> = {
 
 export type RemeshDomainOptions<T extends RemeshDomainDefinition, Arg> = {
   name: string
+  inspectable?: boolean
   impl: (context: RemeshDomainContext, arg?: Arg) => T
 }
 
@@ -472,10 +494,8 @@ export const RemeshDomain = <T extends RemeshDomainOptions<any, any>>(
   let cacheForNullary: RemeshDomainPayload<ReturnType<T['impl']>, ExtractSecondArg<T['impl']>> | null = null
 
   const Domain: RemeshDomain<ReturnType<T['impl']>, ExtractSecondArg<T['impl']>> = ((arg) => {
-    if (arg === undefined) {
-      if (cacheForNullary) {
-        return cacheForNullary
-      }
+    if (arg === undefined && cacheForNullary) {
+      return cacheForNullary
     }
 
     const result: RemeshDomainPayload<ReturnType<T['impl']>, ExtractSecondArg<T['impl']>> = {
@@ -491,12 +511,11 @@ export const RemeshDomain = <T extends RemeshDomainOptions<any, any>>(
     return result
   }) as RemeshDomain<ReturnType<T['impl']>, ExtractSecondArg<T['impl']>>
 
-  Object.assign(Domain, {
-    type: 'RemeshDomain',
-    domainId: domainUid++,
-    domainName: options.name,
-    impl: options.impl,
-  })
+  Domain.type = 'RemeshDomain'
+  Domain.domainId = domainUid++
+  Domain.domainName = options.name
+  Domain.impl = options.impl
+  Domain.inspectable = options.inspectable ?? true
 
   return Domain
 }

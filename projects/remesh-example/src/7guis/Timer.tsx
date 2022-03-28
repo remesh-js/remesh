@@ -18,6 +18,7 @@ import {
 
 const Timer = Remesh.domain({
   name: 'timer',
+  inspectable: false,
   impl: (domain) => {
     const DurationState = domain.state({
       name: 'duration',

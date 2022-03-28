@@ -1,24 +1,23 @@
-import React from 'react';
-import ReactDOM from 'react-dom';
+import React from 'react'
+import ReactDOM from 'react-dom'
 
-import { RemeshRoot } from "remesh-react";
+import { RemeshRoot } from 'remesh-react'
 
-import { CounterApp } from './Counter';
-import { TemperatureConverterApp } from './TemperatureConverter';
-import { FlightBookerApp } from './FlightBooker';
-import { TimerApp } from './Timer';
-import { CRUDApp } from './CRUD';
-import { CircleDrawerApp } from './CircleDrawer';
-import { CellsApp } from './Cells';
+import { RemeshReduxDevtools } from 'remesh-redux-devtools'
+
+import { CounterApp } from './Counter'
+import { TemperatureConverterApp } from './TemperatureConverter'
+import { FlightBookerApp } from './FlightBooker'
+import { TimerApp } from './Timer'
+import { CRUDApp } from './CRUD'
+import { CircleDrawerApp } from './CircleDrawer'
+import { CellsApp } from './Cells'
 
 const Root = () => {
   return (
     <div>
       <h1>7GUIs in React/Remesh/TypeScript</h1>
-      <p>
-        This is a live version of an implementation (source) of 7GUIs with
-        React, TypeScript and Remesh.
-      </p>
+      <p>This is a live version of an implementation (source) of 7GUIs with React, TypeScript and Remesh.</p>
       <hr />
       <CounterApp />
       <hr />
@@ -34,14 +33,18 @@ const Root = () => {
       <hr />
       <CellsApp />
     </div>
-  );
-};
+  )
+}
 
 ReactDOM.render(
   <React.StrictMode>
-    <RemeshRoot>
+    <RemeshRoot
+      options={{
+        inspectors: [RemeshReduxDevtools()],
+      }}
+    >
       <Root />
     </RemeshRoot>
   </React.StrictMode>,
-  document.getElementById('root')
-);
+  document.getElementById('root'),
+)

@@ -11,6 +11,7 @@ export default defineConfig({
     alias: {
       "remesh": resolve(__dirname, '../../packages/remesh/src'),
       "remesh-react": resolve(__dirname, '../../packages/remesh-react/src'),
+      "remesh-redux-devtools": resolve(__dirname, '../../packages/remesh-redux-devtools/src'),
     }
   },
   build: {

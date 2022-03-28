@@ -14,6 +14,7 @@
     "react-dom": "^17.0.0",
     "remesh": "^1.0.0",
     "remesh-react": "^1.0.0",
+    "remesh-redux-devtools": "^1.0.0",
     "rxjs": "^7.3.0",
     "todomvc-app-css": "^2.4.2",
     "react-router": "^6.2.2",

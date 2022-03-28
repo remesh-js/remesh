@@ -20,6 +20,7 @@ type CellState = {
 
 export const Cells = Remesh.domain({
   name: 'Cells',
+  inspectable: false,
   impl: (domain) => {
     const RowKeyListState = domain.state({
       name: 'RowKeyListState',
@@ -123,48 +124,6 @@ export const Cells = Remesh.domain({
       },
     })
 
-    const testOptionalArg0 = domain.command({
-      name: 'testOptionalArg0',
-      impl: (_, arg?: number) => {
-        return []
-      },
-    })
-
-    testOptionalArg0()
-
-    const testOptionalArg1 = domain.state({
-      name: 'testOptionalArg1',
-      impl: (arg?: number) => {
-        return arg ?? 0
-      },
-    })
-
-    testOptionalArg1()
-
-    const testOptionalArg2 = domain.query({
-      name: 'testOptionalArg2',
-      impl: (_, arg: number = 0) => {
-        return arg ?? 0
-      }
-    })
-
-    testOptionalArg2()
-
-    const testOptionalArg3 = domain.event({
-      name: 'testOptionalArg3',
-      impl: (_, arg: number = 0) => {
-        return arg
-      }
-    })
-
-    testOptionalArg3()
-
-    const test4 = domain.event<number>({
-      name: 'test4',
-    })
-
-    test4()
-
     return {
       query: {
         CellQuery,
@@ -175,7 +134,6 @@ export const Cells = Remesh.domain({
         selectCell,
         unselectCell,
         setCellContent,
-        testOptionalArg0
       },
     }
   },
@@ -185,8 +143,6 @@ export const CellsApp = () => {
   const cells = useRemeshDomain(Cells())
   const columnKeyList = useRemeshQuery(cells.query.ColumnKeyListQuery())
   const rowKeyList = useRemeshQuery(cells.query.RowKeyListQuery())
-
-  cells.command.testOptionalArg0()
 
   return (
     <div>

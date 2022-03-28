@@ -30,9 +30,24 @@ import {
   RemeshStatePayload,
 } from './remesh'
 
+import { RemeshInspectorDomain } from './inspector'
+
+type InspectInput = {
+  inspectable: boolean
+  owner: {
+    Domain: {
+      inspectable: boolean
+    }
+  }
+}
+
+export const isInspectable = (input: InspectInput): boolean => {
+  return input.owner.Domain.inspectable && input.inspectable
+}
+
 export type RemeshStore = ReturnType<typeof RemeshStore>
 
-type RemeshStateStorage<T, U> = {
+export type RemeshStateStorage<T, U> = {
   type: 'RemeshStateStorage'
   State: RemeshState<T, U>
   arg: T
@@ -41,7 +56,7 @@ type RemeshStateStorage<T, U> = {
   downstreamSet: Set<RemeshQueryStorage<any, any>>
 }
 
-type RemeshQueryStorage<T, U> = {
+export type RemeshQueryStorage<T, U> = {
   type: 'RemeshQueryStorage'
   Query: RemeshQuery<T, U>
   arg: T
@@ -54,7 +69,7 @@ type RemeshQueryStorage<T, U> = {
   refCount: number
 }
 
-type RemeshEventStorage<T = unknown, U = T> = {
+export type RemeshEventStorage<T = unknown, U = T> = {
   type: 'RemeshEventStorage'
   Event: RemeshEvent<T, U>
   subject: Subject<U>
@@ -62,7 +77,7 @@ type RemeshEventStorage<T = unknown, U = T> = {
   refCount: number
 }
 
-type RemeshCommand$Storage<T> = {
+export type RemeshCommand$Storage<T> = {
   type: 'RemeshCommand$Storage'
   Command$: RemeshCommand$<T>
   subject: Subject<T>
@@ -70,7 +85,7 @@ type RemeshCommand$Storage<T> = {
   subscription?: Subscription
 }
 
-type RemeshDomainStorage<T extends RemeshDomainDefinition, Arg> = {
+export type RemeshDomainStorage<T extends RemeshDomainDefinition, Arg> = {
   type: 'RemeshDomainStorage'
   Domain: RemeshDomain<T, Arg>
   arg: Arg
@@ -91,74 +106,54 @@ type RemeshDomainStorage<T extends RemeshDomainDefinition, Arg> = {
   running: boolean
 }
 
-type RemeshExternStorage<T> = {
+export type RemeshExternStorage<T> = {
   type: 'RemeshExternStorage'
   Extern: RemeshExtern<T>
   currentValue: T
 }
 
-export type RemeshStateCreated<T, U> = {
-  type: 'RemeshStateCreated'
-  State: RemeshState<T, U>
-  key: string
-  arg: T
-  state: U
-}
-
-export type RemeshStateUpdated<T, U> = {
-  type: 'RemeshStateUpdated'
-  State: RemeshState<T, U>
-  key: string
-  arg: T
-  oldState: U
-  newState: U
-}
-
-export type RemeshStateDeleted<T, U> = {
-  type: 'RemeshStateDeleted'
-  State: RemeshState<T, U>
-  key: string
-  arg: T
-  state: U
-}
-
-export type RemeshStateAction<T, U> = RemeshStateCreated<T, U> | RemeshStateUpdated<T, U> | RemeshStateDeleted<T, U>
-
-export type RemeshStateInspector = {
-  type: 'RemeshStateInspector'
-  onStateAction: <T, U>(action: RemeshStateAction<T, U>) => unknown
-  onDestroy: () => unknown
-}
-
-export type RemeshInspector = RemeshStateInspector
-
 export type RemeshStoreOptions = {
-  name: string
+  name?: string
   externs?: RemeshExternPayload<any>[]
-  inspectors?: (RemeshInspector | undefined)[]
+  inspectors?: (RemeshStore | false | undefined | null)[]
 }
 
-type BindingCommand<T extends RemeshDomainDefinition['command']> = T extends {}
+export type BindingCommand<T extends RemeshDomainDefinition['command']> = T extends {}
   ? {
       [key in keyof T]: (...args: Parameters<T[key]>) => void
     }
   : never
 
-type BindingDomainOutput<T extends RemeshDomainDefinition> = Omit<T, 'command'> & {
+export type BindingDomainOutput<T extends RemeshDomainDefinition> = Omit<T, 'command'> & {
   command: BindingCommand<T['command']>
 }
 
+type PendingClearItem =
+  | RemeshStateStorage<any, any>
+  | RemeshDomainStorage<any, any>
+  | RemeshEventStorage<any, any>
+  | RemeshQueryStorage<any, any>
+
 export const RemeshStore = (options: RemeshStoreOptions) => {
+  const withInspectorStore = (fn: (inspector: RemeshStore) => unknown) => {
+    if (options.inspectors) {
+      for (const inspector of options.inspectors) {
+        if (inspector) {
+          fn(inspector)
+        }
+      }
+    }
+  }
+
+  const destroyInspectors = () => {
+    withInspectorStore((inspector) => {
+      inspector.destroy()
+    })
+  }
+
   const dirtySet = new Set<RemeshQueryStorage<any, any>>()
   const domainStorageMap = new Map<string, RemeshDomainStorage<any, any>>()
   const externStorageMap = new Map<RemeshExtern<any>, RemeshExternStorage<any>>()
-
-  type PendingClearItem =
-    | RemeshStateStorage<any, any>
-    | RemeshDomainStorage<any, any>
-    | RemeshEventStorage<any, any>
-    | RemeshQueryStorage<any, any>
-
   const pendingStorageSet = new Set<PendingClearItem>()
 
   const getExternValue = <T>(Extern: RemeshExtern<T>): T => {
@@ -194,26 +189,6 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     return getExternStorage(Extern).currentValue
   }
 
-  const onStateAction = <T, U>(stateAction: RemeshStateAction<T, U>) => {
-    if (options.inspectors) {
-      for (const inspector of options.inspectors) {
-        if (inspector) {
-          inspector.onStateAction(stateAction)
-        }
-      }
-    }
-  }
-
-  const onDestroyInspectors = () => {
-    if (options.inspectors) {
-      for (const inspector of options.inspectors) {
-        if (inspector) {
-          inspector.onDestroy()
-        }
-      }
-    }
-  }
-
   const storageKeyWeakMap = new WeakMap<
     RemeshQueryPayload<any, any> | RemeshStateItem<any, any> | RemeshDomainPayload<any, any>,
     string
@@ -228,7 +203,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
     const stateName = stateItem.State.stateName
     const argString = JSON.stringify(stateItem.arg) ?? ''
-    const keyString = `State/${stateItem.State.stateId}/${stateName}/${argString}`
+    const keyString = `State/${stateItem.State.stateId}/${stateName}:${argString}`
 
     storageKeyWeakMap.set(stateItem, keyString)
 
@@ -244,7 +219,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
     const queryName = queryPayload.Query.queryName
     const argString = JSON.stringify(queryPayload.arg) ?? ''
-    const keyString = `Query/${queryPayload.Query.queryId}/${queryName}/${argString}`
+    const keyString = `Query/${queryPayload.Query.queryId}/${queryName}:${argString}`
 
     storageKeyWeakMap.set(queryPayload, keyString)
 
@@ -282,13 +257,14 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
     domainStorage.stateMap.set(key, newStateStorage)
 
-    if (options.inspectors) {
-      onStateAction({
-        type: 'RemeshStateCreated',
-        State: stateItem.State,
-        arg: stateItem.arg,
-        key,
-        state: newStateStorage.currentState,
+    if (isInspectable(stateItem.State)) {
+      withInspectorStore((store) => {
+        const inspectorDomain = store.getDomain(RemeshInspectorDomain())
+        const event = inspectorDomain.event.RemeshStateStorageCreatedEvent({
+          type: 'RemeshStateStorageCreated',
+          storage: newStateStorage,
+        })
+        store.emitEvent(event)
       })
     }
 
@@ -397,6 +373,17 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
     domainStorage.queryMap.set(key, currentQueryStorage)
 
+    if (isInspectable(currentQueryStorage.Query)) {
+      withInspectorStore((store) => {
+        const inspectorDomain = store.getDomain(RemeshInspectorDomain())
+        const event = inspectorDomain.event.RemeshQueryStorageCreatedEvent({
+          type: 'RemeshQueryStorageCreated',
+          storage: currentQueryStorage,
+        })
+        store.emitEvent(event)
+      })
+    }
+
     return currentQueryStorage
   }
 
@@ -434,7 +421,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
     const domainName = domainPayload.Domain.domainName
     const argString = JSON.stringify(domainPayload.arg) ?? ''
-    const keyString = `Domain/${domainPayload.Domain.domainId}/${domainName}/${argString}`
+    const keyString = `Domain/${domainPayload.Domain.domainId}/${domainName}:${argString}`
 
     storageKeyWeakMap.set(domainPayload, keyString)
 
@@ -566,11 +553,34 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
       upstreamDomainStorage.downstreamSet.add(currentDomainStorage)
     }
 
+    if (currentDomainStorage.Domain.inspectable) {
+      withInspectorStore((store) => {
+        const inspectorDomain = store.getDomain(RemeshInspectorDomain())
+        const event = inspectorDomain.event.RemeshDomainStorageCreatedEvent({
+          type: 'RemeshDomainStorageCreated',
+          storage: currentDomainStorage,
+        })
+        store.emitEvent(event)
+      })
+    }
+
     return getDomainStorage(domainPayload)
   }
 
   const clearQueryStorage = <T, U>(queryStorage: RemeshQueryStorage<T, U>) => {
     const domainStorage = getDomainStorage(queryStorage.Query.owner)
+
+    if (isInspectable(queryStorage.Query)) {
+      withInspectorStore((store) => {
+        const inspectorDomain = store.getDomain(RemeshInspectorDomain())
+        const event = inspectorDomain.event.RemeshQueryStorageDestroyedEvent({
+          type: 'RemeshQueryStorageDestroyed',
+          storage: queryStorage,
+        })
+
+        store.emitEvent(event)
+      })
+    }
 
     queryStorage.subject.complete()
     domainStorage.queryMap.delete(queryStorage.key)
@@ -603,17 +613,19 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
   const clearStateStorage = <T, U>(stateStorage: RemeshStateStorage<T, U>) => {
     const domainStorage = getDomainStorage(stateStorage.State.owner)
 
-    domainStorage.stateMap.delete(stateStorage.key)
+    if (isInspectable(stateStorage.State)) {
+      withInspectorStore((store) => {
+        const inspectorDomain = store.getDomain(RemeshInspectorDomain())
+        const event = inspectorDomain.event.RemeshStateStorageDestroyedEvent({
+          type: 'RemeshStateStorageDestroyed',
+          storage: stateStorage,
+        })
 
-    if (options.inspectors) {
-      onStateAction({
-        type: 'RemeshStateDeleted',
-        State: stateStorage.State,
-        key: stateStorage.key,
-        arg: stateStorage.arg,
-        state: stateStorage.currentState,
+        store.emitEvent(event)
       })
     }
+
+    domainStorage.stateMap.delete(stateStorage.key)
   }
 
   const clearStateStorageIfNeeded = <T, U>(stateStorage: RemeshStateStorage<T, U>) => {
@@ -648,6 +660,18 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
   }
 
   const clearDomainStorage = <T extends RemeshDomainDefinition, Arg>(domainStorage: RemeshDomainStorage<T, Arg>) => {
+    if (domainStorage.Domain.inspectable) {
+      withInspectorStore((store) => {
+        const inspectorDomain = store.getDomain(RemeshInspectorDomain())
+        const event = inspectorDomain.event.RemeshDomainStorageDestroyedEvent({
+          type: 'RemeshDomainStorageDestroyed',
+          storage: domainStorage,
+        })
+
+        store.emitEvent(event)
+      })
+    }
+
     const upstreamList = [...domainStorage.upstreamSet]
 
     clearSubscriptionSet(domainStorage.domainSubscriptionSet)
@@ -794,6 +818,18 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
     dirtySet.add(queryStorage)
 
+    if (isInspectable(queryStorage.Query)) {
+      withInspectorStore((store) => {
+        const inspectorDomain = store.getDomain(RemeshInspectorDomain())
+        const event = inspectorDomain.event.RemeshQueryStorageUpdatedEvent({
+          type: 'RemeshQueryStorageUpdated',
+          storage: queryStorage,
+        })
+
+        store.emitEvent(event)
+      })
+    }
+
     /**
      * updateQueryStorage may update upstream.downstreamSet
      * so it should be converted to an array for avoiding infinite loop
@@ -865,10 +901,19 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
       return
     }
 
-    const oldState = stateStorage.currentState
-    const newState = statePayload.newState
+    stateStorage.currentState = statePayload.newState
 
-    stateStorage.currentState = newState
+    if (isInspectable(stateStorage.State)) {
+      withInspectorStore((store) => {
+        const inspectorDomain = store.getDomain(RemeshInspectorDomain())
+        const event = inspectorDomain.event.RemeshStateStorageUpdatedEvent({
+          type: 'RemeshStateStorageUpdated',
+          storage: stateStorage,
+        })
+
+        store.emitEvent(event)
+      })
+    }
 
     /**
      * updateQueryStorage may update upstream.downstreamSet
@@ -879,22 +924,23 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     }
 
     commit()
-
-    if (options.inspectors) {
-      onStateAction({
-        type: 'RemeshStateUpdated',
-        State: stateStorage.State,
-        key: stateStorage.key,
-        arg: stateStorage.arg,
-        oldState,
-        newState,
-      })
-    }
   }
 
   const handleEventPayload = <T, U = T>(eventPayload: RemeshEventPayload<T, U>) => {
     const { Event, arg } = eventPayload
     const eventStorage = getEventStorage(Event)
+
+    if (isInspectable(eventStorage.Event)) {
+      withInspectorStore((store) => {
+        const inspectorDomain = store.getDomain(RemeshInspectorDomain())
+        const event = inspectorDomain.event.RemeshEventEmittedEvent({
+          type: 'RemeshEventEmitted',
+          payload: eventPayload,
+        })
+
+        store.emitEvent(event)
+      })
+    }
 
     if (Event.impl) {
       const eventContext = {
@@ -908,10 +954,23 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
   }
 
   const handleCommandPayload = <T>(commandPayload: RemeshCommandPayload<T>) => {
+    if (isInspectable(commandPayload.Command)) {
+      withInspectorStore((store) => {
+        const inspectorDomain = store.getDomain(RemeshInspectorDomain())
+        const event = inspectorDomain.event.RemeshCommandReceivedEvent({
+          type: 'RemeshCommandReceived',
+          payload: commandPayload,
+        })
+
+        store.emitEvent(event)
+      })
+    }
+
     const { Command, arg } = commandPayload
     const commandContext: RemeshCommandContext = {
       get: remeshInjectedContext.get,
     }
+
     const commandOutput = Command.impl(commandContext, arg)
 
     handleCommandOutput(commandOutput)
@@ -972,6 +1031,18 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
   }
 
   const handleCommand$Payload = <T>(command$Payload: RemeshCommand$Payload<T>) => {
+    if (isInspectable(command$Payload.Command$)) {
+      withInspectorStore((store) => {
+        const inspectorDomain = store.getDomain(RemeshInspectorDomain())
+        const event = inspectorDomain.event.RemeshCommand$ReceivedEvent({
+          type: 'RemeshCommand$Received',
+          payload: command$Payload,
+        })
+
+        store.emitEvent(event)
+      })
+    }
+
     const { Command$, arg } = command$Payload
     const command$Storage = getCommand$Storage(Command$)
 
@@ -1076,7 +1147,8 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
   }
 
   const destroy = () => {
-    onDestroyInspectors()
+    destroyInspectors()
+
     for (const domainStorage of domainStorageMap.values()) {
       clearDomainStorage(domainStorage)
     }

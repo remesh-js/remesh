@@ -175,6 +175,14 @@ export const CRUDApp = () => {
   };
 
   const handleSelect = (itemId: string | null) => {
+    if (itemId === selected) {
+      return
+    }
+
+    if (selected && selected.id === itemId) {
+      return
+    }
+
     domain.command.selectItem(itemId);
   };
 
