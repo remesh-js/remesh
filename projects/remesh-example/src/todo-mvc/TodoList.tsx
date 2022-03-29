@@ -1,11 +1,13 @@
+import React from 'react'
 import { useRemeshDomain, useRemeshEvent, useRemeshQuery } from 'remesh-react'
-import { TodoDomain } from './todo'
 import { NavLink, useParams } from 'react-router-dom'
-import { useInput, useOnEnter } from './hooks'
-import React, { useEffect } from 'react'
+
+import { TodoDomain } from './todo'
+import { useInputHandler, useKeyPressHandler } from './hooks'
 import { TodoItem } from './TodoItem'
 
 type FilterType = 'completed' | 'active' | undefined
+
 export const TodoList = () => {
   const domain = useRemeshDomain(TodoDomain())
 
@@ -17,27 +19,24 @@ export const TodoList = () => {
   const hasCompleted = useRemeshQuery(domain.query.HasCompletedQuery())
   const allCompleted = useRemeshQuery(domain.query.AllCompletedQuery())
 
-  useRemeshEvent(domain.event.addTodoFailEvent, () => {
-    alert('Cannot be empty, please enter the TODO name')
+  useRemeshEvent(domain.event.addTodoFailEvent, (message) => {
+    alert(message)
   })
 
-  const onToggleAll = () => {
+  const handleToggleAll = () => {
     domain.command.toggleAllTodoCompleted(!allCompleted)
   }
 
-  const [newTodo, onNewTodoChange, setNewTodo] = useInput('')
-  const onEnter = useOnEnter(() => {
+  const [newTodo, handleTodoNameInput, setNewTodo] = useInputHandler('')
+
+  const handlePressEnter = useKeyPressHandler('enter', () => {
     domain.command.addTodo(newTodo)
     setNewTodo('')
   })
 
-  const clearCompleted = () => {
+  const handleClearCompleted = () => {
     domain.command.clearCompleted()
   }
-
-  useEffect(() => {
-    domain.command.fetchTodoList()
-  }, [])
 
   return (
     <div className="todoapp">
@@ -47,13 +46,13 @@ export const TodoList = () => {
           className="new-todo"
           placeholder="What needs to be done?"
           value={newTodo}
-          onChange={onNewTodoChange}
-          onKeyDown={onEnter}
+          onChange={handleTodoNameInput}
+          onKeyDown={handlePressEnter}
         />
       </header>
 
       <section className="main">
-        <input id="toggle-all" type="checkbox" className="toggle-all" checked={allCompleted} onChange={onToggleAll} />
+        <input id="toggle-all" type="checkbox" className="toggle-all" checked={allCompleted} onChange={handleToggleAll} />
         <label htmlFor="toggle-all" />
         <ul className="todo-list">
           {todoList.map((todo) => (
@@ -84,7 +83,7 @@ export const TodoList = () => {
           </li>
         </ul>
         {hasCompleted && (
-          <button className="clear-completed" onClick={clearCompleted}>
+          <button className="clear-completed" onClick={handleClearCompleted}>
             Clear completed
           </button>
         )}

@@ -1,26 +1,31 @@
-import {useCallback, useEffect, useRef, useState} from "react";
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 
-export function useInput(defaultValue: string) {
+export function useInputHandler(defaultValue: string) {
   const [value, setValue] = useState(defaultValue)
 
-  const onChange = useCallback((event) => {
+  const onChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     setValue(event.target.value)
   }, [])
 
   return [value, onChange, setValue] as const
 }
 
-export function useOnEnter(callback: (event: Event) => void) {
-  const cb = useRef(callback)
+export function useKeyPressHandler(key: string, callback: (event: React.KeyboardEvent<HTMLInputElement>) => void) {
+  const callbackRef = useRef(callback)
+
+  const handleKeyPress = useCallback(
+    (event: React.KeyboardEvent<HTMLInputElement>) => {
+      if (event.key.toLocaleLowerCase() === key.toLocaleLowerCase()) {
+        event.preventDefault()
+        callbackRef.current(event)
+      }
+    },
+    [key],
+  )
 
   useEffect(() => {
-    cb.current = callback
+    callbackRef.current = callback
   })
 
-  return useCallback((event) => {
-    if (event.key === 'Enter') {
-      event.preventDefault()
-      cb.current(event)
-    }
-  }, [])
+  return handleKeyPress
 }

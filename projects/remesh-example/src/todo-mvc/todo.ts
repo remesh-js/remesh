@@ -1,5 +1,5 @@
 import { Remesh } from 'remesh'
-import { from, map, Observable, of, switchMap } from 'rxjs'
+import { from, map, merge, tap } from 'rxjs'
 import { uuid } from './uuid'
 import { TodoRepoExtern } from './todoRepo'
 
@@ -54,93 +54,119 @@ export const TodoDomain = Remesh.domain({
       },
     })
 
-    const addTodoEvent = domain.event({
+    const TodoAddedEvent = domain.event<Todo>({
       name: 'addTodoEvent',
-      impl(_, todo: Todo) {
-        repo.addTodo(todo)
-      },
     })
 
-    const resetTodoList = domain.command({
-      name: 'resetTodoList',
+    const setTodoList = domain.command({
+      name: 'setTodoList',
       impl(_, todoList: Todo[]) {
         return TodoListState().new(todoList)
       },
     })
 
-    const addTodoFailEvent = domain.event({
-      name: 'addTodoFailEvent',
+    const AddTodoFailedEvent = domain.event<string>({
+      name: 'AddTodoFailedEvent',
     })
 
     const addTodo = domain.command({
       name: 'addTodo',
       impl({ get }, todoName: string) {
         if (todoName.trim() === '') {
-          return [addTodoFailEvent()]
+          return [AddTodoFailedEvent('Cannot be empty, please enter the TODO name')]
         }
 
         const todoList = get(TodoListState())
-        const newTodo = { name: todoName, completed: false, id: uuid() }
+        const newTodo = {
+          id: uuid(),
+          name: todoName,
+          completed: false,
+        }
 
-        return [TodoListState().new([newTodo, ...todoList]), addTodoEvent(newTodo)]
+        return [TodoListState().new([newTodo, ...todoList]), TodoAddedEvent(newTodo)]
       },
     })
 
-    const removeTodoEvent = domain.event({
+    const removeTodoEvent = domain.event<Todo['id'][]>({
       name: 'removeTodoEvent',
-      impl(_, ids: Todo['id'][]) {
-        repo.removeTodoByIds(ids)
-      },
     })
 
     const removeTodo = domain.command({
       name: 'removeTodo',
       impl({ get }, id: Todo['id']) {
         const todoList = get(TodoListState())
-        return [TodoListState().new(todoList.filter((todo) => todo.id !== id)), removeTodoEvent([id])]
+        const newTodoList = todoList.filter((todo) => todo.id !== id)
+
+        return [TodoListState().new(newTodoList), removeTodoEvent([id])]
       },
     })
 
-    const updateTodoEvent = domain.event({
-      name: 'updateTodoEvent',
-      impl(_, todo: Todo) {
-        repo.updateTodo(todo)
-      },
+    const TodoUpdatedEvent = domain.event<Todo>({
+      name: 'TodoUpdatedEvent',
     })
 
     const updateTodo = domain.command({
       name: 'updateTodo',
-      impl({ get }, updateTodo: Todo) {
+      impl({ get }, payload: { id: Todo['id'] } & Partial<Todo>) {
         const todoList = get(TodoListState())
-        if (updateTodo.name.trim() === '') {
-          return removeTodo(updateTodo.id)
+
+        if (payload.name && payload.name.trim() === '') {
+          return removeTodo(payload.id)
         }
-        return [
-          TodoListState().new(todoList.map((todo) => (todo.id === updateTodo.id ? { ...todo, ...updateTodo } : todo))),
-          updateTodoEvent(updateTodo),
-        ]
+
+        const newTodoList = todoList.map((todo) => {
+          if (todo.id === payload.id) {
+            return {
+              ...todo,
+              ...payload,
+              id: todo.id,
+            }
+          } else {
+            return todo
+          }
+        })
+
+        const targetTodo = newTodoList.find((todo) => todo.id === payload.id)
+
+        if (!targetTodo) {
+          return null
+        }
+
+        return [TodoListState().new(newTodoList), TodoUpdatedEvent(targetTodo)]
       },
     })
 
-    const toggleTodoCompletedEvent = domain.event({
-      name: 'toggleAllTodoCompletedEvent',
-      impl(_, payload: { ids: Todo['id'][]; completed: boolean }) {
-        repo.toggleCompletedByIds(payload.ids, payload.completed)
-      },
+    const TodoCompletedChangedEvent = domain.event<{ ids: Todo['id'][]; completed: boolean }>({
+      name: 'TodoCompletedChangedEvent',
     })
 
     const toggleTodoCompleted = domain.command({
       name: 'toggleTodoCompleted',
-      impl({ get }, payload: { id: Todo['id']; completed: Todo['completed'] }) {
-        const { id, completed } = payload
+      impl({ get }, targetTodoId: Todo['id']) {
         const todoList = get(TodoListState())
-        return [
-          TodoListState().new(todoList.map((todo) => (todo.id === id ? { ...todo, completed } : todo))),
-          toggleTodoCompletedEvent({
-            ids: [id],
-            completed: completed,
-          }),
-        ]
+
+        const newTodoList = todoList.map((todo) => {
+          if (todo.id === targetTodoId) {
+            return {
+              ...todo,
+              completed: !todo.completed,
+            }
+          }
+          return todo
+        })
+
+        const targetTodo = newTodoList.find((todo) => todo.id === targetTodoId)
+
+        if (!targetTodo) {
+          return null
+        }
+
+        const eventData = {
+          ids: [targetTodoId],
+          completed: targetTodo?.completed,
+        }
+
+        return [TodoListState().new(newTodoList), TodoCompletedChangedEvent(eventData)]
       },
     })
 
@@ -153,14 +179,14 @@ export const TodoDomain = Remesh.domain({
           return null
         }
 
+        const newTodoList = todoList.map((todo) => {
+          return { ...todo, completed }
+        })
+
         return [
-          TodoListState().new(
-            todoList.map((todo) => {
-              return { ...todo, completed }
-            }),
-          ),
-          toggleTodoCompletedEvent({
-            ids: todoList.map((todo) => todo.id),
+          TodoListState().new(newTodoList),
+          TodoCompletedChangedEvent({
+            ids: newTodoList.map((todo) => todo.id),
             completed,
           }),
         ]
@@ -171,20 +197,34 @@ export const TodoDomain = Remesh.domain({
       name: 'clearCompleted',
       impl({ get }) {
         const todoList = get(TodoListState())
-        return [
-          TodoListState().new(todoList.filter((todo) => !todo.completed)),
-          removeTodoEvent(todoList.filter((item) => item.completed).map((todo) => todo.id)),
-        ]
+        const newTodoList = todoList.filter((todo) => !todo.completed)
+        const removedTodoIdList = todoList.filter((todo) => todo.completed).map((todo) => todo.id)
+
+        return [TodoListState().new(newTodoList), removeTodoEvent(removedTodoIdList)]
       },
     })
 
-    const fetchTodoList = domain.command$({
-      name: 'fetchTodoList',
-      impl(_, payload$: Observable<void>) {
-        return payload$.pipe(
-          switchMap(() => from(repo.getTodoList())),
-          map((todos) => resetTodoList(todos)),
+    domain.command$({
+      name: 'fromRepoToState',
+      impl() {
+        return from(repo.getTodoList()).pipe(map((todos) => setTodoList(todos)))
+      },
+    })
+
+    domain.command$({
+      name: 'fromStateToRepo',
+      impl: ({ fromEvent }) => {
+        const addTodo$ = fromEvent(TodoAddedEvent).pipe(tap((todo) => repo.addTodo(todo)))
+
+        const removeTodo$ = fromEvent(removeTodoEvent).pipe(tap((ids) => repo.removeTodoByIds(ids)))
+
+        const updateTodo$ = fromEvent(TodoUpdatedEvent).pipe(tap((todo) => repo.updateTodo(todo)))
+
+        const toggleTodoCompleted$ = fromEvent(TodoCompletedChangedEvent).pipe(
+          tap((eventData) => repo.toggleCompletedByIds(eventData.ids, eventData.completed)),
         )
+
+        return merge(addTodo$, removeTodo$, updateTodo$, toggleTodoCompleted$).pipe(map(() => null))
       },
     })
 
@@ -202,9 +242,8 @@ export const TodoDomain = Remesh.domain({
         toggleAllTodoCompleted,
         updateTodo,
         clearCompleted,
-        fetchTodoList,
       },
-      event: { addTodoFailEvent }
+      event: { addTodoFailEvent: AddTodoFailedEvent },
     }
   },
 })
