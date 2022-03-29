@@ -1,5 +1,5 @@
 import React from 'react'
-import ReactDOM from 'react-dom'
+import * as ReactDOMClient from 'react-dom/client'
 
 import { RemeshRoot } from 'remesh-react'
 
@@ -37,18 +37,18 @@ const Root = () => {
   )
 }
 
-ReactDOM.render(
-  <React.StrictMode>
+const container = document.getElementById('root')
+
+if (container) {
+  const root = ReactDOMClient.createRoot(container)
+
+  root.render(
     <RemeshRoot
       options={{
-        inspectors: [
-          RemeshReduxDevtools(),
-          RemeshLogger(),
-        ],
+        inspectors: [RemeshReduxDevtools(), RemeshLogger()],
       }}
     >
       <Root />
-    </RemeshRoot>
-  </React.StrictMode>,
-  document.getElementById('root'),
-)
+    </RemeshRoot>,
+  )
+}

@@ -1,32 +1,30 @@
 import React from 'react'
-import ReactDOM from 'react-dom'
+import * as ReactDOMClient from 'react-dom/client'
 
 import { HashRouter, Routes, Route } from 'react-router-dom'
 
 import { RemeshRoot } from 'remesh-react'
-
 import { RemeshReduxDevtools } from 'remesh-redux-devtools'
+import { RemeshLogger } from 'remesh-logger'
 
 import { TodoList } from './TodoList'
 
-function Root() {
-  return <TodoList />
-}
+const container = document.getElementById('root')
 
-ReactDOM.render(
-  <React.StrictMode>
+if (container) {
+  const root = ReactDOMClient.createRoot(container)
+  root.render(
     <RemeshRoot
       options={{
-        inspectors: [RemeshReduxDevtools()],
+        inspectors: [RemeshReduxDevtools(), RemeshLogger()],
       }}
     >
       <HashRouter basename="/">
         <Routes>
-          <Route path="/" element={<Root />} />
-          <Route path="/:filter" element={<Root />} />
+          <Route path="/" element={<TodoList />} />
+          <Route path="/:filter" element={<TodoList />} />
         </Routes>
       </HashRouter>
-    </RemeshRoot>
-  </React.StrictMode>,
-  document.getElementById('root'),
-)
+    </RemeshRoot>,
+  )
+}

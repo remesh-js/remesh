@@ -10,8 +10,8 @@
   },
   "dependencies": {
     "tslib": "^2.3.1",
-    "react": "^17.0.0",
-    "react-dom": "^17.0.0",
+    "react": "^18.0.0-rc.3",
+    "react-dom": "^18.0.0-rc.3",
     "remesh": "^1.0.0",
     "remesh-react": "^1.0.0",
     "remesh-redux-devtools": "^1.0.0",

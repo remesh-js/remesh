@@ -148,6 +148,11 @@ export const TodoDomain = Remesh.domain({
       name: 'toggleAllTodoCompleted',
       impl({ get }, completed: boolean) {
         const todoList = get(TodoListState())
+
+        if (todoList.length === 0) {
+          return null
+        }
+
         return [
           TodoListState().new(
             todoList.map((todo) => {
