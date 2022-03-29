@@ -9,34 +9,33 @@ import { TodoItem } from './TodoItem'
 type FilterType = 'completed' | 'active' | undefined
 
 export const TodoList = () => {
-  const domain = useRemeshDomain(TodoDomain())
-
   const { filter } = useParams()
 
-  const todoList = useRemeshQuery(domain.query.TodoListQuery(filter as FilterType))
+  const domain = useRemeshDomain(TodoDomain())
 
+  const todoList = useRemeshQuery(domain.query.TodoListQuery(filter as FilterType))
   const activeTodoCount = useRemeshQuery(domain.query.ActiveTodoCountQuery())
   const hasCompleted = useRemeshQuery(domain.query.HasCompletedQuery())
   const allCompleted = useRemeshQuery(domain.query.AllCompletedQuery())
 
-  useRemeshEvent(domain.event.addTodoFailEvent, (message) => {
-    alert(message)
+  const [newTodo, handleTodoNameInput, setNewTodo] = useInputHandler('')
+
+  const handlePressEnter = useKeyPressHandler('Enter', () => {
+    domain.command.addTodo(newTodo)
+    setNewTodo('')
   })
 
   const handleToggleAll = () => {
     domain.command.toggleAllTodoCompleted(!allCompleted)
   }
 
-  const [newTodo, handleTodoNameInput, setNewTodo] = useInputHandler('')
-
-  const handlePressEnter = useKeyPressHandler('enter', () => {
-    domain.command.addTodo(newTodo)
-    setNewTodo('')
-  })
-
   const handleClearCompleted = () => {
     domain.command.clearCompleted()
   }
+  
+  useRemeshEvent(domain.event.AddTodoFailedEvent, (message) => {
+    alert(message)
+  })
 
   return (
     <div className="todoapp">

@@ -243,7 +243,7 @@ export const TodoDomain = Remesh.domain({
         updateTodo,
         clearCompleted,
       },
-      event: { addTodoFailEvent: AddTodoFailedEvent },
+      event: { AddTodoFailedEvent },
     }
   },
 })
