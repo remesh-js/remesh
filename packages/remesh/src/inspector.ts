@@ -1,6 +1,6 @@
 import { RemeshDomain, RemeshCommand$Payload, RemeshCommandPayload, RemeshEventPayload } from './remesh'
 
-import { RemeshDomainStorage, RemeshStateStorage, RemeshQueryStorage } from './store'
+import { RemeshDomainStorage, RemeshStateStorage, RemeshQueryStorage, RemeshStore, RemeshStoreOptions } from './store'
 
 export type RemeshDomainStorageCreated<T, U> = {
   type: 'RemeshDomainStorageCreated'

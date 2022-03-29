@@ -13,6 +13,9 @@
     },
     {
       "path": "./packages/remesh-redux-devtools/tsconfig.json"
+    },
+    {
+      "path": "./packages/remesh-logger/tsconfig.json"
     }
   ]
 }

@@ -1,7 +1,7 @@
 {
-  "name": "remesh-redux-devtools",
+  "name": "remesh-logger",
   "version": "1.0.0",
-  "description": "Redux devtools adapter for remesh",
+  "description": "A logger for remesh",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
@@ -13,13 +13,11 @@
     "remesh": "^1.0.0"
   },
   "dependencies": {
-    "@redux-devtools/extension": "^3.2.2",
-    "remesh-debugger-helper": "^1.0.0",
-    "tslib": "^2.3.1"
+    "tslib": "^2.3.1",
+    "remesh-debugger-helper": "^1.0.0"
   },
   "devDependencies": {
     "@types/node": "^16.7.2",
-    "redux": "^4.1.2",
     "remesh": "^1.0.0",
     "typescript": "^4.3.2"
   }

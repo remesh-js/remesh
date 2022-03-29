@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom'
 import { RemeshRoot } from 'remesh-react'
 
 import { RemeshReduxDevtools } from 'remesh-redux-devtools'
+import { RemeshLogger } from 'remesh-logger'
 
 import { CounterApp } from './Counter'
 import { TemperatureConverterApp } from './TemperatureConverter'
@@ -40,7 +41,10 @@ ReactDOM.render(
   <React.StrictMode>
     <RemeshRoot
       options={{
-        inspectors: [RemeshReduxDevtools()],
+        inspectors: [
+          RemeshReduxDevtools(),
+          RemeshLogger(),
+        ],
       }}
     >
       <Root />

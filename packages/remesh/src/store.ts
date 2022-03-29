@@ -739,17 +739,6 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     return queryStorage.currentValue
   }
 
-  const queryByKey = <T>(domainPayload: RemeshDomainPayload<any, any>, queryKey: string): T => {
-    const domainStorage = getDomainStorage(domainPayload)
-    const queryStorage = domainStorage.queryMap.get(queryKey)
-
-    if (queryStorage) {
-      return queryStorage.currentValue
-    }
-
-    throw new Error(`query key not found in ${domainPayload.Domain.domainName}`)
-  }
-
   const remeshInjectedContext: RemeshInjectedContext = {
     get: (input) => {
       if (input.type === 'RemeshStateItem') {
@@ -1081,7 +1070,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
     for (const key in domain.command) {
       const Command = domain.command[key]
-      command[key] = (arg: any) => emitCommand(Command(arg))
+      command[key] = (arg: any) => sendCommand(Command(arg))
     }
 
     return command as BindingCommand<T['command']>
@@ -1160,7 +1149,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     handleEventPayload(eventPayload)
   }
 
-  const emitCommand = <T>(input: RemeshCommandPayload<T> | RemeshCommand$Payload<T>) => {
+  const sendCommand = <T>(input: RemeshCommandPayload<T> | RemeshCommand$Payload<T>) => {
     if (input.type === 'RemeshCommandPayload') {
       handleCommandPayload(input)
     } else if (input.type === 'RemeshCommand$Payload') {
@@ -1172,9 +1161,8 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     name: options.name,
     getDomain,
     query: getCurrentQueryValue,
-    queryByKey,
     emitEvent,
-    emitCommand,
+    sendCommand,
     destroy,
     subscribeQuery,
     subscribeEvent,

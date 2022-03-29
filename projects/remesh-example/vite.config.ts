@@ -1,7 +1,7 @@
-import { defineConfig } from 'vite';
-import reactRefresh from '@vitejs/plugin-react-refresh';
-import { vanillaExtractPlugin } from '@vanilla-extract/vite-plugin';
-import { resolve } from 'path';
+import { defineConfig } from 'vite'
+import reactRefresh from '@vitejs/plugin-react-refresh'
+import { vanillaExtractPlugin } from '@vanilla-extract/vite-plugin'
+import { resolve } from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -9,10 +9,12 @@ export default defineConfig({
   plugins: [reactRefresh(), vanillaExtractPlugin()],
   resolve: {
     alias: {
-      "remesh": resolve(__dirname, '../../packages/remesh/src'),
-      "remesh-react": resolve(__dirname, '../../packages/remesh-react/src'),
-      "remesh-redux-devtools": resolve(__dirname, '../../packages/remesh-redux-devtools/src'),
-    }
+      remesh: resolve(__dirname, '../../packages/remesh/src'),
+      'remesh-react': resolve(__dirname, '../../packages/remesh-react/src'),
+      'remesh-debugger-helper': resolve(__dirname, '../../packages/remesh-debugger-helper/src'),
+      'remesh-redux-devtools': resolve(__dirname, '../../packages/remesh-redux-devtools/src'),
+      'remesh-logger': resolve(__dirname, '../../packages/remesh-logger/src'),
+    },
   },
   build: {
     outDir: resolve(__dirname, '../../dist'),
@@ -24,4 +26,4 @@ export default defineConfig({
       },
     },
   },
-});
+})

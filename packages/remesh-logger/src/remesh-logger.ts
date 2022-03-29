@@ -1,48 +1,45 @@
 import { Remesh, RemeshDomainPayload, RemeshInspectorDomain, RemeshStoreOptions } from 'remesh'
-import { RemeshDebuggerHelper, RemeshDebugOptions } from 'remesh-debugger-helper'
 
-import type { Config as _Config } from '@redux-devtools/extension'
-import type { Action } from 'redux'
+import { RemeshDebugOptions, RemeshDebuggerHelper, formatNow } from 'remesh-debugger-helper'
 
-const getReduxDevtools = () => {
-  if (typeof window !== 'undefined') {
-    return window.__REDUX_DEVTOOLS_EXTENSION__
-  }
+export type RemeshLoggerExtendedOptions = {
+  collapsed?: boolean
 }
 
-export type RemeshReduxDevtoolsOptions = RemeshStoreOptions & RemeshDebugOptions
+export type RemeshLoggerOptions = RemeshLoggerExtendedOptions & RemeshStoreOptions & RemeshDebugOptions
 
-export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
-  const reduxDevtools = getReduxDevtools()
-
-  if (!reduxDevtools) {
-    return
+export const RemeshLogger = (options?: RemeshLoggerOptions) => {
+  const config = {
+    collapsed: true,
+    ...options,
   }
 
-  const helper = RemeshDebuggerHelper(options)
+  const helper = RemeshDebuggerHelper(config)
 
-  const devtools = reduxDevtools.connect({
-    name: options?.name,
-    features: {
-      pause: false, // start/pause recording of dispatched actions
-      lock: false, // lock/unlock dispatching actions and side effects
-      persist: false, // persist states on page reloading
-      export: false, // export history of actions in a file
-      import: false, // import history of actions from a file
-      jump: false, // jump back and forth (time travelling)
-      skip: false, // skip (cancel) actions
-      reorder: false, // drag and drop actions in the history list
-      dispatch: false, // dispatch custom actions or action creators
-      test: false, // generate tests for the selected actions
-    },
-  })
+  const log = (type: string, info: object) => {
+    if (config.collapsed) {
+      const parts = type.split('::')
+      console.groupCollapsed(
+        `%c${parts[0]}%c::%c${parts[1]}%c::%c${parts[2]}%c @ ${formatNow()}`,
+        'color:#03A9F4; font-weight: bold',
+        'color:#9E9E9E; font-weight: bold',
+        'color:#4CAF50; font-weight: bold',
+        'color:#9E9E9E; font-weight: bold',
+        'color:#AA07DE; font-weight: bold',
+        `color:#9E9E9E; font-weight: lighter`,
+      )
+    }
 
-  const send = (_type: string, action: Action<unknown>) => {
-    devtools.send(action, null)
+    console.log(info)
+
+    if (config.collapsed) {
+      console.groupEnd()
+    }
   }
 
   const store = Remesh.store({
-    name: `RemeshReduxDevtools(${options?.name ?? ''})`,
+    ...config,
+    name: `RemeshLogger(${config?.name ?? ''})`,
   })
 
   const inspectorDomain = store.getDomain(RemeshInspectorDomain())
@@ -73,12 +70,12 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
       }
 
       if (event.storage.arg !== undefined) {
-        send(info.type, {
+        log(info.type, {
           ...info,
           domainArg: event.storage.arg,
         })
       } else {
-        send(info.type, info)
+        log(info.type, info)
       }
     })
 
@@ -91,12 +88,12 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
       }
 
       if (event.storage.arg !== undefined) {
-        send(info.type, {
+        log(info.type, {
           ...info,
           domainArg: event.storage.arg,
         })
       } else {
-        send(info.type, info)
+        log(info.type, info)
       }
     })
 
@@ -111,12 +108,12 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
       }
 
       if (event.storage.arg !== undefined) {
-        send(info.type, {
+        log(info.type, {
           ...info,
           stateArg: event.storage.arg,
         })
       } else {
-        send(info.type, info)
+        log(info.type, info)
       }
     })
   })
@@ -133,12 +130,12 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
       }
 
       if (event.storage.arg !== undefined) {
-        send(info.type, {
+        log(info.type, {
           ...info,
           stateArg: event.storage.arg,
         })
       } else {
-        send(info.type, info)
+        log(info.type, info)
       }
     })
 
@@ -153,12 +150,12 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
       }
 
       if (event.storage.arg !== undefined) {
-        send(info.type, {
+        log(info.type, {
           ...info,
           stateArg: event.storage.arg,
         })
       } else {
-        send(info.type, info)
+        log(info.type, info)
       }
     })
   })
@@ -174,12 +171,12 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
       }
 
       if (event.storage.arg !== undefined) {
-        send(info.type, {
+        log(info.type, {
           ...info,
           queryArg: event.storage.arg,
         })
       } else {
-        send(info.type, info)
+        log(info.type, info)
       }
     })
 
@@ -193,12 +190,12 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
       }
 
       if (event.storage.arg !== undefined) {
-        send(info.type, {
+        log(info.type, {
           ...info,
           queryArg: event.storage.arg,
         })
       } else {
-        send(info.type, info)
+        log(info.type, info)
       }
     })
 
@@ -212,12 +209,12 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
       }
 
       if (event.storage.arg !== undefined) {
-        send(info.type, {
+        log(info.type, {
           ...info,
           queryArg: event.storage.arg,
         })
       } else {
-        send(info.type, info)
+        log(info.type, info)
       }
     })
   })
@@ -233,12 +230,12 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
       }
 
       if (event.payload.arg !== undefined) {
-        send(info.type, {
+        log(info.type, {
           ...info,
           commandArg: event.payload.arg,
         })
       } else {
-        send(info.type, info)
+        log(info.type, info)
       }
     })
   })
@@ -254,12 +251,12 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
       }
 
       if (event.payload.arg !== undefined) {
-        send(info.type, {
+        log(info.type, {
           ...info,
           command$Arg: event.payload.arg,
         })
       } else {
-        send(info.type, info)
+        log(info.type, info)
       }
     })
   })
@@ -276,12 +273,12 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
       }
 
       if (event.payload.arg !== undefined) {
-        send(info.type, {
+        log(info.type, {
           ...info,
           eventArg: event.payload.arg,
         })
       } else {
-        send(info.type, info)
+        log(info.type, info)
       }
     })
   })
