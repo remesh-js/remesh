@@ -218,7 +218,10 @@ const RowView = ({ columnKeyList, rowKey }: RowViewProps) => {
               border: '1px solid #bbb',
               overflow: 'hidden',
             }}
-            onClick={() => {
+            onClick={(event) => {
+              if (event.target instanceof HTMLInputElement) {
+                return
+              }
               cells.command.selectCell(cellKey)
             }}
           >

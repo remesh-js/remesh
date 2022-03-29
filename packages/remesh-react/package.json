@@ -15,10 +15,12 @@
     "remesh": "^1.0.0"
   },
   "dependencies": {
-    "tslib": "^2.3.1"
+    "tslib": "^2.3.1",
+    "use-sync-external-store": "^1.0.0-rc.0 || ^1.0.0"
   },
   "devDependencies": {
     "@types/node": "^16.7.2",
+    "@types/use-sync-external-store": "^0.0.3 || ^1.0.0",
     "rimraf": "^3.0.2",
     "react": "^17.0.0",
     "react-dom": "^17.0.0",

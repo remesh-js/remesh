@@ -1,4 +1,6 @@
-import React, { useEffect, useRef, useContext, createContext, ReactNode, useReducer } from 'react'
+import React, { useEffect, useRef, useContext, createContext, ReactNode, useCallback } from 'react'
+
+import { useSyncExternalStore } from 'use-sync-external-store/shim'
 
 import {
   RemeshDomainDefinition,
@@ -62,27 +64,35 @@ export const RemeshRoot = (props: RemeshRootProps) => {
   useEffect(() => {
     return () => {
       taskContextRef.current?.remeshStore.destroy()
+      taskContextRef.current = null
     }
   }, [])
 
   return <RemeshReactContext.Provider value={taskContextRef.current}>{props.children}</RemeshReactContext.Provider>
 }
 
-const useForceUpdate = () => {
-  const [, forceUpdate] = useReducer((i: number) => i + 1, 0)
-  return forceUpdate
-}
-
 export const useRemeshQuery = function <T, U>(queryPayload: RemeshQueryPayload<T, U>): U {
   const store = useRemeshStore()
 
-  const forceUpdate = useForceUpdate()
+  const triggerRef = useRef<(() => void) | null>(null)
+
+  const subscribe = useCallback((triggerUpdate) => {
+    triggerRef.current = triggerUpdate
+    return () => {
+      triggerRef.current = null
+    }
+  }, [])
+
+  const getSnapshot = useCallback(() => {
+    const snapshot = store.query(queryPayload)
+    return snapshot
+  }, [store, queryPayload])
+
+  const state = useSyncExternalStore(subscribe, getSnapshot)
 
   const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null)
 
   const queryKey = store.getKey(queryPayload)
-
-  const state = store.query(queryPayload)
 
   useEffect(() => {
     return () => {
@@ -95,7 +105,9 @@ export const useRemeshQuery = function <T, U>(queryPayload: RemeshQueryPayload<T
     if (subscriptionRef.current !== null) {
       return
     }
-    subscriptionRef.current = store.subscribeQuery(queryPayload, forceUpdate)
+    subscriptionRef.current = store.subscribeQuery(queryPayload, () => {
+      triggerRef.current?.()
+    })
   }, [store, queryPayload])
 
   return state
