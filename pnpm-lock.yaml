@@ -91,21 +91,21 @@ importers:
     specifiers:
       '@types/node': ^16.7.2
       '@types/use-sync-external-store': ^0.0.3 || ^1.0.0
-      react: ^18.0.0-rc.3
-      react-dom: ^18.0.0-rc.3
+      react: ^18.0.0
+      react-dom: ^18.0.0
       remesh: ^1.0.0
       rimraf: ^3.0.2
       tslib: ^2.3.1
       typescript: ^4.3.2
-      use-sync-external-store: ^1.0.0-rc.0 || ^1.0.0
+      use-sync-external-store: ^1.0.0
     dependencies:
       tslib: 2.3.1
-      use-sync-external-store: 1.0.0-rc.0_e246ff394bc7cfee5a3cf26dd6e64d39
+      use-sync-external-store: 1.0.0_react@18.0.0
     devDependencies:
       '@types/node': 16.11.26
       '@types/use-sync-external-store': 0.0.3
-      react: 18.0.0-rc.3-next-e7d0053e6-20220325
-      react-dom: 18.0.0-rc.3-next-e7d0053e6-20220325_e246ff394bc7cfee5a3cf26dd6e64d39
+      react: 18.0.0
+      react-dom: 18.0.0_react@18.0.0
       remesh: link:../remesh
       rimraf: 3.0.2
       typescript: 4.6.3
@@ -132,17 +132,15 @@ importers:
   projects/remesh-example:
     specifiers:
       '@rollup/plugin-node-resolve': ^13.0.4
-      '@types/lru-cache': ^5.1.1
       '@types/node': ^16.7.2
       '@types/react': ^17.0.0
       '@types/react-dom': ^17.0.0
-      '@types/shallowequal': ^1.1.1
       '@vanilla-extract/css': ^1.2.3
       '@vanilla-extract/vite-plugin': ^1.2.0
       '@vitejs/plugin-react-refresh': ^1.3.1
       localforage: ^1.10.0
-      react: ^18.0.0-rc.3
-      react-dom: ^18.0.0-rc.3
+      react: ^18.0.0
+      react-dom: ^18.0.0
       react-router: ^6.2.2
       react-router-dom: ^6.2.2
       remesh: ^1.0.0
@@ -157,10 +155,10 @@ importers:
       vite: ^2.5.1
     dependencies:
       localforage: 1.10.0
-      react: 18.0.0-rc.3-next-e7d0053e6-20220325
-      react-dom: 18.0.0-rc.3-next-e7d0053e6-20220325_e246ff394bc7cfee5a3cf26dd6e64d39
-      react-router: 6.2.2_e246ff394bc7cfee5a3cf26dd6e64d39
-      react-router-dom: 6.2.2_f6419e544d30be84ac2ca962aba7adc2
+      react: 18.0.0
+      react-dom: 18.0.0_react@18.0.0
+      react-router: 6.2.2_react@18.0.0
+      react-router-dom: 6.2.2_react-dom@18.0.0+react@18.0.0
       remesh: link:../../packages/remesh
       remesh-logger: link:../../packages/remesh-logger
       remesh-react: link:../../packages/remesh-react
@@ -170,11 +168,9 @@ importers:
       tslib: 2.3.1
     devDependencies:
       '@rollup/plugin-node-resolve': 13.1.3
-      '@types/lru-cache': 5.1.1
       '@types/node': 16.11.26
       '@types/react': 17.0.43
       '@types/react-dom': 17.0.14
-      '@types/shallowequal': 1.1.1
       '@vanilla-extract/css': 1.6.8
       '@vanilla-extract/vite-plugin': 1.2.0_vite@2.8.6
       '@vitejs/plugin-react-refresh': 1.3.6
@@ -752,10 +748,6 @@ packages:
 
   /@types/json-schema/7.0.10:
     resolution: {integrity: sha512-BLO9bBq59vW3fxCpD4o0N4U+DXsvwvIcl+jofw0frQo/GrBFC+/jRZj1E7kgp6dvTyNmA4y6JCV5Id/r3mNP5A==}
-    dev: true
-
-  /@types/lru-cache/5.1.1:
-    resolution: {integrity: sha512-ssE3Vlrys7sdIzs5LOxCzTVMsU7i9oa/IaW92wF32JFb3CVczqOkru2xspuKczHEbG3nvmPY7IFqVmGGHdNbYw==}
     dev: true
 
   /@types/minimist/1.2.2:
@@ -3270,14 +3262,14 @@ packages:
     engines: {node: '>=8'}
     dev: true
 
-  /react-dom/18.0.0-rc.3-next-e7d0053e6-20220325_e246ff394bc7cfee5a3cf26dd6e64d39:
-    resolution: {integrity: sha512-LIpWe5CdiO8NZ+K4YzGj8wdqW44eBBNwUy3Q9OTYBY4G+JB31/c8GGzoBC2FvVkSVLTb4LUHBGYiyl7s2n1zug==}
+  /react-dom/18.0.0_react@18.0.0:
+    resolution: {integrity: sha512-XqX7uzmFo0pUceWFCt7Gff6IyIMzFUn7QMZrbrQfGxtaxXZIcGQzoNpRLE3fQLnS4XzLLPMZX2T9TRcSrasicw==}
     peerDependencies:
-      react: 18.0.0-rc.3-next-e7d0053e6-20220325
+      react: ^18.0.0
     dependencies:
       loose-envify: 1.4.0
-      react: 18.0.0-rc.3-next-e7d0053e6-20220325
-      scheduler: 0.21.0-rc.3-next-e7d0053e6-20220325
+      react: 18.0.0
+      scheduler: 0.21.0
 
   /react-is/16.13.1:
     resolution: {integrity: sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==}
@@ -3288,29 +3280,29 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: true
 
-  /react-router-dom/6.2.2_f6419e544d30be84ac2ca962aba7adc2:
+  /react-router-dom/6.2.2_react-dom@18.0.0+react@18.0.0:
     resolution: {integrity: sha512-AtYEsAST7bDD4dLSQHDnk/qxWLJdad5t1HFa1qJyUrCeGgEuCSw0VB/27ARbF9Fi/W5598ujvJOm3ujUCVzuYQ==}
     peerDependencies:
       react: '>=16.8'
       react-dom: '>=16.8'
     dependencies:
       history: 5.3.0
-      react: 18.0.0-rc.3-next-e7d0053e6-20220325
-      react-dom: 18.0.0-rc.3-next-e7d0053e6-20220325_e246ff394bc7cfee5a3cf26dd6e64d39
-      react-router: 6.2.2_e246ff394bc7cfee5a3cf26dd6e64d39
+      react: 18.0.0
+      react-dom: 18.0.0_react@18.0.0
+      react-router: 6.2.2_react@18.0.0
     dev: false
 
-  /react-router/6.2.2_e246ff394bc7cfee5a3cf26dd6e64d39:
+  /react-router/6.2.2_react@18.0.0:
     resolution: {integrity: sha512-/MbxyLzd7Q7amp4gDOGaYvXwhEojkJD5BtExkuKmj39VEE0m3l/zipf6h2WIB2jyAO0lI6NGETh4RDcktRm4AQ==}
     peerDependencies:
       react: '>=16.8'
     dependencies:
       history: 5.3.0
-      react: 18.0.0-rc.3-next-e7d0053e6-20220325
+      react: 18.0.0
     dev: false
 
-  /react/18.0.0-rc.3-next-e7d0053e6-20220325:
-    resolution: {integrity: sha512-6NlK01y2cbOS+s8+Ludj90p0kKE1+EvmWef0TPrLgFkC7l3EtcZvDBk+DR14+CQgVDybvT4Dh4DAAyH4knUbTA==}
+  /react/18.0.0:
+    resolution: {integrity: sha512-x+VL6wbT4JRVPm7EGxXhZ8w8LTROaxPXOqhlGyVSrv0sB1jkyFGgXxJ8LVoPRLvPR6/CIZGFmfzqUa2NYeMr2A==}
     engines: {node: '>=0.10.0'}
     dependencies:
       loose-envify: 1.4.0
@@ -3490,8 +3482,8 @@ packages:
     resolution: {integrity: sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==}
     dev: true
 
-  /scheduler/0.21.0-rc.3-next-e7d0053e6-20220325:
-    resolution: {integrity: sha512-DIpRZC4U7E4snduICzeIL4N16C9R1kX/CIBrH5kp0kGB6zbTkIKSBnuAXoKgmgHe2tt2LVGWN1x2XMgw3xylLw==}
+  /scheduler/0.21.0:
+    resolution: {integrity: sha512-1r87x5fz9MXqswA2ERLo0EbOAU74DpIUO090gIasYTqlVoJeMcl+Z1Rg7WHz+qtPujhS/hGIt9kxZOYBV3faRQ==}
     dependencies:
       loose-envify: 1.4.0
 
@@ -3954,12 +3946,12 @@ packages:
       fast-url-parser: 1.1.3
     dev: true
 
-  /use-sync-external-store/1.0.0-rc.0_e246ff394bc7cfee5a3cf26dd6e64d39:
-    resolution: {integrity: sha512-0U9Xlc2QDFzSGMB0DvcJQL0+DIdxDPJC7mnZlYFbl7wrSrPMcs89X5TVkNB6Dzg618m8lZop+U+J6ow3vq9RAQ==}
+  /use-sync-external-store/1.0.0_react@18.0.0:
+    resolution: {integrity: sha512-AFVsxg5GkFg8GDcxnl+Z0lMAz9rE8DGJCc28qnBuQF7lac57B5smLcT37aXpXIIPz75rW4g3eXHPjhHwdGskOw==}
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0-rc
     dependencies:
-      react: 18.0.0-rc.3-next-e7d0053e6-20220325
+      react: 18.0.0
     dev: false
 
   /uuid/8.3.2:
