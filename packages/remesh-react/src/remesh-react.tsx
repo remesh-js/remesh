@@ -1,15 +1,8 @@
-import React, { useEffect, useRef, useContext, createContext, ReactNode, useCallback } from 'react'
+import React, { useEffect, useRef, useContext, createContext, ReactNode, useCallback, useMemo } from 'react'
 
 import { useSyncExternalStore } from 'use-sync-external-store/shim'
 
-import {
-  RemeshDomainDefinition,
-  RemeshQueryPayload,
-  RemeshEvent,
-  RemeshDomainPayload,
-  RemeshStore,
-  RemeshStoreOptions,
-} from 'remesh'
+import { RemeshDomainDefinition, RemeshQueryPayload, RemeshEvent, RemeshDomainPayload, RemeshStore } from 'remesh'
 
 export type RemeshReactContext = {
   remeshStore: RemeshStore
@@ -32,43 +25,19 @@ export const useRemeshStore = (): RemeshStore => {
   return context.remeshStore
 }
 
-export type RemeshRootProps =
-  | {
-      children: ReactNode
-      options?: RemeshStoreOptions
-      store?: undefined
-    }
-  | {
-      children: ReactNode
-      store: RemeshStore
-    }
+export type RemeshRootProps = {
+  children: ReactNode
+  store: RemeshStore
+}
 
 export const RemeshRoot = (props: RemeshRootProps) => {
-  const taskContextRef = useRef<RemeshReactContext | null>(null)
-
-  if (taskContextRef.current === null) {
-    if (props.store) {
-      taskContextRef.current = {
-        remeshStore: props.store,
-      }
-    } else {
-      taskContextRef.current = {
-        remeshStore: RemeshStore({
-          name: 'RemeshStore',
-          ...props.options,
-        }),
-      }
+  const contextValue: RemeshReactContext = useMemo(() => {
+    return {
+      remeshStore: props.store,
     }
-  }
+  }, [props.store])
 
-  useEffect(() => {
-    return () => {
-      taskContextRef.current?.remeshStore.destroy()
-      taskContextRef.current = null
-    }
-  }, [])
-
-  return <RemeshReactContext.Provider value={taskContextRef.current}>{props.children}</RemeshReactContext.Provider>
+  return <RemeshReactContext.Provider value={contextValue}>{props.children}</RemeshReactContext.Provider>
 }
 
 export const useRemeshQuery = function <T, U>(queryPayload: RemeshQueryPayload<T, U>): U {
@@ -105,6 +74,7 @@ export const useRemeshQuery = function <T, U>(queryPayload: RemeshQueryPayload<T
     if (subscriptionRef.current !== null) {
       return
     }
+
     subscriptionRef.current = store.subscribeQuery(queryPayload, () => {
       triggerRef.current?.()
     })
@@ -141,13 +111,22 @@ export const useRemeshDomain = function <T extends RemeshDomainDefinition, Arg>(
   domainPayload: RemeshDomainPayload<T, Arg>,
 ) {
   const store = useRemeshStore()
+  const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null)
   const domain = store.getDomain(domainPayload)
+  const domainKey = store.getKey(domainPayload)
 
   useEffect(() => {
-    const subscription = store.subscribeDomain(domainPayload)
     return () => {
-      subscription.unsubscribe()
+      subscriptionRef.current?.unsubscribe()
+      subscriptionRef.current = null
     }
+  }, [store, domainKey])
+
+  useEffect(() => {
+    if (subscriptionRef.current !== null) {
+      return
+    }
+    subscriptionRef.current = store.subscribeDomain(domainPayload)
   }, [store, domainPayload])
 
   return domain

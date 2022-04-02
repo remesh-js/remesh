@@ -37,6 +37,8 @@ export const TodoList = () => {
     alert(message)
   })
 
+  console.log('render list')
+
   return (
     <div className="todoapp">
       <header className="header">

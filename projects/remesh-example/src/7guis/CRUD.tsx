@@ -1,50 +1,41 @@
-import React from 'react';
+import React from 'react'
 
-import { Remesh } from 'remesh';
-import { useRemeshDomain, useRemeshQuery } from "remesh-react";
+import { Remesh } from 'remesh'
+import { useRemeshDomain, useRemeshQuery } from 'remesh-react'
 
-import { ListModule } from 'remesh/modules/list';
-import { OuterClickWrapper } from './OuterClickWrapper';
+import { ListModule } from 'remesh/modules/list'
+import { OuterClickWrapper } from './OuterClickWrapper'
 
 type Name = {
-  name: string;
-  surname: string;
-};
+  name: string
+  surname: string
+}
 
 type NameItem = {
-  id: string;
-} & Name;
+  id: string
+} & Name
 
 export const CRUD = Remesh.domain({
   name: 'CRUD',
   impl: (domain) => {
-    let nameUid = 0;
+    let nameUid = 0
 
-    const nameListDomain = domain.module(
-      ListModule<NameItem>({
-        name: 'Name',
-        getKey: (item) => item.id,
-        createItem: (key) => {
-          return {
-            id: key,
-            name: '',
-            surname: '',
-          };
-        },
-      })
-    );
+    const nameListDomain = ListModule<NameItem>(domain, {
+      name: 'Name',
+      key: (item) => item.id,
+    })
 
     const FilterPrefixState = domain.state({
       name: 'FilterPrefix',
       default: '',
-    });
+    })
 
     const updateFilterPrefix = domain.command({
       name: 'updateFilterPrefix',
       impl: ({}, prefix: string) => {
-        return FilterPrefixState().new(prefix);
+        return FilterPrefixState().new(prefix)
       },
-    });
+    })
 
     const CreatedState = domain.state<Name>({
       name: 'Created',
@@ -52,95 +43,102 @@ export const CRUD = Remesh.domain({
         name: '',
         surname: '',
       },
-    });
+    })
 
     const updateCreated = domain.command({
       name: 'UpdateCreated',
       impl: ({ get }, name: Partial<Name>) => {
-        const currentName = get(CreatedState());
+        const currentName = get(CreatedState())
         return CreatedState().new({
           ...currentName,
           ...name,
-        });
+        })
       },
-    });
+    })
 
     const SelectedState = domain.state<NameItem | null>({
       name: 'Selected',
       default: null,
-    });
+    })
 
     const selectItem = domain.command({
       name: 'Select',
-      impl: ({ get }, itemId: string | null) => {
-        if (itemId === null) {
-          return SelectedState().new(null);
+      impl: ({ get }, targetItemId: string | null) => {
+        const currentSelected = get(SelectedState())
+
+        if (targetItemId === null) {
+          if (currentSelected === null) {
+            return null
+          } else {
+            return SelectedState().new(null)
+          }
         }
 
-        const targetItem = get(nameListDomain.query.ItemQuery(itemId));
+        if (currentSelected && currentSelected.id === targetItemId) {
+          return SelectedState().new(null)
+        }
 
-        return SelectedState().new(targetItem);
+        const targetItem = get(nameListDomain.query.ItemQuery(targetItemId))
+
+        return SelectedState().new(targetItem)
       },
-    });
+    })
 
     const updateSelectedName = domain.command({
       name: 'UpdateSelectedName',
       impl: ({ get }, name: Partial<Name>) => {
-        const selected = get(SelectedState());
+        const selected = get(SelectedState())
 
         if (selected === null) {
-          return [];
+          return []
         }
 
         return SelectedState().new({
           ...selected,
           ...name,
-        });
+        })
       },
-    });
+    })
 
     const FilteredListQuery = domain.query({
       name: 'FilteredListQuery',
       impl: ({ get }) => {
-        const filterPrefix = get(FilterPrefixState());
-        const nameList = get(nameListDomain.query.ItemListQuery());
+        const filterPrefix = get(FilterPrefixState())
+        const nameList = get(nameListDomain.query.ItemListQuery())
 
         if (filterPrefix === '') {
-          return nameList;
+          return nameList
         }
 
-        return nameList.filter((item) => item.surname.startsWith(filterPrefix));
+        return nameList.filter((item) => item.surname.startsWith(filterPrefix))
       },
-    });
+    })
 
     const syncSelected = domain.command({
       name: 'SyncSelected',
       impl: ({ get }) => {
-        const selected = get(SelectedState());
+        const selected = get(SelectedState())
 
         if (selected === null) {
-          return [];
+          return []
         }
 
-        return nameListDomain.command.updateItem(selected);
+        return nameListDomain.command.updateItem(selected)
       },
-    });
+    })
 
     const createNameItem = domain.command({
       name: 'CreateNameItem',
       impl: ({ get }) => {
-        const created = get(CreatedState());
+        const created = get(CreatedState())
         const newItem = {
           id: `${nameUid++}`,
           ...created,
-        };
+        }
 
-        return [
-          nameListDomain.command.addItem(newItem),
-          updateCreated({ name: '', surname: '' }),
-        ];
+        return [nameListDomain.command.addItem(newItem), updateCreated({ name: '', surname: '' })]
       },
-    });
+    })
 
     return {
       query: {
@@ -159,71 +157,63 @@ export const CRUD = Remesh.domain({
         createNameItem: createNameItem,
         syncSelected: syncSelected,
       },
-    };
+    }
   },
-});
+})
 
 export const CRUDApp = () => {
-  const domain = useRemeshDomain(CRUD());
-  const filteredList = useRemeshQuery(domain.query.FilteredListQuery());
-  const filter = useRemeshQuery(domain.query.FilterPrefixQuery());
-  const created = useRemeshQuery(domain.query.CreatedQuery());
-  const selected = useRemeshQuery(domain.query.SelectedQuery());
+  const domain = useRemeshDomain(CRUD())
+  const filteredList = useRemeshQuery(domain.query.FilteredListQuery())
+  const filter = useRemeshQuery(domain.query.FilterPrefixQuery())
+  const created = useRemeshQuery(domain.query.CreatedQuery())
+  const selected = useRemeshQuery(domain.query.SelectedQuery())
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    domain.command.updateFilterPrefix(e.target.value);
-  };
+    domain.command.updateFilterPrefix(e.target.value)
+  }
 
   const handleSelect = (itemId: string | null) => {
-    if (itemId === selected) {
-      return
-    }
-
-    if (selected && selected.id === itemId) {
-      return
-    }
-
-    domain.command.selectItem(itemId);
-  };
+    domain.command.selectItem(itemId)
+  }
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (selected) {
       domain.command.updateSelectedName({
         name: e.target.value,
-      });
+      })
     } else {
-      domain.command.updateCreated({ name: e.target.value });
+      domain.command.updateCreated({ name: e.target.value })
     }
-  };
+  }
 
   const handleSurnameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (selected) {
       domain.command.updateSelectedName({
         surname: e.target.value,
-      });
+      })
     } else {
-      domain.command.updateCreated({ surname: e.target.value });
+      domain.command.updateCreated({ surname: e.target.value })
     }
-  };
+  }
 
   const handleCreate = () => {
     if (selected === null) {
-      domain.command.createNameItem();
+      domain.command.createNameItem()
     }
-  };
+  }
 
   const handleSync = () => {
     if (selected) {
-      domain.command.syncSelected();
+      domain.command.syncSelected()
     }
-  };
+  }
 
   const handleDelete = () => {
     if (selected) {
-      domain.command.removeItem(selected.id);
-      domain.command.selectItem(null);
+      domain.command.deleteItem(selected.id)
+      domain.command.selectItem(null)
     }
-  };
+  }
 
   return (
     <OuterClickWrapper
@@ -234,7 +224,7 @@ export const CRUDApp = () => {
         padding: 10,
       }}
       onOuterClick={() => {
-        handleSelect(null);
+        handleSelect(null)
       }}
     >
       <h2>CRUD</h2>
@@ -256,7 +246,7 @@ export const CRUDApp = () => {
           }}
         >
           {filteredList.map((item) => {
-            const fullName = item.name + ', ' + item.surname;
+            const fullName = item.name + ', ' + item.surname
 
             return (
               <div
@@ -266,57 +256,37 @@ export const CRUDApp = () => {
                   color: selected?.id === item.id ? 'white' : '',
                 }}
                 onClick={() => {
-                  handleSelect(item.id);
+                  handleSelect(item.id)
                 }}
               >
                 {fullName}
               </div>
-            );
+            )
           })}
         </div>
         <div style={{ width: '50%', padding: 10 }}>
           <div>
             <label>Name:</label>
-            <input
-              type="text"
-              value={selected ? selected.name : created.name}
-              onChange={handleNameChange}
-            />
+            <input type="text" value={selected ? selected.name : created.name} onChange={handleNameChange} />
           </div>
           <div>
             <label>Surname:</label>
-            <input
-              type="text"
-              value={selected ? selected.surname : created.surname}
-              onChange={handleSurnameChange}
-            />
+            <input type="text" value={selected ? selected.surname : created.surname} onChange={handleSurnameChange} />
           </div>
         </div>
 
         <div>
-          <button
-            disabled={selected !== null}
-            style={{ marginRight: 10 }}
-            onClick={handleCreate}
-          >
+          <button disabled={selected !== null} style={{ marginRight: 10 }} onClick={handleCreate}>
             Create
           </button>
-          <button
-            disabled={selected === null}
-            style={{ marginRight: 10 }}
-            onClick={handleSync}
-          >
+          <button disabled={selected === null} style={{ marginRight: 10 }} onClick={handleSync}>
             Update
           </button>
-          <button
-            disabled={selected === null}
-            style={{ marginRight: 10 }}
-            onClick={handleDelete}
-          >
+          <button disabled={selected === null} style={{ marginRight: 10 }} onClick={handleDelete}>
             Delete
           </button>
         </div>
       </div>
     </OuterClickWrapper>
-  );
-};
+  )
+}

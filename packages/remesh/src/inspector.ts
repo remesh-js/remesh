@@ -1,128 +1,250 @@
 import { RemeshDomain, RemeshCommand$Payload, RemeshCommandPayload, RemeshEventPayload } from './remesh'
 
-import { RemeshDomainStorage, RemeshStateStorage, RemeshQueryStorage, RemeshStore, RemeshStoreOptions } from './store'
+import type {
+  RemeshStoreOptions,
+  RemeshDomainStorage,
+  RemeshStateStorage,
+  RemeshQueryStorage,
+  RemeshStore,
+  RemeshStoreInspector,
+} from './store'
 
-export type RemeshDomainStorageCreated<T, U> = {
-  type: 'RemeshDomainStorageCreated'
+export type RemeshDomainStorageEventData<T, U> = {
+  type: 'Domain::Created' | 'Domain::Destroyed' | 'Domain::Restored'
   storage: RemeshDomainStorage<T, U>
 }
 
-export type RemeshDomainStorageDestroyed<T, U> = {
-  type: 'RemeshDomainStorageDestroyed'
-  storage: RemeshDomainStorage<T, U>
-}
-
-export type RemeshStateStorageCreated<T, U> = {
-  type: 'RemeshStateStorageCreated'
+export type RemeshStateStorageEventData<T, U> = {
+  type: 'State::Created' | 'State::Updated' | 'State::Destroyed' | 'State::Restored'
   storage: RemeshStateStorage<T, U>
 }
 
-export type RemeshStateStorageUpdated<T, U> = {
-  type: 'RemeshStateStorageUpdated'
-  storage: RemeshStateStorage<T, U>
-}
-
-export type RemeshStateStorageDestroyed<T, U> = {
-  type: 'RemeshStateStorageDestroyed'
-  storage: RemeshStateStorage<T, U>
-}
-
-export type RemeshQueryStorageCreated<T, U> = {
-  type: 'RemeshQueryStorageCreated'
+export type RemeshQueryStorageEventData<T, U> = {
+  type: 'Query::Created' | 'Query::Updated' | 'Query::Destroyed' | 'Query::Restored'
   storage: RemeshQueryStorage<T, U>
 }
 
-export type RemeshQueryStorageUpdated<T, U> = {
-  type: 'RemeshQueryStorageUpdated'
-  storage: RemeshQueryStorage<T, U>
-}
-
-export type RemeshQueryStorageDestroyed<T, U> = {
-  type: 'RemeshQueryStorageDestroyed'
-  storage: RemeshQueryStorage<T, U>
-}
-
-export type RemeshEventEmitted<T, U> = {
-  type: 'RemeshEventEmitted'
+export type RemeshEventEmittedEventData<T, U> = {
+  type: 'Event::Emitted'
   payload: RemeshEventPayload<T, U>
 }
 
-export type RemeshCommandReceived<T> = {
-  type: 'RemeshCommandReceived'
+export type RemeshCommandReceivedEventData<T> = {
+  type: 'Command::Received'
   payload: RemeshCommandPayload<T>
 }
 
-export type RemeshCommand$Received<T> = {
-  type: 'RemeshCommand$Received'
+export type RemeshCommand$ReceivedEventData<T> = {
+  type: 'Command$::Received'
   payload: RemeshCommand$Payload<T>
 }
 
+export const InspectorType = {
+  DomainCreated: 'Domain::Created',
+  DomainDestroyed: 'Domain::Destroyed',
+  DomainRestored: 'Domain::Restored',
+  StateCreated: 'State::Created',
+  StateUpdated: 'State::Updated',
+  StateDestroyed: 'State::Destroyed',
+  StateRestored: 'State::Restored',
+  QueryCreated: 'Query::Created',
+  QueryUpdated: 'Query::Updated',
+  QueryDestroyed: 'Query::Destroyed',
+  QueryRestored: 'Query::Restored',
+  EventEmitted: 'Event::Emitted',
+  CommandReceived: 'Command::Received',
+  Command$Received: 'Command$::Received',
+} as const
+
 export const RemeshInspectorDomain = RemeshDomain({
   name: 'RemeshInspector',
-  inspectable: false,
   impl: (domain) => {
-    const RemeshStateStorageCreatedEvent = domain.event<RemeshStateStorageCreated<any, any>>({
-      name: 'RemeshStateStorageCreated',
+    const RemeshDomainStorageEvent = domain.event<RemeshDomainStorageEventData<any, any>>({
+      name: 'RemeshDomainStorageEvent',
     })
 
-    const RemeshStateStorageUpdatedEvent = domain.event<RemeshStateStorageUpdated<any, any>>({
-      name: 'RemeshStateStorageUpdated',
+    const RemeshStateStorageEvent = domain.event<RemeshStateStorageEventData<any, any>>({
+      name: 'RemeshStateStorageEvent',
     })
 
-    const RemeshStateStorageDestroyedEvent = domain.event<RemeshStateStorageDestroyed<any, any>>({
-      name: 'RemeshStateStorageDestroyed',
+    const RemeshQueryStorageEvent = domain.event<RemeshQueryStorageEventData<any, any>>({
+      name: 'RemeshQueryStorageEvent',
     })
 
-    const RemeshQueryStorageCreatedEvent = domain.event<RemeshQueryStorageCreated<any, any>>({
-      name: 'RemeshQueryStorageCreated',
-    })
-
-    const RemeshQueryStorageUpdatedEvent = domain.event<RemeshQueryStorageUpdated<any, any>>({
-      name: 'RemeshQueryStorageUpdated',
-    })
-
-    const RemeshQueryStorageDestroyedEvent = domain.event<RemeshQueryStorageDestroyed<any, any>>({
-      name: 'RemeshQueryStorageDestroyed',
-    })
-
-    const RemeshEventEmittedEvent = domain.event<RemeshEventEmitted<any, any>>({
+    const RemeshEventEmittedEvent = domain.event<RemeshEventEmittedEventData<any, any>>({
       name: 'RemeshEventEmitted',
     })
 
-    const RemeshCommandReceivedEvent = domain.event<RemeshCommandReceived<any>>({
+    const RemeshCommandReceivedEvent = domain.event<RemeshCommandReceivedEventData<any>>({
       name: 'RemeshCommandReceived',
     })
 
-    const RemeshCommand$ReceivedEvent = domain.event<RemeshCommand$Received<any>>({
+    const RemeshCommand$ReceivedEvent = domain.event<RemeshCommand$ReceivedEventData<any>>({
       name: 'RemeshCommand$Received',
-    })
-
-    const RemeshDomainStorageCreatedEvent = domain.event<RemeshDomainStorageCreated<any, any>>({
-      name: 'RemeshDomainStorageCreated',
-    })
-
-    const RemeshDomainStorageDestroyedEvent = domain.event<RemeshDomainStorageDestroyed<any, any>>({
-      name: 'RemeshDomainStorageDestroyed',
     })
 
     return {
       event: {
-        RemeshDomainStorageCreatedEvent,
-        RemeshDomainStorageDestroyedEvent,
-
-        RemeshStateStorageCreatedEvent,
-        RemeshStateStorageUpdatedEvent,
-        RemeshStateStorageDestroyedEvent,
-
-        RemeshQueryStorageCreatedEvent,
-        RemeshQueryStorageUpdatedEvent,
-        RemeshQueryStorageDestroyedEvent,
-
+        RemeshDomainStorageEvent,
+        RemeshStateStorageEvent,
+        RemeshQueryStorageEvent,
         RemeshEventEmittedEvent,
-
         RemeshCommandReceivedEvent,
         RemeshCommand$ReceivedEvent,
       },
     }
   },
 })
+
+export type InspectInput = {
+  inspectable: boolean
+  owner?: {
+    Domain: {
+      inspectable: boolean
+    }
+  }
+}
+
+export const isInspectable = (input: InspectInput): boolean => {
+  if (input.owner) {
+    return input.owner.Domain.inspectable && input.inspectable
+  }
+  return input.inspectable
+}
+
+const initInspectors = (options: RemeshStoreOptions) => {
+  return (options.inspectors ?? [])
+    .filter((inspector): inspector is RemeshStoreInspector => !!inspector)
+    .map((inspector) => {
+      const { inspectors, ...rest } = options
+      return inspector(rest)
+    })
+}
+
+export const createInspectorManager = (options: RemeshStoreOptions) => {
+  let inspectors: RemeshStore[] | null = null
+
+  const getInspectors = (): RemeshStore[] => {
+    if (!inspectors) {
+      inspectors = initInspectors(options)
+    }
+
+    return inspectors
+  }
+
+  const destroyInspectors = () => {
+    if (inspectors) {
+      for (const inspector of inspectors) {
+        inspector.destroy()
+      }
+
+      inspectors = null
+    }
+  }
+
+  const inspectDomainStorage = <T, U>(
+    type: RemeshDomainStorageEventData<T, U>['type'],
+    domainStorage: RemeshDomainStorage<T, U>,
+  ) => {
+    if (isInspectable(domainStorage.Domain)) {
+      for (const inspector of getInspectors()) {
+        const inspectorDomain = inspector.getDomain(RemeshInspectorDomain())
+        const event = inspectorDomain.event.RemeshDomainStorageEvent({
+          type,
+          storage: domainStorage,
+        })
+        inspector.emitEvent(event)
+      }
+    }
+  }
+
+  const inspectStateStorage = <T, U>(
+    type: RemeshStateStorageEventData<T, U>['type'],
+    stateStorage: RemeshStateStorage<T, U>,
+  ) => {
+    if (isInspectable(stateStorage.State)) {
+      for (const inspector of getInspectors()) {
+        const inspectorDomain = inspector.getDomain(RemeshInspectorDomain())
+        const event = inspectorDomain.event.RemeshStateStorageEvent({
+          type,
+          storage: stateStorage,
+        })
+        inspector.emitEvent(event)
+      }
+    }
+  }
+
+  const inspectQueryStorage = <T, U>(
+    type: RemeshQueryStorageEventData<T, U>['type'],
+    queryStorage: RemeshQueryStorage<T, U>,
+  ) => {
+    if (isInspectable(queryStorage.Query)) {
+      for (const inspector of getInspectors()) {
+        const inspectorDomain = inspector.getDomain(RemeshInspectorDomain())
+        const event = inspectorDomain.event.RemeshQueryStorageEvent({
+          type,
+          storage: queryStorage,
+        })
+        inspector.emitEvent(event)
+      }
+    }
+  }
+
+  const inspectEventEmitted = <T, U>(
+    type: RemeshEventEmittedEventData<T, U>['type'],
+    eventPayload: RemeshEventPayload<T, U>,
+  ) => {
+    if (isInspectable(eventPayload.Event)) {
+      for (const inspector of getInspectors()) {
+        const inspectorDomain = inspector.getDomain(RemeshInspectorDomain())
+        const event = inspectorDomain.event.RemeshEventEmittedEvent({
+          type,
+          payload: eventPayload,
+        })
+        inspector.emitEvent(event)
+      }
+    }
+  }
+
+  const inspectCommandReceived = <T>(
+    type: RemeshCommandReceivedEventData<T>['type'],
+    commandPayload: RemeshCommandPayload<T>,
+  ) => {
+    if (isInspectable(commandPayload.Command)) {
+      for (const inspector of getInspectors()) {
+        const inspectorDomain = inspector.getDomain(RemeshInspectorDomain())
+        const event = inspectorDomain.event.RemeshCommandReceivedEvent({
+          type,
+          payload: commandPayload,
+        })
+        inspector.emitEvent(event)
+      }
+    }
+  }
+
+  const inspectCommand$Received = <T>(
+    type: RemeshCommand$ReceivedEventData<T>['type'],
+    command$Payload: RemeshCommand$Payload<T>,
+  ) => {
+    if (isInspectable(command$Payload.Command$)) {
+      for (const inspector of getInspectors()) {
+        const inspectorDomain = inspector.getDomain(RemeshInspectorDomain())
+        const event = inspectorDomain.event.RemeshCommand$ReceivedEvent({
+          type,
+          payload: command$Payload,
+        })
+        inspector.emitEvent(event)
+      }
+    }
+  }
+
+  return {
+    destroyInspectors,
+    inspectDomainStorage,
+    inspectStateStorage,
+    inspectQueryStorage,
+    inspectEventEmitted,
+    inspectCommandReceived,
+    inspectCommand$Received,
+  }
+}

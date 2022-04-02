@@ -1,6 +1,5 @@
 import {
   RemeshDomain,
-  RemeshModule,
   RemeshExtern,
   RemeshState,
   RemeshQuery,
@@ -19,7 +18,6 @@ export const Remesh = {
   domain: RemeshDomain,
   extern: RemeshExtern,
   store: RemeshStore,
-  module: RemeshModule,
   state: RemeshState,
   query: RemeshQuery,
   command: RemeshCommand,

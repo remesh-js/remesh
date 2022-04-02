@@ -16,6 +16,9 @@
     },
     {
       "path": "./packages/remesh-logger/tsconfig.json"
+    },
+    {
+      "path": "./packages/remesh-debugger-helper/tsconfig.json"
     }
   ]
 }

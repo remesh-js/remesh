@@ -1,0 +1,1 @@
+import"./modulepreload-polyfill.b7f2da20.js";import{R as t,a as e}from"./vendor.c7f4f184.js";t.render(e.createElement(e.StrictMode,null,e.createElement("a",{href:"/remesh/dist/7guis/index.html"},"7guis app")),document.getElementById("root"));

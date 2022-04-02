@@ -2,9 +2,11 @@ import { concatMap, exhaustMap, mergeMap, Observable, switchMap } from 'rxjs'
 
 import shallowEqual from 'shallowequal'
 
-import { isPlainObject } from 'is-plain-object'
-
 export type Undefined2Void<T> = undefined extends T ? Exclude<T, undefined> | void : T
+
+export const undefined2Void = <T>(value: T): Undefined2Void<T> => {
+  return value as Undefined2Void<T>
+}
 
 export type ExtractFirstArg<T extends (...args: any) => any> = Undefined2Void<Parameters<T>[0]>
 
@@ -20,7 +22,7 @@ export type RemeshEventContext = {
   get: RemeshInjectedContext['get']
 }
 
-export type RemeshEvent<T, U> = {
+export type RemeshEvent<T, U = T> = {
   type: 'RemeshEvent'
   eventId: number
   eventName: string
@@ -47,7 +49,7 @@ let eventUid = 0
 export function RemeshEvent<T extends RemeshEventOptions<any, any>>(
   options: T,
 ): RemeshEvent<ExtractSecondArg<T['impl']>, ReturnType<T['impl']>>
-export function RemeshEvent<T = void>(options: { name: string }): RemeshEvent<T, T>
+export function RemeshEvent<T = void>(options: { name: string }): RemeshEvent<T>
 export function RemeshEvent(options: RemeshEventOptions<unknown, unknown> | { name: string }): RemeshEvent<any, any> {
   const eventId = eventUid++
 
@@ -74,10 +76,16 @@ export function RemeshEvent(options: RemeshEventOptions<unknown, unknown> | { na
 
 export type CompareFn<T> = (prev: T, curr: T) => boolean
 
+export type RemeshStateChangedEventData<T> = {
+  previous: T
+  current: T
+}
+
 export type RemeshState<T, U> = {
   type: 'RemeshState'
   stateId: number
   stateName: string
+  defer: boolean
   impl: (arg: T) => U
   (arg: T): RemeshStateItem<T, U>
   owner: RemeshDomainPayload<any, any>
@@ -109,6 +117,24 @@ export const RemeshDefaultState = <T>(options: RemeshDefaultStateOptions<T>): Re
   })
 }
 
+export type RemeshDeferStateOptions<T, U> = {
+  name: RemeshState<T, U>['stateName']
+  inspectable?: boolean
+  compare?: RemeshState<T, U>['compare']
+}
+
+export const RemeshDeferState = <T, U>(options: RemeshDeferStateOptions<T, U>) => {
+  return RemeshState({
+    name: options.name,
+    defer: true,
+    impl: (_arg: T): U => {
+      throw new Error(`RemeshDeferState: ${options.name} is not resolved`)
+    },
+    inspectable: options.inspectable,
+    compare: options.compare,
+  })
+}
+
 export type RemeshStatePayload<T, U> = {
   type: 'RemeshStateSetterPayload'
   stateItem: RemeshStateItem<T, U>
@@ -117,6 +143,7 @@ export type RemeshStatePayload<T, U> = {
 
 export type RemeshStateOptions<T, U> = {
   name: string
+  defer?: boolean
   impl: (arg?: T) => U
   inspectable?: boolean
   compare?: CompareFn<U>
@@ -125,11 +152,7 @@ export type RemeshStateOptions<T, U> = {
 let stateUid = 0
 
 export const defaultCompare = <T>(prev: T, curr: T) => {
-  if (isPlainObject(prev) && isPlainObject(curr)) {
-    return shallowEqual(prev, curr)
-  }
-
-  return prev === curr
+  return shallowEqual(prev, curr)
 }
 
 export const RemeshState = <T extends RemeshStateOptions<any, any>>(
@@ -137,14 +160,18 @@ export const RemeshState = <T extends RemeshStateOptions<any, any>>(
 ): RemeshState<ExtractFirstArg<T['impl']>, ReturnType<T['impl']>> => {
   const stateId = stateUid++
 
-  let cacheForNullary = null as RemeshStateItem<ExtractFirstArg<T['impl']>, ReturnType<T['impl']>> | null
+  type StateArg = ExtractFirstArg<T['impl']>
+  type StateReturn = ReturnType<T['impl']>
+  type StateItem = RemeshStateItem<StateArg, StateReturn>
+
+  let cacheForNullary = null as StateItem | null
 
   const State = ((arg) => {
     if (arg === undefined && cacheForNullary) {
       return cacheForNullary
     }
 
-    const stateItem: RemeshStateItem<ExtractFirstArg<T['impl']>, ReturnType<T['impl']>> = {
+    const stateItem: StateItem = {
       type: 'RemeshStateItem',
       arg,
       State,
@@ -162,7 +189,7 @@ export const RemeshState = <T extends RemeshStateOptions<any, any>>(
     }
 
     return stateItem
-  }) as RemeshState<ExtractFirstArg<T['impl']>, ReturnType<T['impl']>>
+  }) as RemeshState<StateArg, StateReturn>
 
   State.type = 'RemeshState'
   State.stateId = stateId
@@ -171,12 +198,13 @@ export const RemeshState = <T extends RemeshStateOptions<any, any>>(
   State.compare = options.compare ?? defaultCompare
   State.owner = DefaultDomain()
   State.inspectable = options.inspectable ?? true
+  State.defer = options.defer ?? false
 
   State.Query = RemeshQuery({
-    name: `Query(${options.name})`,
+    name: `${options.name}.Query`,
     inspectable: false,
-    impl: ({ get }: RemeshQueryContext, arg: T) => {
-      return get(State(arg as ExtractFirstArg<T['impl']>))
+    impl: ({ get }: RemeshQueryContext, arg: StateArg) => {
+      return get(State(arg))
     },
   })
 
@@ -437,12 +465,12 @@ export type RemeshDomainContext = {
   state<T extends RemeshStateOptions<any, any>>(
     options: T,
   ): RemeshState<ExtractFirstArg<T['impl']>, ReturnType<T['impl']>>
+  state<T, U>(options: RemeshDeferStateOptions<T, U>): RemeshState<Undefined2Void<T>, U>
   event: typeof RemeshEvent
   query: typeof RemeshQuery
   command: typeof RemeshCommand
   command$: typeof RemeshCommand$
   commandAsync: typeof RemeshCommandAsync
-  module: <T>(module: RemeshModule<T>) => T
   // methods
   getDomain: <T extends RemeshDomainDefinition, Arg>(domainPayload: RemeshDomainPayload<T, Arg>) => T
   getExtern: <T>(Extern: RemeshExtern<T>) => T
@@ -526,9 +554,3 @@ export const DefaultDomain: RemeshDomain<any, void> = RemeshDomain({
     return {}
   },
 })
-
-export type RemeshModule<T> = (context: RemeshDomainContext) => T
-
-export const RemeshModule = <T>(impl: RemeshModule<T>) => {
-  return impl
-}

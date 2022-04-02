@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { StrictMode } from 'react'
 import * as ReactDOMClient from 'react-dom/client'
 
+import { Remesh } from 'remesh'
 import { HashRouter, Routes, Route } from 'react-router-dom'
 
 import { RemeshRoot } from 'remesh-react'
@@ -13,18 +14,22 @@ const container = document.getElementById('root')
 
 if (container) {
   const root = ReactDOMClient.createRoot(container)
+  const store = Remesh.store({
+    inspectors: [RemeshReduxDevtools(), RemeshLogger({
+      include: ['command', 'query', 'event', 'domain', 'command$', 'state'],
+    })],
+  })
+
   root.render(
-    <RemeshRoot
-      options={{
-        inspectors: [RemeshReduxDevtools(), RemeshLogger()],
-      }}
-    >
-      <HashRouter basename="/">
-        <Routes>
-          <Route path="/" element={<TodoList />} />
-          <Route path="/:filter" element={<TodoList />} />
-        </Routes>
-      </HashRouter>
-    </RemeshRoot>,
+    <StrictMode>
+      <RemeshRoot store={store}>
+        <HashRouter basename="/">
+          <Routes>
+            <Route path="/" element={<TodoList />} />
+            <Route path="/:filter" element={<TodoList />} />
+          </Routes>
+        </HashRouter>
+      </RemeshRoot>
+    </StrictMode>,
   )
 }

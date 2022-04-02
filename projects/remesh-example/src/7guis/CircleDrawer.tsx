@@ -1,65 +1,65 @@
-import React from 'react';
+import React from 'react'
 
-import { Remesh } from 'remesh';
-import { useRemeshDomain, useRemeshQuery } from "remesh-react";
+import { Remesh } from 'remesh'
+import { useRemeshDomain, useRemeshQuery } from 'remesh-react'
 
-import { OuterClickWrapper } from './OuterClickWrapper';
+import { OuterClickWrapper } from './OuterClickWrapper'
 
-type Position = { x: number; y: number };
+type Position = { x: number; y: number }
 
 type DrawAction = {
-  position: Position;
-  diameter: number;
-};
+  position: Position
+  diameter: number
+}
 
 type AdjustAction = {
-  index: number;
-  diameter: number;
-};
+  index: number
+  diameter: number
+}
 
 type Circle = {
-  position: Position;
-  diameter: number;
-};
+  position: Position
+  diameter: number
+}
 
 type DrawState = {
-  circles: Circle[];
-};
+  circles: Circle[]
+}
 
 type TooltipsState =
   | {
-      type: 'default';
+      type: 'default'
     }
   | {
-      type: 'show-tips';
-      index: number;
-      circle: Circle;
-      pageX: number;
-      pageY: number;
+      type: 'show-tips'
+      index: number
+      circle: Circle
+      pageX: number
+      pageY: number
     }
   | {
-      type: 'open-slider';
-      index: number;
-      circle: Circle;
-      pageX: number;
-      pageY: number;
-    };
+      type: 'open-slider'
+      index: number
+      circle: Circle
+      pageX: number
+      pageY: number
+    }
 
 type HistoryStateItem =
   | {
-      action: 'add-circle';
-      state: DrawState;
+      action: 'add-circle'
+      state: DrawState
     }
   | {
-      action: 'adjust-circle';
-      index: number;
-      state: DrawState;
-    };
+      action: 'adjust-circle'
+      index: number
+      state: DrawState
+    }
 
 type HistoryState = {
-  items: HistoryStateItem[];
-  currentIndex: number;
-};
+  items: HistoryStateItem[]
+  currentIndex: number
+}
 
 const CircleDrawer = Remesh.domain({
   name: 'CircleDrawer',
@@ -70,14 +70,14 @@ const CircleDrawer = Remesh.domain({
         items: [],
         currentIndex: -1,
       },
-    });
+    })
 
     const recordHistoryState = domain.command({
       name: 'recordHistoryState',
       impl: ({ get }, state: HistoryStateItem) => {
-        const history = get(HistoryState());
+        const history = get(HistoryState())
 
-        const previousItems = history.items.slice(0, history.currentIndex + 1);
+        const previousItems = history.items.slice(0, history.currentIndex + 1)
 
         /**
          * If the current state is the same as the last state,
@@ -90,38 +90,35 @@ const CircleDrawer = Remesh.domain({
          * TODO: Find a better way to do this.
          */
         if (state.action === 'adjust-circle') {
-          const lastState = previousItems[previousItems.length - 1];
-          if (
-            lastState.action === 'adjust-circle' &&
-            lastState.index === state.index
-          ) {
-            previousItems.pop();
+          const lastState = previousItems[previousItems.length - 1]
+          if (lastState.action === 'adjust-circle' && lastState.index === state.index) {
+            previousItems.pop()
           }
         }
 
-        const newItems = [...previousItems, state];
-        const newIndex = newItems.length - 1;
+        const newItems = [...previousItems, state]
+        const newIndex = newItems.length - 1
 
         return HistoryState().new({
           items: newItems,
           currentIndex: newIndex,
-        });
+        })
       },
-    });
+    })
 
     const DrawState = domain.state<DrawState>({
       name: 'DrawState',
       default: {
         circles: [],
       },
-    });
+    })
 
     const undo = domain.command({
       name: 'undo',
       impl: ({ get }) => {
-        const history = get(HistoryState());
-        const canUndo = get(CanUndoQuery());
-        const newIndex = history.currentIndex - 1;
+        const history = get(HistoryState())
+        const canUndo = get(CanUndoQuery())
+        const newIndex = history.currentIndex - 1
 
         if (!canUndo || newIndex < 0) {
           return [
@@ -132,7 +129,7 @@ const CircleDrawer = Remesh.domain({
               items: history.items,
               currentIndex: -1,
             }),
-          ];
+          ]
         }
 
         return [
@@ -141,21 +138,21 @@ const CircleDrawer = Remesh.domain({
             items: history.items,
             currentIndex: newIndex,
           }),
-        ];
+        ]
       },
-    });
+    })
 
     const redo = domain.command({
       name: 'redo',
       impl: ({ get }) => {
-        const history = get(HistoryState());
-        const canRedo = get(CanRedoQuery());
+        const history = get(HistoryState())
+        const canRedo = get(CanRedoQuery())
 
         if (!canRedo) {
-          return [];
+          return []
         }
 
-        const newIndex = history.currentIndex + 1;
+        const newIndex = history.currentIndex + 1
 
         return [
           DrawState().new(history.items[newIndex].state),
@@ -163,92 +160,89 @@ const CircleDrawer = Remesh.domain({
             items: history.items,
             currentIndex: newIndex,
           }),
-        ];
+        ]
       },
-    });
+    })
 
     const CanUndoQuery = domain.query({
       name: 'CanUndoQuery',
       impl: ({ get }) => {
-        const history = get(HistoryState());
-        return history.currentIndex >= 0;
+        const history = get(HistoryState())
+        return history.currentIndex >= 0
       },
-    });
+    })
 
     const CanRedoQuery = domain.query({
       name: 'CanRedoQuery',
       impl: ({ get }) => {
-        const history = get(HistoryState());
-        return history.currentIndex < history.items.length - 1;
+        const history = get(HistoryState())
+        return history.currentIndex < history.items.length - 1
       },
-    });
+    })
 
     const SelectedIndexState = domain.state<number>({
       name: 'SelectedIndexState',
       default: -1,
-    });
+    })
 
     const setSelectedIndex = domain.command({
       name: 'setSelectedIndex',
       impl: ({}, index: number) => {
-        return SelectedIndexState().new(index);
+        return SelectedIndexState().new(index)
       },
-    });
+    })
 
     const SelectedCircleInfoQuery = domain.query({
       name: 'SelectedCircleInfoQuery',
       impl: ({ get }) => {
-        const index = get(SelectedIndexState());
-        const circles = get(DrawState()).circles;
+        const index = get(SelectedIndexState())
+        const circles = get(DrawState()).circles
 
         if (index === -1) {
-          return null;
+          return null
         }
 
         return {
           index,
           circle: circles[index],
-        };
+        }
       },
-    });
+    })
 
     const draw = domain.command({
       name: 'draw',
       impl: ({ get }, action: DrawAction) => {
-        const state = get(DrawState());
+        const state = get(DrawState())
         const newState = {
-          circles: [
-            ...state.circles,
-            { position: action.position, diameter: action.diameter },
-          ],
-        };
+          circles: [...state.circles, { position: action.position, diameter: action.diameter }],
+        }
         return [
           DrawState().new(newState),
           recordHistoryState({
             action: 'add-circle',
             state: newState,
           }),
-        ];
+        ]
       },
-    });
+    })
 
     const adjust = domain.command({
       name: 'adjust',
       impl: ({ get }, action: AdjustAction) => {
-        const state = get(DrawState());
+        const state = get(DrawState())
         const circles = state.circles.map((circle, index) => {
           if (index === action.index) {
             return {
               position: circle.position,
               diameter: action.diameter,
-            };
+            }
           }
-          return circle;
-        });
+          return circle
+        })
 
         const newState = {
           circles,
-        };
+        }
 
         return [
           DrawState().new(newState),
@@ -257,23 +251,23 @@ const CircleDrawer = Remesh.domain({
             index: action.index,
             state: newState,
           }),
-        ];
+        ]
       },
-    });
+    })
 
     const TooltipsState = domain.state<TooltipsState>({
       name: 'TooltipsState',
       default: {
         type: 'default',
       },
-    });
+    })
 
     const updateTooltips = domain.command({
       name: 'updateTooltips',
       impl: ({}, newState: TooltipsState) => {
-        return TooltipsState().new(newState);
+        return TooltipsState().new(newState)
       },
-    });
+    })
 
     return {
       query: {
@@ -293,95 +287,91 @@ const CircleDrawer = Remesh.domain({
         redo,
         setSelectedIndex,
       },
-    };
+    }
   },
-});
+})
 
 const positionInCircle = (position: Position, circle: Circle): boolean => {
-  const { x, y } = position;
-  const { diameter, position: circlePosition } = circle;
-  const { x: circleX, y: circleY } = circlePosition;
-  const radius = diameter / 2;
-  const dx = x - circleX;
-  const dy = y - circleY;
+  const { x, y } = position
+  const { diameter, position: circlePosition } = circle
+  const { x: circleX, y: circleY } = circlePosition
+  const radius = diameter / 2
+  const dx = x - circleX
+  const dy = y - circleY
 
-  return dx * dx + dy * dy < radius * radius;
-};
+  return dx * dx + dy * dy < radius * radius
+}
 
 export const CircleDrawerApp = () => {
-  const domain = useRemeshDomain(CircleDrawer());
-  const drawState = useRemeshQuery(domain.query.DrawQuery());
-  const tooltipsState = useRemeshQuery(domain.query.TooltipsQuery());
-  const selectedCircleInfo = useRemeshQuery(
-    domain.query.SelectedCircleInfoQuery()
-  );
-  const canUndo = useRemeshQuery(domain.query.CanUndoQuery());
-  const canRedo = useRemeshQuery(domain.query.CanRedoQuery());
+  const domain = useRemeshDomain(CircleDrawer())
+  const drawState = useRemeshQuery(domain.query.DrawQuery())
+  const tooltipsState = useRemeshQuery(domain.query.TooltipsQuery())
+  const selectedCircleInfo = useRemeshQuery(domain.query.SelectedCircleInfoQuery())
+  const canUndo = useRemeshQuery(domain.query.CanUndoQuery())
+  const canRedo = useRemeshQuery(domain.query.CanRedoQuery())
 
   const getCircleInfo = (position: Position) => {
     const circle = drawState.circles.find((circle) => {
-      return positionInCircle(position, circle);
-    });
+      return positionInCircle(position, circle)
+    })
 
     if (!circle) {
-      return null;
+      return null
     }
 
-    const index = drawState.circles.indexOf(circle);
+    const index = drawState.circles.indexOf(circle)
 
     return {
       index,
       circle,
-    };
-  };
+    }
+  }
 
-  const handleRightClick = (
-    e: React.MouseEvent<HTMLDivElement, MouseEvent>
-  ) => {
-    e.preventDefault();
-    const position = { x: e.pageX, y: e.pageY };
+  const handleRightClick = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    e.preventDefault()
+    const position = { x: e.pageX, y: e.pageY }
 
-    const circleInfo = getCircleInfo(position);
+    const circleInfo = getCircleInfo(position)
 
     if (circleInfo) {
-      domain.command.setSelectedIndex(circleInfo.index);
+      domain.command.setSelectedIndex(circleInfo.index)
       domain.command.updateTooltips({
         type: 'show-tips',
         index: circleInfo.index,
         circle: circleInfo.circle,
         pageX: e.pageX,
         pageY: e.pageY,
-      });
+      })
     }
-  };
+  }
 
   const handleLeftClick = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     if (tooltipsState.type !== 'default') {
-      return;
+      return
     }
 
-    const position = { x: e.pageX, y: e.pageY };
-    const circleInfo = getCircleInfo(position);
+    const position = { x: e.pageX, y: e.pageY }
+    const circleInfo = getCircleInfo(position)
 
     if (!circleInfo) {
-      domain.command.draw({ position, diameter: 30 });
+      domain.command.draw({ position, diameter: 30 })
     }
-  };
+  }
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     if (tooltipsState.type !== 'default') {
-      return;
+      return
     }
 
-    const position = { x: e.pageX, y: e.pageY };
-    const circleInfo = getCircleInfo(position);
+    const position = { x: e.pageX, y: e.pageY }
+    const circleInfo = getCircleInfo(position)
 
     if (circleInfo) {
-      domain.command.setSelectedIndex(circleInfo.index);
+      domain.command.setSelectedIndex(circleInfo.index)
     } else {
-      domain.command.setSelectedIndex(-1);
+      domain.command.setSelectedIndex(-1)
     }
-  };
+  }
 
   const handleOpenSlider = () => {
     if (tooltipsState.type === 'show-tips') {
@@ -391,26 +381,30 @@ export const CircleDrawerApp = () => {
         circle: tooltipsState.circle,
         pageX: tooltipsState.pageX,
         pageY: tooltipsState.pageY,
-      });
+      })
     }
-  };
+  }
 
   const handleCloseSlider = () => {
+    console.log('handleCloseSlider')
     domain.command.updateTooltips({
       type: 'default',
-    });
-  };
+    })
+  }
 
   const handleAdust = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(event.target.value, 10);
+    const value = parseInt(event.target.value, 10)
 
     if (selectedCircleInfo && !isNaN(value)) {
       domain.command.adjust({
         index: selectedCircleInfo.index,
         diameter: value,
-      });
+      })
     }
-  };
+  }
+
+  console.log('tooltipsState', tooltipsState)
+
   return (
     <div
       style={{
@@ -460,13 +454,7 @@ export const CircleDrawerApp = () => {
         {drawState.circles.map((circle, index) => {
           return (
             <div
-              key={
-                circle.position.x +
-                '-' +
-                circle.position.y +
-                '-' +
-                circle.diameter
-              }
+              key={circle.position.x + '-' + circle.position.y + '-' + circle.diameter}
               style={{
                 position: 'absolute',
                 left: circle.position.x - circle.diameter / 2,
@@ -475,16 +463,16 @@ export const CircleDrawerApp = () => {
                 height: circle.diameter,
                 borderRadius: circle.diameter / 2,
                 border: '1px solid #666',
-                backgroundColor:
-                  selectedCircleInfo?.index === index ? '#eaeaea' : '',
+                backgroundColor: selectedCircleInfo?.index === index ? '#eaeaea' : '',
               }}
               onContextMenu={handleRightClick}
             ></div>
-          );
+          )
         })}
       </div>
       {tooltipsState.type === 'show-tips' && (
         <OuterClickWrapper
+          key="show-tips"
           style={{
             position: 'absolute',
             left: tooltipsState.pageX,
@@ -502,6 +490,7 @@ export const CircleDrawerApp = () => {
       )}
       {tooltipsState.type === 'open-slider' && (
         <OuterClickWrapper
+          key="open-slider"
           style={{
             position: 'absolute',
             left: tooltipsState.pageX,
@@ -512,7 +501,6 @@ export const CircleDrawerApp = () => {
             padding: 10,
           }}
           onOuterClick={handleCloseSlider}
-          onClick={handleOpenSlider}
         >
           <p>Adjust Diameter</p>
           <div>
@@ -527,5 +515,5 @@ export const CircleDrawerApp = () => {
         </OuterClickWrapper>
       )}
     </div>
-  );
-};
+  )
+}

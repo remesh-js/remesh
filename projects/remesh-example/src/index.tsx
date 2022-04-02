@@ -15,6 +15,11 @@ if (container) {
       <li>
         <a href={`${import.meta.env.BASE_URL}todo-mvc/index.html`}>todo-mvc app</a>
       </li>
+      <li>
+        <a href={`${import.meta.env.BASE_URL}todo-mvc-with-multiple-domains/index.html`}>
+          todo-mvc-with-multiple-domains app
+        </a>
+      </li>
     </ul>,
   )
 }

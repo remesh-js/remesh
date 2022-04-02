@@ -1,6 +1,6 @@
 import React from 'react'
 
-import { Remesh, RemeshStateOptions } from 'remesh'
+import { Remesh } from 'remesh'
 import { useRemeshDomain, useRemeshQuery } from 'remesh-react'
 
 type CellContent =
