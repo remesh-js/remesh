@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ListModule = void 0;
-var remesh_1 = require("../remesh");
 var ListModule = function (domain, options) {
     var KeyListState = domain.state({
         name: "".concat(options.name, ".KeyListState"),
@@ -40,11 +39,11 @@ var ListModule = function (domain, options) {
         impl: function (_a, newList) {
             var get = _a.get;
             var keyList = newList.map(options.key);
-            var itemList = get(ItemListQuery());
+            var oldList = get(ItemListQuery());
             return [
+                newList.map(function (item, index) { return ItemState(keyList[index]).new(item); }),
                 KeyListState().new(keyList),
-                newList.map(function (item) { return updateItem((0, remesh_1.undefined2Void)(item)); }),
-                ListChangedEvent({ previous: itemList, current: newList }),
+                ListChangedEvent({ previous: oldList, current: newList }),
             ];
         },
     });
@@ -53,27 +52,24 @@ var ListModule = function (domain, options) {
         impl: function (_a, newItem) {
             var get = _a.get;
             var keyList = get(KeyListState());
+            var list = get(ItemListQuery());
             var newKey = options.key(newItem);
             if (keyList.includes(newKey)) {
                 return FailedToAddItemEvent({
                     reason: 'item already exists',
                 });
             }
-            return [
-                KeyListState().new(keyList.concat(newKey)),
-                ItemState(newKey).new(newItem),
-                ItemAddedEvent({ item: newItem }),
-            ];
+            return [setList(list.concat(newItem)), ItemAddedEvent({ item: newItem })];
         },
     });
     var deleteItem = domain.command({
         name: "".concat(options.name, ".deleteItem"),
         impl: function (_a, targetKey) {
             var get = _a.get;
-            var keyList = get(KeyListState());
-            var newKeyList = keyList.filter(function (key) { return key !== targetKey; });
+            var list = get(ItemListQuery());
+            var newList = list.filter(function (item) { return options.key(item) !== targetKey; });
             var removedItem = get(ItemState(targetKey));
-            return [KeyListState().new(newKeyList), ItemDeletedEvent({ item: removedItem })];
+            return [setList(newList), ItemDeletedEvent({ item: removedItem })];
         },
     });
     var updateItem = domain.command({
@@ -88,8 +84,15 @@ var ListModule = function (domain, options) {
                     reason: 'item does not exist',
                 });
             }
+            var list = get(ItemListQuery());
+            var newList = list.map(function (item) {
+                if (options.key(item) === key) {
+                    return newItem;
+                }
+                return item;
+            });
             var oldItem = get(ItemState(key));
-            return [ItemState(key).new(newItem), ItemUpdatedEvent({ previous: oldItem, current: newItem })];
+            return [setList(newList), ItemUpdatedEvent({ previous: oldItem, current: newItem })];
         },
     });
     return {

@@ -1,8 +1,9 @@
-import { Observable, Subject, Subscription } from 'rxjs';
+import { Observable, Observer, Subject, Subscription } from 'rxjs';
 import { RemeshCommand$, RemeshCommand$Payload, RemeshCommandPayload, RemeshDomain, RemeshDomainDefinition, RemeshDomainPayload, RemeshEvent, RemeshEventPayload, RemeshExtern, RemeshExternPayload, RemeshQuery, RemeshQueryPayload, RemeshState, RemeshStateItem } from './remesh';
 export declare type RemeshStore = ReturnType<typeof RemeshStore>;
 export declare const StateValuePlaceholder: unique symbol;
 export declare type RemeshStateStorage<T, U> = {
+    id: number;
     type: 'RemeshStateStorage';
     State: RemeshState<T, U>;
     arg: T;
@@ -11,6 +12,7 @@ export declare type RemeshStateStorage<T, U> = {
     downstreamSet: Set<RemeshQueryStorage<any, any>>;
 };
 export declare type RemeshQueryStorage<T, U> = {
+    id: number;
     type: 'RemeshQueryStorage';
     Query: RemeshQuery<T, U>;
     arg: T;
@@ -23,6 +25,7 @@ export declare type RemeshQueryStorage<T, U> = {
     refCount: number;
 };
 export declare type RemeshEventStorage<T = unknown, U = T> = {
+    id: number;
     type: 'RemeshEventStorage';
     Event: RemeshEvent<T, U>;
     subject: Subject<U>;
@@ -30,6 +33,7 @@ export declare type RemeshEventStorage<T = unknown, U = T> = {
     refCount: number;
 };
 export declare type RemeshCommand$Storage<T> = {
+    id: number;
     type: 'RemeshCommand$Storage';
     Command$: RemeshCommand$<T>;
     subject: Subject<T>;
@@ -37,6 +41,7 @@ export declare type RemeshCommand$Storage<T> = {
     subscription?: Subscription;
 };
 export declare type RemeshDomainStorage<T extends RemeshDomainDefinition, Arg> = {
+    id: number;
     type: 'RemeshDomainStorage';
     Domain: RemeshDomain<T, Arg>;
     arg: Arg;
@@ -57,6 +62,7 @@ export declare type RemeshDomainStorage<T extends RemeshDomainDefinition, Arg> =
     running: boolean;
 };
 export declare type RemeshExternStorage<T> = {
+    id: number;
     type: 'RemeshExternStorage';
     Extern: RemeshExtern<T>;
     currentValue: T;
@@ -80,7 +86,7 @@ export declare const RemeshStore: (options: RemeshStoreOptions) => {
     emitEvent: <T_2, U_1>(eventPayload: RemeshEventPayload<T_2, U_1>) => void;
     sendCommand: <T_3>(input: RemeshCommandPayload<T_3> | RemeshCommand$Payload<T_3>) => void;
     destroy: () => void;
-    subscribeQuery: <T_4, U_2>(queryPayload: RemeshQueryPayload<T_4, U_2>, subscriber: (data: U_2) => unknown) => Subscription;
+    subscribeQuery: <T_4, U_2>(queryPayload: RemeshQueryPayload<T_4, U_2>, subscriber: Partial<Observer<U_2>> | ((data: U_2) => unknown)) => Subscription;
     subscribeEvent: <T_5, U_3 = T_5>(Event: RemeshEvent<T_5, U_3>, subscriber: (event: U_3) => unknown) => Subscription;
     subscribeDomain: <T_6 extends Partial<import("./remesh").RemeshDomainOutput>, Arg_1>(domainPayload: RemeshDomainPayload<T_6, Arg_1>) => Subscription;
     getKey: <T_7, U_4>(input: RemeshStateItem<T_7, U_4> | RemeshQueryPayload<T_7, U_4> | RemeshDomainPayload<T_7, U_4>) => string;

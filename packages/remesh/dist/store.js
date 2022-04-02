@@ -6,6 +6,7 @@ var rxjs_1 = require("rxjs");
 var remesh_1 = require("./remesh");
 var inspector_1 = require("./inspector");
 exports.StateValuePlaceholder = Symbol('StateValuePlaceholder');
+var uid = 0;
 var RemeshStore = function (options) {
     var inspectorManager = (0, inspector_1.createInspectorManager)(options);
     var dirtySet = new Set();
@@ -39,6 +40,7 @@ var RemeshStore = function (options) {
         }
         var currentValue = getExternValue(Extern);
         var currentExternStorage = {
+            id: uid++,
             type: 'RemeshExternStorage',
             Extern: Extern,
             currentValue: currentValue,
@@ -97,7 +99,7 @@ var RemeshStore = function (options) {
     };
     var getStateFromStorage = function (storage) {
         if (storage.currentState === exports.StateValuePlaceholder) {
-            throw new Error('Unexpected reading defer-state before assigning a value for it');
+            throw new Error("State ".concat(storage.key, " is not found"));
         }
         return storage.currentState;
     };
@@ -107,6 +109,7 @@ var RemeshStore = function (options) {
         var key = getStateStorageKey(stateItem);
         var currentState = stateItem.State.defer ? exports.StateValuePlaceholder : stateItem.State.impl(stateItem.arg);
         var newStateStorage = {
+            id: uid++,
             type: 'RemeshStateStorage',
             State: stateItem.State,
             arg: stateItem.arg,
@@ -119,6 +122,14 @@ var RemeshStore = function (options) {
         inspectorManager.inspectStateStorage(inspector_1.InspectorType.StateCreated, newStateStorage);
         return newStateStorage;
     };
+    var restoreStateStorage = function (stateStorage) {
+        var domainStorage = getDomainStorage(stateStorage.State.owner);
+        if (domainStorage.stateMap.has(stateStorage.key)) {
+            return;
+        }
+        domainStorage.stateMap.set(stateStorage.key, stateStorage);
+        inspectorManager.inspectStateStorage(inspector_1.InspectorType.StateRestored, stateStorage);
+    };
     var getStateStorage = function (stateItem) {
         var domainStorage = getDomainStorage(stateItem.State.owner);
         var key = getStateStorageKey(stateItem);
@@ -128,8 +139,7 @@ var RemeshStore = function (options) {
         }
         var cachedStorage = stateStorageWeakMap.get(stateItem);
         if (cachedStorage) {
-            domainStorage.stateMap.set(key, cachedStorage);
-            inspectorManager.inspectStateStorage(inspector_1.InspectorType.StateRestored, cachedStorage);
+            restoreStateStorage(cachedStorage);
             return cachedStorage;
         }
         return createStateStorage(stateItem);
@@ -145,7 +155,7 @@ var RemeshStore = function (options) {
                 subscription.unsubscribe();
                 currentEventStorage.refCount -= 1;
                 pendingStorageSet.add(currentEventStorage);
-                commit();
+                clearPendingStorageSetIfNeeded();
             };
         });
         var cachedStorage = eventStorageWeakMap.get(Event);
@@ -179,7 +189,7 @@ var RemeshStore = function (options) {
                 subscription.unsubscribe();
                 queryStorage.refCount -= 1;
                 pendingStorageSet.add(queryStorage);
-                commit();
+                clearPendingStorageSetIfNeeded();
             };
         });
         return {
@@ -212,6 +222,7 @@ var RemeshStore = function (options) {
         };
         var currentValue = Query.impl(queryContext, queryPayload.arg);
         var currentQueryStorage = {
+            id: uid++,
             type: 'RemeshQueryStorage',
             Query: queryPayload.Query,
             arg: queryPayload.arg,
@@ -241,6 +252,41 @@ var RemeshStore = function (options) {
         inspectorManager.inspectQueryStorage(inspector_1.InspectorType.QueryCreated, currentQueryStorage);
         return currentQueryStorage;
     };
+    var restoreQueryStorage = function (queryStorage) {
+        var e_3, _a;
+        var domainStorage = getDomainStorage(queryStorage.Query.owner);
+        if (domainStorage.queryMap.has(queryStorage.key)) {
+            return;
+        }
+        var _b = createQuery$(function () { return queryStorage; }), subject = _b.subject, observable = _b.observable;
+        queryStorage.subject = subject;
+        queryStorage.observable = observable;
+        domainStorage.queryMap.set(queryStorage.key, queryStorage);
+        try {
+            for (var _c = tslib_1.__values(queryStorage.upstreamSet), _d = _c.next(); !_d.done; _d = _c.next()) {
+                var upstream = _d.value;
+                upstream.downstreamSet.add(queryStorage);
+                if (upstream.type === 'RemeshQueryStorage') {
+                    restoreQueryStorage(upstream);
+                }
+                else if (upstream.type === 'RemeshStateStorage') {
+                    restoreStateStorage(upstream);
+                }
+                else {
+                    throw new Error("Unknown upstream: ".concat(upstream));
+                }
+            }
+        }
+        catch (e_3_1) { e_3 = { error: e_3_1 }; }
+        finally {
+            try {
+                if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
+            }
+            finally { if (e_3) throw e_3.error; }
+        }
+        inspectorManager.inspectQueryStorage(inspector_1.InspectorType.QueryRestored, queryStorage);
+        updateQueryStorage(queryStorage);
+    };
     var getQueryStorage = function (queryPayload) {
         var domainStorage = getDomainStorage(queryPayload.Query.owner);
         var key = getQueryStorageKey(queryPayload);
@@ -250,11 +296,7 @@ var RemeshStore = function (options) {
         }
         var cachedStorage = queryStorageWeakMap.get(queryPayload);
         if (cachedStorage) {
-            var _a = createQuery$(function () { return cachedStorage; }), subject = _a.subject, observable = _a.observable;
-            cachedStorage.subject = subject;
-            cachedStorage.observable = observable;
-            domainStorage.queryMap.set(key, cachedStorage);
-            inspectorManager.inspectQueryStorage(inspector_1.InspectorType.QueryRestored, cachedStorage);
+            restoreQueryStorage(cachedStorage);
             return cachedStorage;
         }
         return createQueryStorage(queryPayload);
@@ -265,6 +307,7 @@ var RemeshStore = function (options) {
         var subject = new rxjs_1.Subject();
         var observable = subject.asObservable();
         var currentCommand$Storage = {
+            id: uid++,
             type: 'RemeshCommand$Storage',
             Command$: Command$,
             subject: subject,
@@ -286,6 +329,7 @@ var RemeshStore = function (options) {
             var observable = subject.asObservable();
             cachedStorage.subject = subject;
             cachedStorage.observable = observable;
+            cachedStorage.subscription = undefined;
             domainStorage.command$Map.set(Command$, cachedStorage);
             return cachedStorage;
         }
@@ -293,7 +337,7 @@ var RemeshStore = function (options) {
     };
     var domainStorageWeakMap = new WeakMap();
     var createDomainStorage = function (domainPayload) {
-        var e_3, _a;
+        var e_4, _a;
         var key = getDomainStorageKey(domainPayload);
         var isDomainInited = false;
         var upstreamSet = new Set();
@@ -374,6 +418,7 @@ var RemeshStore = function (options) {
         var domain = domainPayload.Domain.impl(domainContext, domainPayload.arg);
         isDomainInited = true;
         var currentDomainStorage = {
+            id: uid++,
             type: 'RemeshDomainStorage',
             Domain: domainPayload.Domain,
             arg: domainPayload.arg,
@@ -401,16 +446,17 @@ var RemeshStore = function (options) {
                 upstreamDomainStorage.downstreamSet.add(currentDomainStorage);
             }
         }
-        catch (e_3_1) { e_3 = { error: e_3_1 }; }
+        catch (e_4_1) { e_4 = { error: e_4_1 }; }
         finally {
             try {
                 if (upstreamSet_2_1 && !upstreamSet_2_1.done && (_a = upstreamSet_2.return)) _a.call(upstreamSet_2);
             }
-            finally { if (e_3) throw e_3.error; }
+            finally { if (e_4) throw e_4.error; }
         }
         return currentDomainStorage;
     };
     var getDomainStorage = function (domainPayload) {
+        var e_5, _a;
         var key = getDomainStorageKey(domainPayload);
         var domainStorage = domainStorageMap.get(key);
         if (domainStorage) {
@@ -418,23 +464,34 @@ var RemeshStore = function (options) {
         }
         var cachedStorage = domainStorageWeakMap.get(domainPayload);
         if (cachedStorage) {
+            cachedStorage.running = false;
             domainStorageMap.set(cachedStorage.key, cachedStorage);
-            runDomainStorageIfNeeded(cachedStorage);
+            try {
+                for (var _b = tslib_1.__values(cachedStorage.upstreamSet), _c = _b.next(); !_c.done; _c = _b.next()) {
+                    var upstreamDomainStorage = _c.value;
+                    upstreamDomainStorage.downstreamSet.add(cachedStorage);
+                }
+            }
+            catch (e_5_1) { e_5 = { error: e_5_1 }; }
+            finally {
+                try {
+                    if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                }
+                finally { if (e_5) throw e_5.error; }
+            }
             inspectorManager.inspectDomainStorage(inspector_1.InspectorType.DomainRestored, cachedStorage);
             return cachedStorage;
         }
         return createDomainStorage(domainPayload);
     };
     var clearQueryStorage = function (queryStorage) {
-        var e_4, _a;
+        var e_6, _a;
         var domainStorage = getDomainStorage(queryStorage.Query.owner);
         if (!domainStorage.queryMap.has(queryStorage.key)) {
             return;
         }
-        inspectorManager.inspectQueryStorage(inspector_1.InspectorType.QueryDestroyed, queryStorage);
-        queryStorage.refCount = 0;
-        queryStorage.subject.complete();
         domainStorage.queryMap.delete(queryStorage.key);
+        inspectorManager.inspectQueryStorage(inspector_1.InspectorType.QueryDestroyed, queryStorage);
         try {
             for (var _b = tslib_1.__values(queryStorage.upstreamSet), _c = _b.next(); !_c.done; _c = _b.next()) {
                 var upstreamStorage = _c.value;
@@ -450,13 +507,14 @@ var RemeshStore = function (options) {
                 }
             }
         }
-        catch (e_4_1) { e_4 = { error: e_4_1 }; }
+        catch (e_6_1) { e_6 = { error: e_6_1 }; }
         finally {
             try {
                 if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
             }
-            finally { if (e_4) throw e_4.error; }
+            finally { if (e_6) throw e_6.error; }
         }
+        queryStorage.subject.complete();
     };
     var clearQueryStorageIfNeeded = function (queryStorage) {
         if (queryStorage.refCount !== 0) {
@@ -474,6 +532,7 @@ var RemeshStore = function (options) {
         }
         inspectorManager.inspectStateStorage(inspector_1.InspectorType.StateDestroyed, stateStorage);
         domainStorage.stateMap.delete(stateStorage.key);
+        stateStorage.downstreamSet.clear();
     };
     var clearStateStorageIfNeeded = function (stateStorage) {
         if (stateStorage.downstreamSet.size !== 0) {
@@ -497,12 +556,12 @@ var RemeshStore = function (options) {
         var domainStorage = getDomainStorage(command$Storage.Command$.owner);
         command$Storage.subject.complete();
         (_a = command$Storage.subscription) === null || _a === void 0 ? void 0 : _a.unsubscribe();
+        command$Storage.subscription = undefined;
         domainStorage.command$Map.delete(command$Storage.Command$);
     };
     var clearDomainStorage = function (domainStorage) {
-        var e_5, _a, e_6, _b, e_7, _c, e_8, _d, e_9, _e;
+        var e_7, _a, e_8, _b, e_9, _c, e_10, _d, e_11, _e;
         inspectorManager.inspectDomainStorage(inspector_1.InspectorType.DomainDestroyed, domainStorage);
-        var upstreamList = tslib_1.__spreadArray([], tslib_1.__read(domainStorage.upstreamSet), false);
         clearSubscriptionSet(domainStorage.domainSubscriptionSet);
         clearSubscriptionSet(domainStorage.upstreamSubscriptionSet);
         try {
@@ -511,12 +570,12 @@ var RemeshStore = function (options) {
                 clearEventStorage(eventStorage);
             }
         }
-        catch (e_5_1) { e_5 = { error: e_5_1 }; }
+        catch (e_7_1) { e_7 = { error: e_7_1 }; }
         finally {
             try {
                 if (_g && !_g.done && (_a = _f.return)) _a.call(_f);
             }
-            finally { if (e_5) throw e_5.error; }
+            finally { if (e_7) throw e_7.error; }
         }
         try {
             for (var _h = tslib_1.__values(domainStorage.queryMap.values()), _j = _h.next(); !_j.done; _j = _h.next()) {
@@ -524,12 +583,12 @@ var RemeshStore = function (options) {
                 clearQueryStorage(queryStorage);
             }
         }
-        catch (e_6_1) { e_6 = { error: e_6_1 }; }
+        catch (e_8_1) { e_8 = { error: e_8_1 }; }
         finally {
             try {
                 if (_j && !_j.done && (_b = _h.return)) _b.call(_h);
             }
-            finally { if (e_6) throw e_6.error; }
+            finally { if (e_8) throw e_8.error; }
         }
         try {
             for (var _k = tslib_1.__values(domainStorage.stateMap.values()), _l = _k.next(); !_l.done; _l = _k.next()) {
@@ -537,12 +596,12 @@ var RemeshStore = function (options) {
                 clearStateStorage(stateStorage);
             }
         }
-        catch (e_7_1) { e_7 = { error: e_7_1 }; }
+        catch (e_9_1) { e_9 = { error: e_9_1 }; }
         finally {
             try {
                 if (_l && !_l.done && (_c = _k.return)) _c.call(_k);
             }
-            finally { if (e_7) throw e_7.error; }
+            finally { if (e_9) throw e_9.error; }
         }
         try {
             for (var _m = tslib_1.__values(domainStorage.command$Map.values()), _o = _m.next(); !_o.done; _o = _m.next()) {
@@ -550,36 +609,34 @@ var RemeshStore = function (options) {
                 clearCommand$Storage(command$Storage);
             }
         }
-        catch (e_8_1) { e_8 = { error: e_8_1 }; }
+        catch (e_10_1) { e_10 = { error: e_10_1 }; }
         finally {
             try {
                 if (_o && !_o.done && (_d = _m.return)) _d.call(_m);
             }
-            finally { if (e_8) throw e_8.error; }
+            finally { if (e_10) throw e_10.error; }
         }
         domainStorage.upstreamSubscriptionSet.clear();
         domainStorage.domainSubscriptionSet.clear();
         domainStorage.downstreamSet.clear();
-        domainStorage.upstreamSet.clear();
         domainStorage.stateMap.clear();
         domainStorage.queryMap.clear();
         domainStorage.eventMap.clear();
-        domainStorage.refCount = 0;
         domainStorage.running = false;
         domainStorageMap.delete(domainStorage.key);
         try {
-            for (var upstreamList_1 = tslib_1.__values(upstreamList), upstreamList_1_1 = upstreamList_1.next(); !upstreamList_1_1.done; upstreamList_1_1 = upstreamList_1.next()) {
-                var upstreamDomainStorage = upstreamList_1_1.value;
+            for (var _p = tslib_1.__values(domainStorage.upstreamSet), _q = _p.next(); !_q.done; _q = _p.next()) {
+                var upstreamDomainStorage = _q.value;
                 upstreamDomainStorage.downstreamSet.delete(domainStorage);
                 clearDomainStorageIfNeeded(upstreamDomainStorage);
             }
         }
-        catch (e_9_1) { e_9 = { error: e_9_1 }; }
+        catch (e_11_1) { e_11 = { error: e_11_1 }; }
         finally {
             try {
-                if (upstreamList_1_1 && !upstreamList_1_1.done && (_e = upstreamList_1.return)) _e.call(upstreamList_1);
+                if (_q && !_q.done && (_e = _p.return)) _e.call(_p);
             }
-            finally { if (e_9) throw e_9.error; }
+            finally { if (e_11) throw e_11.error; }
         }
     };
     var clearDomainStorageIfNeeded = function (domainStorage) {
@@ -622,7 +679,7 @@ var RemeshStore = function (options) {
         },
     };
     var updateQueryStorage = function (queryStorage) {
-        var e_10, _a, e_11, _b;
+        var e_12, _a, e_13, _b;
         var Query = queryStorage.Query;
         try {
             for (var _c = tslib_1.__values(queryStorage.upstreamSet), _d = _c.next(); !_d.done; _d = _c.next()) {
@@ -633,12 +690,12 @@ var RemeshStore = function (options) {
                 }
             }
         }
-        catch (e_10_1) { e_10 = { error: e_10_1 }; }
+        catch (e_12_1) { e_12 = { error: e_12_1 }; }
         finally {
             try {
                 if (_d && !_d.done && (_a = _c.return)) _a.call(_c);
             }
-            finally { if (e_10) throw e_10.error; }
+            finally { if (e_12) throw e_12.error; }
         }
         queryStorage.upstreamSet.clear();
         var queryContext = {
@@ -678,16 +735,16 @@ var RemeshStore = function (options) {
                 updateQueryStorage(downstream);
             }
         }
-        catch (e_11_1) { e_11 = { error: e_11_1 }; }
+        catch (e_13_1) { e_13 = { error: e_13_1 }; }
         finally {
             try {
                 if (_f && !_f.done && (_b = _e.return)) _b.call(_e);
             }
-            finally { if (e_11) throw e_11.error; }
+            finally { if (e_13) throw e_13.error; }
         }
     };
     var clearPendingStorageSetIfNeeded = function () {
-        var e_12, _a;
+        var e_14, _a;
         if (pendingStorageSet.size === 0) {
             return;
         }
@@ -710,21 +767,17 @@ var RemeshStore = function (options) {
                 }
             }
         }
-        catch (e_12_1) { e_12 = { error: e_12_1 }; }
+        catch (e_14_1) { e_14 = { error: e_14_1 }; }
         finally {
             try {
                 if (storageList_1_1 && !storageList_1_1.done && (_a = storageList_1.return)) _a.call(storageList_1);
             }
-            finally { if (e_12) throw e_12.error; }
+            finally { if (e_14) throw e_14.error; }
         }
         clearPendingStorageSetIfNeeded();
     };
-    var clearIfNeeded = function () {
-        clearDirtySetIfNeeded();
-        clearPendingStorageSetIfNeeded();
-    };
     var clearDirtySetIfNeeded = function () {
-        var e_13, _a;
+        var e_15, _a;
         if (dirtySet.size === 0) {
             return;
         }
@@ -738,12 +791,12 @@ var RemeshStore = function (options) {
                 }
             }
         }
-        catch (e_13_1) { e_13 = { error: e_13_1 }; }
+        catch (e_15_1) { e_15 = { error: e_15_1 }; }
         finally {
             try {
                 if (queryStorageList_1_1 && !queryStorageList_1_1.done && (_a = queryStorageList_1.return)) _a.call(queryStorageList_1);
             }
-            finally { if (e_13) throw e_13.error; }
+            finally { if (e_15) throw e_15.error; }
         }
         /**
          * recursively consuming dirty set unit it become empty.
@@ -751,15 +804,16 @@ var RemeshStore = function (options) {
         clearDirtySetIfNeeded();
     };
     var commit = function () {
-        clearIfNeeded();
+        clearDirtySetIfNeeded();
     };
     var handleStatePayload = function (statePayload) {
-        var e_14, _a;
+        var e_16, _a;
         var stateStorage = getStateStorage(statePayload.stateItem);
-        var currentState = getStateFromStorage(stateStorage);
-        var isEqual = statePayload.stateItem.State.compare(currentState, statePayload.newState);
-        if (isEqual) {
-            return;
+        if (stateStorage.currentState !== exports.StateValuePlaceholder) {
+            var isEqual = statePayload.stateItem.State.compare(stateStorage.currentState, statePayload.newState);
+            if (isEqual) {
+                return;
+            }
         }
         stateStorage.currentState = statePayload.newState;
         inspectorManager.inspectStateStorage(inspector_1.InspectorType.StateUpdated, stateStorage);
@@ -773,14 +827,13 @@ var RemeshStore = function (options) {
                 updateQueryStorage(downstream);
             }
         }
-        catch (e_14_1) { e_14 = { error: e_14_1 }; }
+        catch (e_16_1) { e_16 = { error: e_16_1 }; }
         finally {
             try {
                 if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
             }
-            finally { if (e_14) throw e_14.error; }
+            finally { if (e_16) throw e_16.error; }
         }
-        commit();
     };
     var handleEventPayload = function (eventPayload) {
         var Event = eventPayload.Event, arg = eventPayload.arg;
@@ -822,11 +875,15 @@ var RemeshStore = function (options) {
             fromEvent: remeshInjectedContext.fromEvent,
             fromQuery: remeshInjectedContext.fromQuery,
         };
-        var subscription = Command$.impl(command$Context, command$Storage.observable).subscribe(handleCommandOutput);
+        var command$ = Command$.impl(command$Context, command$Storage.observable);
+        var subscription = command$.subscribe(function (commandOutput) {
+            handleCommandOutput(commandOutput);
+            commit();
+        });
         command$Storage.subscription = subscription;
     };
     var handleCommandOutput = function (commandOutput) {
-        var e_15, _a;
+        var e_17, _a;
         if (commandOutput === null) {
             return;
         }
@@ -837,12 +894,12 @@ var RemeshStore = function (options) {
                     handleCommandOutput(item);
                 }
             }
-            catch (e_15_1) { e_15 = { error: e_15_1 }; }
+            catch (e_17_1) { e_17 = { error: e_17_1 }; }
             finally {
                 try {
                     if (commandOutput_1_1 && !commandOutput_1_1.done && (_a = commandOutput_1.return)) _a.call(commandOutput_1);
                 }
-                finally { if (e_15) throw e_15.error; }
+                finally { if (e_17) throw e_17.error; }
             }
             return;
         }
@@ -875,12 +932,14 @@ var RemeshStore = function (options) {
         handleSubscription(domainStorage.domainSubscriptionSet, domainSubscription);
         domainSubscription.add(function () {
             pendingStorageSet.add(domainStorage);
-            commit();
+            clearPendingStorageSetIfNeeded();
         });
     };
     var subscribeQuery = function (queryPayload, subscriber) {
         var queryStorage = getQueryStorage(queryPayload);
-        var subscription = queryStorage.observable.subscribe(subscriber);
+        var subscription = typeof subscriber === 'function'
+            ? queryStorage.observable.subscribe(subscriber)
+            : queryStorage.observable.subscribe(subscriber);
         return subscription;
     };
     var subscribeEvent = function (Event, subscriber) {
@@ -911,23 +970,23 @@ var RemeshStore = function (options) {
         return domainOutput;
     };
     var initCommand$Set = function (command$Set) {
-        var e_16, _a;
+        var e_18, _a;
         try {
             for (var command$Set_1 = tslib_1.__values(command$Set), command$Set_1_1 = command$Set_1.next(); !command$Set_1_1.done; command$Set_1_1 = command$Set_1.next()) {
                 var Command$ = command$Set_1_1.value;
                 initCommand$IfNeeded(Command$);
             }
         }
-        catch (e_16_1) { e_16 = { error: e_16_1 }; }
+        catch (e_18_1) { e_18 = { error: e_18_1 }; }
         finally {
             try {
                 if (command$Set_1_1 && !command$Set_1_1.done && (_a = command$Set_1.return)) _a.call(command$Set_1);
             }
-            finally { if (e_16) throw e_16.error; }
+            finally { if (e_18) throw e_18.error; }
         }
     };
     var runDomainStorageIfNeeded = function (domainStorage) {
-        var e_17, _a;
+        var e_19, _a;
         if (domainStorage.running) {
             return;
         }
@@ -939,12 +998,12 @@ var RemeshStore = function (options) {
                 handleSubscription(domainStorage.upstreamSubscriptionSet, upstreamDomainSubscription);
             }
         }
-        catch (e_17_1) { e_17 = { error: e_17_1 }; }
+        catch (e_19_1) { e_19 = { error: e_19_1 }; }
         finally {
             try {
                 if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
             }
-            finally { if (e_17) throw e_17.error; }
+            finally { if (e_19) throw e_19.error; }
         }
         initCommand$Set(domainStorage.command$Set);
     };
@@ -956,7 +1015,7 @@ var RemeshStore = function (options) {
         return domainSubscription;
     };
     var destroy = function () {
-        var e_18, _a;
+        var e_20, _a;
         inspectorManager.destroyInspectors();
         try {
             for (var _b = tslib_1.__values(domainStorageMap.values()), _c = _b.next(); !_c.done; _c = _b.next()) {
@@ -964,12 +1023,12 @@ var RemeshStore = function (options) {
                 clearDomainStorage(domainStorage);
             }
         }
-        catch (e_18_1) { e_18 = { error: e_18_1 }; }
+        catch (e_20_1) { e_20 = { error: e_20_1 }; }
         finally {
             try {
                 if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
             }
-            finally { if (e_18) throw e_18.error; }
+            finally { if (e_20) throw e_20.error; }
         }
         domainStorageMap.clear();
         dirtySet.clear();
@@ -980,6 +1039,7 @@ var RemeshStore = function (options) {
     var sendCommand = function (input) {
         if (input.type === 'RemeshCommandPayload') {
             handleCommandPayload(input);
+            commit();
         }
         else if (input.type === 'RemeshCommand$Payload') {
             handleCommand$Payload(input);
@@ -1000,19 +1060,19 @@ var RemeshStore = function (options) {
 };
 exports.RemeshStore = RemeshStore;
 var clearSubscriptionSet = function (subscriptionSet) {
-    var e_19, _a;
+    var e_21, _a;
     try {
         for (var subscriptionSet_1 = tslib_1.__values(subscriptionSet), subscriptionSet_1_1 = subscriptionSet_1.next(); !subscriptionSet_1_1.done; subscriptionSet_1_1 = subscriptionSet_1.next()) {
             var subscription = subscriptionSet_1_1.value;
             subscription.unsubscribe();
         }
     }
-    catch (e_19_1) { e_19 = { error: e_19_1 }; }
+    catch (e_21_1) { e_21 = { error: e_21_1 }; }
     finally {
         try {
             if (subscriptionSet_1_1 && !subscriptionSet_1_1.done && (_a = subscriptionSet_1.return)) _a.call(subscriptionSet_1);
         }
-        finally { if (e_19) throw e_19.error; }
+        finally { if (e_21) throw e_21.error; }
     }
 };
 //# sourceMappingURL=store.js.map

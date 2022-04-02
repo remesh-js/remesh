@@ -4,7 +4,6 @@ exports.DefaultDomain = exports.RemeshDomain = exports.RemeshExtern = exports.Re
 var tslib_1 = require("tslib");
 var rxjs_1 = require("rxjs");
 var shallowequal_1 = tslib_1.__importDefault(require("shallowequal"));
-var is_plain_object_1 = require("is-plain-object");
 var undefined2Void = function (value) {
     return value;
 };
@@ -54,10 +53,7 @@ var RemeshDeferState = function (options) {
 exports.RemeshDeferState = RemeshDeferState;
 var stateUid = 0;
 var defaultCompare = function (prev, curr) {
-    if ((0, is_plain_object_1.isPlainObject)(prev) && (0, is_plain_object_1.isPlainObject)(curr)) {
-        return (0, shallowequal_1.default)(prev, curr);
-    }
-    return prev === curr;
+    return (0, shallowequal_1.default)(prev, curr);
 };
 exports.defaultCompare = defaultCompare;
 var RemeshState = function (options) {

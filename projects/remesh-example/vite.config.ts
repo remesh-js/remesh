@@ -17,12 +17,14 @@ export default defineConfig({
     },
   },
   build: {
+    sourcemap: true,
     outDir: resolve(__dirname, '../../dist'),
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
         '7guis': resolve(__dirname, '7guis/index.html'),
         'todo-mvc': resolve(__dirname, 'todo-mvc/index.html'),
+        'todo-mvc-with-multiple-domains': resolve(__dirname, 'todo-mvc-with-multiple-domains/index.html'),
       },
     },
   },

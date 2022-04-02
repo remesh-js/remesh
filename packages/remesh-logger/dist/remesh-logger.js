@@ -73,6 +73,7 @@ var RemeshLogger = function (options) {
                     owner: getOwnerInfo(Query.owner),
                     queryId: Query.queryId,
                     queryName: Query.queryName,
+                    queryValue: event.storage.currentValue,
                 };
                 if (event.storage.arg !== undefined) {
                     log(info.type, tslib_1.__assign(tslib_1.__assign({}, info), { queryArg: event.storage.arg }));

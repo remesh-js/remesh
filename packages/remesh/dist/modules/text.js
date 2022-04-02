@@ -6,7 +6,7 @@ var TextModule = function (domain, options) {
     var _a;
     var TextState = domain.state({
         name: "".concat(options.name, ".TextState"),
-        default: (_a = options.default) !== null && _a !== void 0 ? _a : ''
+        default: (_a = options.default) !== null && _a !== void 0 ? _a : '',
     });
     var TextQuery = domain.query({
         name: "".concat(options.name, ".InputQuery"),

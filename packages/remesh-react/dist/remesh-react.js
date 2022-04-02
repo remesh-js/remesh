@@ -85,12 +85,21 @@ var useRemeshEmit = function () {
 exports.useRemeshEmit = useRemeshEmit;
 var useRemeshDomain = function (domainPayload) {
     var store = (0, exports.useRemeshStore)();
+    var subscriptionRef = (0, react_1.useRef)(null);
     var domain = store.getDomain(domainPayload);
+    var domainKey = store.getKey(domainPayload);
     (0, react_1.useEffect)(function () {
-        var subscription = store.subscribeDomain(domainPayload);
         return function () {
-            subscription.unsubscribe();
+            var _a;
+            (_a = subscriptionRef.current) === null || _a === void 0 ? void 0 : _a.unsubscribe();
+            subscriptionRef.current = null;
         };
+    }, [store, domainKey]);
+    (0, react_1.useEffect)(function () {
+        if (subscriptionRef.current !== null) {
+            return;
+        }
+        subscriptionRef.current = store.subscribeDomain(domainPayload);
     }, [store, domainPayload]);
     return domain;
 };

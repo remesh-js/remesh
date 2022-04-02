@@ -19,11 +19,13 @@ export function TodoItem(props: TodoItemProps) {
 
   const [title, handleTitleChange] = useInputHandler(todo.title)
 
-  const handlePress = useKeyPressHandler(['Enter', 'Escape'], (_, key) => {
-    if (key === 'Enter') {
-      todoListDomain.command.updateTodo({ ...todo, title })
-    }
+  const save = () => {
+    todoListDomain.command.updateTodo({ ...todo, title })
     setEditing(false)
+  }
+
+  const handlePress = useKeyPressHandler(['Enter', 'Escape'], () => {
+    save()
   })
 
   const handleEnableEdit = () => {
@@ -39,7 +41,7 @@ export function TodoItem(props: TodoItemProps) {
   }
 
   const handleBlur = () => {
-    setEditing(false)
+    save()
   }
 
   const inputRef = useRef<HTMLInputElement>(null)

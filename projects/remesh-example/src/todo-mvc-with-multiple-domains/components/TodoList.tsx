@@ -9,19 +9,31 @@ import { TodoItem } from './TodoItem'
 
 export const TodoList = () => {
   const todoAppDomain = useRemeshDomain(TodoAppDomain())
-  const todoListDomain = useRemeshDomain(TodoListDomain())
-
   const filteredTodoKeyList = useRemeshQuery(todoAppDomain.query.FilteredTodoKeyListQuery())
-  const isAllCompleted = useRemeshQuery(todoListDomain.query.IsAllCompletedQuery())
-
-  const handleToggleAll = () => {
-    todoListDomain.command.toggleAllTodos()
-  }
 
   console.log('render list')
 
   return (
     <section className="main">
+      <ToggleAllInput />
+      <ul className="todo-list">
+        {filteredTodoKeyList.map((todoId) => (
+          <TodoItem key={todoId} id={todoId} />
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+const ToggleAllInput = () => {
+  const todoListDomain = useRemeshDomain(TodoListDomain())
+  const isAllCompleted = useRemeshQuery(todoListDomain.query.IsAllCompletedQuery())
+
+  const handleToggleAll = () => {
+    todoListDomain.command.toggleAllTodos()
+  }
+  return (
+    <>
       <input
         id="toggle-all"
         type="checkbox"
@@ -30,11 +42,6 @@ export const TodoList = () => {
         onChange={handleToggleAll}
       />
       <label htmlFor="toggle-all" />
-      <ul className="todo-list">
-        {filteredTodoKeyList.map((todoId) => (
-          <TodoItem key={todoId} id={todoId} />
-        ))}
-      </ul>
-    </section>
+    </>
   )
 }
