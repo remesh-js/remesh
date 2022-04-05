@@ -20,6 +20,9 @@ if (container) {
           todo-mvc-with-multiple-domains app
         </a>
       </li>
+      <li>
+        <a href={`${import.meta.env.BASE_URL}chess/index.html`}>chinese chess</a>
+      </li>
     </ul>,
   )
 }
