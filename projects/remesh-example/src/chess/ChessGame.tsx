@@ -17,6 +17,13 @@ export const ChessGame = () => {
     alert('不该你走')
   })
 
+  useRemeshEvent(domain.event.gameOverEvent, () => {
+    const shouldRestart = window.confirm('游戏结束，是否重新开始？')
+    if (shouldRestart) {
+      domain.command.resetGameState()
+    }
+  })
+
   const style: React.HTMLAttributes<HTMLDivElement>['style'] = {
     width: left + 9 * gridSize,
     height: top + 10 * gridSize,

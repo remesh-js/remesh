@@ -1,5 +1,5 @@
 import { Remesh } from 'remesh'
-import { from, map, Observable, of, switchMap } from 'rxjs'
+import { delay, filter, map } from 'rxjs/operators'
 
 export enum ChessValue {
   General = 100,
@@ -37,6 +37,8 @@ export type Game = {
   situation: Chess[]
   markers: Marker[]
 }
+
+export type GameStatus = 'red-win' | 'black-win' | 'playing'
 
 /**
  * 帮助函数
@@ -465,6 +467,26 @@ const attack =
     return game
   }
 
+const getGameStatus = (situation: Game['situation']): GameStatus => {
+  const blackWin = !situation.some((chess) => {
+    return chess.color === ChessColor.Red && chess.value === ChessValue.General
+  })
+
+  if (blackWin) {
+    return 'black-win'
+  }
+
+  const redWin = !situation.some((chess) => {
+    return chess.color === ChessColor.Black && chess.value === ChessValue.General
+  })
+
+  if (redWin) {
+    return 'red-win'
+  }
+
+  return 'playing'
+}
+
 const defaultSituation: Chess[] = [
   { color: ChessColor.Black, value: ChessValue.Chariot, position: { x: 0, y: 0 } },
   { color: ChessColor.Black, value: ChessValue.Horse, position: { x: 1, y: 0 } },
@@ -508,34 +530,54 @@ const defaultSituation: Chess[] = [
 export const GameDomain = Remesh.domain({
   name: 'GameDomain',
   impl: (domain) => {
+    const defaultGameState = {
+      currentPlayer: ChessColor.Red,
+      selectedChess: undefined,
+      situation: defaultSituation,
+      markers: [],
+    }
+
     const GameState = domain.state<Game>({
       name: 'Game',
-      default: {
-        currentPlayer: ChessColor.Red,
-        selectedChess: undefined,
-        situation: defaultSituation,
-        markers: [],
+      default: defaultGameState,
+    })
+
+    // 不需要筛选过滤了，直接返回
+    const gameQuery = GameState.Query
+
+    const gameStatusQuery = domain.query({
+      name: 'gameStatus',
+      impl: ({ get }): GameStatus => {
+        const { situation } = get(gameQuery())
+        return getGameStatus(situation)
       },
     })
 
-    const gameQuery = domain.query({
-      name: 'GameQuery',
-      impl({ get }) {
-        // 不需要筛选过滤了，直接返回
-        return get(GameState())
-      },
+    const gameOverEvent = domain.event({
+      name: 'gameOverEvent',
     })
 
+    // 不需要区分前因后果，知道他不能走就可以了，所以参数跟返回值都不用了
     const notYourMoveEvent = domain.event({
       name: 'notYourMoveEvent',
-      impl() {
-        // 不需要区分前因后果，知道他不能走就可以了，所以参数跟返回值都不用了
+    })
+
+    const resetGameState = domain.command({
+      name: 'resetGameState',
+      impl: () => {
+        return GameState().new(defaultGameState)
       },
     })
 
     const selectChess = domain.command({
       name: 'selectChess',
       impl({ get }, chess: Chess) {
+        const gameStatus = get(gameStatusQuery())
+
+        if (gameStatus !== 'playing') {
+          return gameOverEvent()
+        }
+
         const game = get(GameState())
         const { currentPlayer, selectedChess } = game
 
@@ -554,6 +596,12 @@ export const GameDomain = Remesh.domain({
     const moveChess = domain.command({
       name: 'moveChess',
       impl({ get }, position: Marker) {
+        const gameStatus = get(gameStatusQuery())
+
+        if (gameStatus !== 'playing') {
+          return gameOverEvent()
+        }
+
         const game = get(GameState())
 
         const { selectedChess } = game
@@ -566,15 +614,31 @@ export const GameDomain = Remesh.domain({
       },
     })
 
+    domain.command$({
+      name: 'checkGameStatus',
+      impl: ({ fromQuery }) => {
+        return fromQuery(gameStatusQuery()).pipe(
+          filter((gameStatus) => gameStatus !== 'playing'),
+          delay(100),
+          map(() => gameOverEvent()),
+        )
+      },
+    })
+
     return {
       query: {
         gameQuery,
+        gameStatusQuery,
       },
       command: {
         selectChess,
         moveChess,
+        resetGameState,
       },
-      event: { notYourMoveEvent },
+      event: {
+        notYourMoveEvent,
+        gameOverEvent,
+      },
     }
   },
 })
