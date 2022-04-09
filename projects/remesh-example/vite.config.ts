@@ -3,6 +3,17 @@ import reactRefresh from '@vitejs/plugin-react-refresh'
 import { vanillaExtractPlugin } from '@vanilla-extract/vite-plugin'
 import { resolve } from 'path'
 
+import fg from 'fast-glob'
+
+const entries = fg
+  .sync('./**/*.html', {
+    cwd: __dirname,
+    ignore: ['./node_modules/**', './dist/**'],
+  })
+  .map((entry) => resolve(__dirname, entry))
+
+console.log('entries', entries)
+
 // https://vitejs.dev/config/
 export default defineConfig({
   base: '/remesh/dist/',
@@ -20,12 +31,7 @@ export default defineConfig({
     sourcemap: true,
     outDir: resolve(__dirname, '../../dist'),
     rollupOptions: {
-      input: {
-        main: resolve(__dirname, 'index.html'),
-        '7guis': resolve(__dirname, '7guis/index.html'),
-        'todo-mvc': resolve(__dirname, 'todo-mvc/index.html'),
-        'todo-mvc-with-multiple-domains': resolve(__dirname, 'todo-mvc-with-multiple-domains/index.html'),
-      },
+      input: entries,
     },
   },
 })
