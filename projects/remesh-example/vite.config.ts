@@ -12,7 +12,6 @@ const entries = fg
   })
   .map((entry) => resolve(__dirname, entry))
 
-console.log('entries', entries)
 
 // https://vitejs.dev/config/
 export default defineConfig({
