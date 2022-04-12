@@ -13,6 +13,7 @@ import { RemeshStore } from './store'
 export * from './remesh'
 export * from './store'
 export * from './inspector'
+export * from './promise'
 
 export const Remesh = {
   domain: RemeshDomain,
