@@ -2,7 +2,11 @@ import React, { StrictMode, Suspense } from 'react'
 import * as ReactDOMClient from 'react-dom/client'
 
 import { Remesh } from 'remesh'
-import { RemeshRoot, useRemeshAsyncQuery, useRemeshDomain, useRemeshQuery, useRemeshSuspenseQuery } from 'remesh-react'
+
+import { debounce } from 'remesh/schedulers/debounce'
+import { throttle } from 'remesh/schedulers/throttle'
+
+import { RemeshRoot, useRemeshAsyncQuery, useRemeshDomain, useRemeshSuspenseQuery } from 'remesh-react'
 import { RemeshReduxDevtools } from 'remesh-redux-devtools'
 import { RemeshLogger } from 'remesh-logger'
 
@@ -45,6 +49,7 @@ const TestDomain = Remesh.domain({
 
     const CountQuery = domain.query({
       name: 'CountQuery',
+      scheduler: debounce(0),
       impl: async ({ get }) => {
         const [incre, decre, double] = await Promise.all([
           get(CountIncreQuery()),

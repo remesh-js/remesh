@@ -217,6 +217,14 @@ export const RemeshState = <T extends RemeshStateOptions<any, any>>(
   return State
 }
 
+export type RemeshSchedulerContext = {
+  get: RemeshInjectedContext['get']
+  fromEvent: RemeshInjectedContext['fromEvent']
+  fromQuery: RemeshInjectedContext['fromQuery']
+}
+
+export type RemeshScheduler<U> = (context: RemeshSchedulerContext, input$: Observable<U>) => Observable<unknown>
+
 export type RemeshQueryContext = {
   get: RemeshInjectedContext['get']
 }
@@ -232,6 +240,7 @@ export type RemeshQuery<T, U> = {
   (arg: T): RemeshQueryPayload<T, U>
   owner: RemeshDomainPayload<any, any>
   compare: CompareFn<U>
+  scheduler?: RemeshScheduler<U>
   inspectable: boolean
 }
 
@@ -244,9 +253,10 @@ export type RemeshQueryPayload<T, U> = {
 export type RemeshQueryOptions<T, U> = {
   name: string
   inspectable?: boolean
-  prepare?: RemeshQuery<T, U>['prepare']
   impl: (context: RemeshQueryContext, arg?: T) => U
-  compare?: CompareFn<U>
+  prepare?: RemeshQuery<T, U>['prepare']
+  compare?: RemeshQuery<T, U>['compare']
+  scheduler?: RemeshQuery<T, U>['scheduler']
 }
 
 let queryUid = 0
@@ -286,6 +296,7 @@ export const RemeshQuery = <T extends RemeshQueryOptions<any, any>>(
   Query.compare = options.compare ?? defaultCompare
   Query.owner = DefaultDomain()
   Query.inspectable = options.inspectable ?? true
+  Query.scheduler = options.scheduler
 
   return Query
 }

@@ -82,7 +82,6 @@ export const useRemeshQuery = function <T, U>(queryPayload: RemeshQueryPayload<T
     if (subscriptionRef.current !== null) {
       return
     }
-
     subscriptionRef.current = store.subscribeQuery(queryPayload, () => {
       triggerRef.current?.()
     })

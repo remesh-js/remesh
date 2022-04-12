@@ -63,6 +63,7 @@ export type RemeshQueryStorage<T, U> = {
   downstreamSet: Set<RemeshQueryStorage<any, any>>
   subject: Subject<U>
   observable: Observable<U>
+  schedulerSubject?: Subject<U>
   refCount: number
 }
 
@@ -402,6 +403,29 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     handleStatePayload(result)
   }
 
+  const handleQueryScheduler = <T, U>(queryStorage: RemeshQueryStorage<T, U>) => {
+    if (!queryStorage.Query.scheduler) {
+      return
+    }
+
+    const schedulerSubject = new Subject<U>()
+
+    queryStorage.schedulerSubject = schedulerSubject
+
+    const schedulerContext = {
+      get: remeshInjectedContext.get,
+      fromEvent: remeshInjectedContext.fromEvent,
+      fromQuery: remeshInjectedContext.fromQuery,
+    }
+
+    const scheduler = queryStorage.Query.scheduler(schedulerContext, schedulerSubject.asObservable())
+
+    scheduler.subscribe(() => {
+      updateQueryStorageImmediately(queryStorage)
+      commit()
+    })
+  }
+
   const createQueryStorage = <T, U>(queryPayload: RemeshQueryPayload<T, U>): RemeshQueryStorage<T, U> => {
     const domainStorage = getDomainStorage(queryPayload.Query.owner)
     const key = getQueryStorageKey(queryPayload)
@@ -424,6 +448,8 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     }
 
     const { Query } = queryPayload
+
+    handleQueryScheduler(currentQueryStorage)
 
     const queryContext: RemeshQueryContext = {
       get: (input) => {
@@ -479,6 +505,8 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     queryStorage.subject = subject
     queryStorage.observable = observable
     domainStorage.queryMap.set(queryStorage.key, queryStorage)
+
+    handleQueryScheduler(queryStorage)
 
     for (const upstream of queryStorage.upstreamSet) {
       upstream.downstreamSet.add(queryStorage)
@@ -742,6 +770,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       }
     }
 
+    queryStorage.schedulerSubject?.complete()
     queryStorage.subject.complete()
   }
 
@@ -899,6 +928,18 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
   }
 
   const updateQueryStorage = <T, U>(queryStorage: RemeshQueryStorage<T, U>) => {
+    if (queryStorage.schedulerSubject) {
+      if (queryStorage.currentValue !== RemeshValuePlaceholder) {
+        queryStorage.schedulerSubject.next(queryStorage.currentValue)
+      } else {
+        throw new Error(`Query ${queryStorage.key} is not ready yet.`)
+      }
+    } else {
+      updateQueryStorageImmediately(queryStorage)
+    }
+  }
+
+  const updateQueryStorageImmediately = <T, U>(queryStorage: RemeshQueryStorage<T, U>) => {
     const { Query } = queryStorage
 
     for (const upstream of queryStorage.upstreamSet) {
