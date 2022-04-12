@@ -1,4 +1,14 @@
-import React, { useEffect, useRef, useContext, createContext, ReactNode, useCallback, useMemo } from 'react'
+import React, {
+  useEffect,
+  useRef,
+  useContext,
+  createContext,
+  ReactNode,
+  useCallback,
+  useMemo,
+  useState,
+  useReducer,
+} from 'react'
 
 import { useSyncExternalStore } from 'use-sync-external-store/shim'
 
@@ -81,6 +91,77 @@ export const useRemeshQuery = function <T, U>(queryPayload: RemeshQueryPayload<T
   }, [store, queryPayload])
 
   return state
+}
+
+export type PendingPromise = {
+  type: 'pending'
+}
+
+export type ResolvedPromise<T> = {
+  type: 'resolved'
+  value: T
+}
+
+export type RejectedPromise = {
+  type: 'rejected'
+  error: Error
+}
+
+export type PromiseData<T> = PendingPromise | ResolvedPromise<T> | RejectedPromise
+
+const promiseWeakMap = new WeakMap<Promise<any>, PromiseData<any>>()
+
+const getPromiseData = function <T>(promise: Promise<T>): PromiseData<T> {
+  if (!promiseWeakMap.has(promise)) {
+    promiseWeakMap.set(promise, { type: 'pending' })
+
+    promise.then(
+      (value) => {
+        promiseWeakMap.set(promise, { type: 'resolved', value })
+      },
+      (error) => {
+        if (error instanceof Error) {
+          promiseWeakMap.set(promise, { type: 'rejected', error })
+        } else {
+          promiseWeakMap.set(promise, { type: 'rejected', error: new Error(error) })
+        }
+      },
+    )
+  }
+
+  return promiseWeakMap.get(promise)!
+}
+
+const useForceUpdate = () => {
+  const [, forceUpdate] = useReducer((state) => state + 1, 0)
+  return forceUpdate
+}
+
+export const useRemeshAsyncQuery = function <T, U>(queryPayload: RemeshQueryPayload<T, Promise<U>>): PromiseData<U> {
+  const promise = useRemeshQuery(queryPayload)
+  const forceUpdate = useForceUpdate()
+  const promiseData = getPromiseData(promise)
+
+  useEffect(() => {
+    promise.then(forceUpdate, forceUpdate)
+  }, [promise])
+
+  return promiseData
+}
+
+export const useRemeshSuspenseQuery = function <T, U>(queryPayload: RemeshQueryPayload<T, Promise<U>>): U {
+  const promise = useRemeshQuery(queryPayload)
+  const promiseData = getPromiseData(promise)
+
+  if (promiseData.type === 'pending') {
+    throw promise
+  }
+
+  if (promiseData.type === 'rejected') {
+    throw promiseData.error
+  }
+
+  return promiseData.value
 }
 
 export const useRemeshEvent = function <T, U = T>(Event: RemeshEvent<T, U>, callback: (data: U) => unknown) {

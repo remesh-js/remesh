@@ -1,4 +1,4 @@
-import { from, Observable, Observer, Subject, Subscription } from 'rxjs'
+import { Observable, Observer, Subject, Subscription } from 'rxjs'
 
 import {
   RemeshCommand,
@@ -36,7 +36,9 @@ import { createInspectorManager, InspectorType } from './inspector'
 
 export type RemeshStore = ReturnType<typeof RemeshStore>
 
-export const StateValuePlaceholder = Symbol('StateValuePlaceholder')
+export const RemeshValuePlaceholder = Symbol('RemeshValuePlaceholder')
+
+export type RemeshValuePlaceholder = typeof RemeshValuePlaceholder
 
 let uid = 0
 
@@ -46,7 +48,7 @@ export type RemeshStateStorage<T, U> = {
   State: RemeshState<T, U>
   arg: T
   key: string
-  currentState: U | typeof StateValuePlaceholder
+  currentState: U | RemeshValuePlaceholder
   downstreamSet: Set<RemeshQueryStorage<any, any>>
 }
 
@@ -56,7 +58,7 @@ export type RemeshQueryStorage<T, U> = {
   Query: RemeshQuery<T, U>
   arg: T
   key: string
-  currentValue: U
+  currentValue: U | RemeshValuePlaceholder
   upstreamSet: Set<RemeshQueryStorage<any, any> | RemeshStateStorage<any, any>>
   downstreamSet: Set<RemeshQueryStorage<any, any>>
   subject: Subject<U>
@@ -135,8 +137,12 @@ type PendingClearItem =
   | RemeshEventStorage<any, any>
   | RemeshQueryStorage<any, any>
 
-export const RemeshStore = (options: RemeshStoreOptions) => {
-  const inspectorManager = createInspectorManager(options)
+export const RemeshStore = (options?: RemeshStoreOptions) => {
+  const config = {
+    ...options,
+  }
+
+  const inspectorManager = createInspectorManager(config)
 
   const dirtySet = new Set<RemeshQueryStorage<any, any>>()
   const domainStorageMap = new Map<string, RemeshDomainStorage<any, any>>()
@@ -144,7 +150,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
   const externStorageWeakMap = new WeakMap<RemeshExtern<any>, RemeshExternStorage<any>>()
 
   const getExternValue = <T>(Extern: RemeshExtern<T>): T => {
-    for (const payload of options.externs ?? []) {
+    for (const payload of config.externs ?? []) {
       if (payload.Extern === Extern) {
         return payload.value
       }
@@ -244,7 +250,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
   }
 
   const getStateFromStorage = <T, U>(storage: RemeshStateStorage<T, U>): U => {
-    if (storage.currentState === StateValuePlaceholder) {
+    if (storage.currentState === RemeshValuePlaceholder) {
       throw new Error(`State ${storage.key} is not found`)
     }
     return storage.currentState
@@ -256,7 +262,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     const domainStorage = getDomainStorage(stateItem.State.owner)
     const key = getStateStorageKey(stateItem)
 
-    const currentState = stateItem.State.defer ? StateValuePlaceholder : stateItem.State.impl(stateItem.arg)
+    const currentState = stateItem.State.defer ? RemeshValuePlaceholder : stateItem.State.impl(stateItem.arg)
 
     const newStateStorage: RemeshStateStorage<T, U> = {
       id: uid++,
@@ -402,21 +408,44 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
     const { subject, observable } = createQuery$(() => currentQueryStorage)
     const upstreamSet: RemeshQueryStorage<T, U>['upstreamSet'] = new Set()
-    const downstreamSet: RemeshQueryStorage<T, U>['downstreamSet'] = new Set()
+
+    const currentQueryStorage: RemeshQueryStorage<T, U> = {
+      id: uid++,
+      type: 'RemeshQueryStorage',
+      Query: queryPayload.Query,
+      arg: queryPayload.arg,
+      currentValue: RemeshValuePlaceholder,
+      key,
+      upstreamSet,
+      downstreamSet: new Set(),
+      subject,
+      observable,
+      refCount: 0,
+    }
 
     const { Query } = queryPayload
 
     const queryContext: RemeshQueryContext = {
       get: (input) => {
+        if (currentQueryStorage.upstreamSet !== upstreamSet) {
+          return remeshInjectedContext.get(input)
+        }
+
         if (input.type === 'RemeshStateItem') {
           const upstreamStateStorage = getStateStorage(input)
-          upstreamSet.add(upstreamStateStorage)
+
+          currentQueryStorage.upstreamSet.add(upstreamStateStorage)
+          upstreamStateStorage.downstreamSet.add(currentQueryStorage)
+
           return remeshInjectedContext.get(input)
         }
 
         if (input.type === 'RemeshQueryPayload') {
           const upstreamQueryStorage = getQueryStorage(input)
-          upstreamSet.add(upstreamQueryStorage)
+
+          currentQueryStorage.upstreamSet.add(upstreamQueryStorage)
+          upstreamQueryStorage.downstreamSet.add(currentQueryStorage)
+
           return remeshInjectedContext.get(input)
         }
 
@@ -428,23 +457,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
     const currentValue = Query.impl(queryContext, queryPayload.arg)
 
-    const currentQueryStorage: RemeshQueryStorage<T, U> = {
-      id: uid++,
-      type: 'RemeshQueryStorage',
-      Query: queryPayload.Query,
-      arg: queryPayload.arg,
-      currentValue,
-      key,
-      upstreamSet,
-      downstreamSet,
-      subject,
-      observable,
-      refCount: 0,
-    }
-
-    for (const upstream of upstreamSet) {
-      upstream.downstreamSet.add(currentQueryStorage)
-    }
+    currentQueryStorage.currentValue = currentValue
 
     domainStorage.queryMap.set(key, currentQueryStorage)
     queryStorageWeakMap.set(queryPayload, currentQueryStorage)
@@ -854,8 +867,13 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
 
   const getCurrentQueryValue = <T, U>(queryPayload: RemeshQueryPayload<T, U>): U => {
     const queryStorage = getQueryStorage(queryPayload)
+    const currentValue = queryStorage.currentValue
 
-    return queryStorage.currentValue
+    if (currentValue === RemeshValuePlaceholder) {
+      throw new Error(`Query ${queryStorage.key} is not ready yet.`)
+    }
+
+    return currentValue
   }
 
   const remeshInjectedContext: RemeshInjectedContext = {
@@ -890,36 +908,48 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
       }
     }
 
-    queryStorage.upstreamSet.clear()
+    const upstreamSet: RemeshQueryStorage<T, U>['upstreamSet'] = new Set()
+
+    queryStorage.upstreamSet = upstreamSet
 
     const queryContext: RemeshQueryContext = {
       get: (input) => {
+        if (queryStorage.upstreamSet !== upstreamSet) {
+          return remeshInjectedContext.get(input)
+        }
+
         if (input.type === 'RemeshStateItem') {
-          const stateItem = input
-          const upstreamStateStorage = getStateStorage(stateItem)
+          const upstreamStateStorage = getStateStorage(input)
+
           queryStorage.upstreamSet.add(upstreamStateStorage)
           upstreamStateStorage.downstreamSet.add(queryStorage)
-          return remeshInjectedContext.get(stateItem)
+
+          return remeshInjectedContext.get(input)
         }
 
         if (input.type === 'RemeshQueryPayload') {
-          const queryPayload = input
-          const upstreamQueryStorage = getQueryStorage(queryPayload)
+          const upstreamQueryStorage = getQueryStorage(input)
+
           queryStorage.upstreamSet.add(upstreamQueryStorage)
           upstreamQueryStorage.downstreamSet.add(queryStorage)
-          return remeshInjectedContext.get(queryPayload)
+
+          return remeshInjectedContext.get(input)
         }
 
         return remeshInjectedContext.get(input)
       },
     }
 
+    prepareQuery(Query, queryContext, queryStorage.arg)
+
     const newValue = Query.impl(queryContext, queryStorage.arg)
 
-    const isEqual = Query.compare(queryStorage.currentValue, newValue)
+    if (queryStorage.currentValue !== RemeshValuePlaceholder) {
+      const isEqual = Query.compare(queryStorage.currentValue, newValue)
 
-    if (isEqual) {
-      return
+      if (isEqual) {
+        return
+      }
     }
 
     queryStorage.currentValue = newValue
@@ -989,7 +1019,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
   const handleStatePayload = <T, U>(statePayload: RemeshStatePayload<T, U>) => {
     const stateStorage = getStateStorage(statePayload.stateItem)
 
-    if (stateStorage.currentState !== StateValuePlaceholder) {
+    if (stateStorage.currentState !== RemeshValuePlaceholder) {
       const isEqual = statePayload.stateItem.State.compare(stateStorage.currentState, statePayload.newState)
 
       if (isEqual) {
@@ -1230,7 +1260,7 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
   }
 
   return {
-    name: options.name,
+    name: config.name,
     getDomain,
     query: getCurrentQueryValue,
     emitEvent,

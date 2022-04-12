@@ -2,6 +2,8 @@ import { concatMap, exhaustMap, mergeMap, Observable, switchMap } from 'rxjs'
 
 import shallowEqual from 'shallowequal'
 
+import { isPlainObject } from 'is-plain-object'
+
 export type Undefined2Void<T> = undefined extends T ? Exclude<T, undefined> | void : T
 
 export const undefined2Void = <T>(value: T): Undefined2Void<T> => {
@@ -152,7 +154,11 @@ export type RemeshStateOptions<T, U> = {
 let stateUid = 0
 
 export const defaultCompare = <T>(prev: T, curr: T) => {
-  return shallowEqual(prev, curr)
+  if (isPlainObject(prev) && isPlainObject(curr)) {
+    return shallowEqual(prev, curr)
+  }
+
+  return prev === curr
 }
 
 export const RemeshState = <T extends RemeshStateOptions<any, any>>(

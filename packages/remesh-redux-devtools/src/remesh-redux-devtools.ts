@@ -1,4 +1,4 @@
-import { Remesh, RemeshDomainPayload, RemeshInspectorDomain, RemeshStoreOptions } from 'remesh'
+import { Remesh, RemeshDomainPayload, RemeshInspectorDomain, RemeshStoreInspector, RemeshStoreOptions } from 'remesh'
 import { RemeshDebuggerHelper, RemeshDebugOptions } from 'remesh-debugger-helper'
 
 import type { Config as _Config } from '@redux-devtools/extension'
@@ -19,7 +19,7 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
     return
   }
 
-  return (storeOptions: RemeshStoreOptions) => {
+  return (storeOptions?: RemeshStoreOptions) => {
     const helper = RemeshDebuggerHelper(options)
 
     const devtools = reduxDevtools.connect({
