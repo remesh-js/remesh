@@ -375,6 +375,27 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
     }
   }
 
+  const prepareQuery = <T, U>(Query: RemeshQuery<T, U>, queryContext: RemeshQueryContext, arg: T) => {
+    if (!Query.prepare) {
+      return
+    }
+
+    const result = Query.prepare(queryContext, arg)
+
+    if (!result) {
+      return
+    }
+
+    if (Array.isArray(result)) {
+      for (const statePayload of result) {
+        handleStatePayload(statePayload)
+      }
+      return
+    }
+
+    handleStatePayload(result)
+  }
+
   const createQueryStorage = <T, U>(queryPayload: RemeshQueryPayload<T, U>): RemeshQueryStorage<T, U> => {
     const domainStorage = getDomainStorage(queryPayload.Query.owner)
     const key = getQueryStorageKey(queryPayload)
@@ -402,6 +423,8 @@ export const RemeshStore = (options: RemeshStoreOptions) => {
         return remeshInjectedContext.get(input)
       },
     }
+
+    prepareQuery(Query, queryContext, queryPayload.arg)
 
     const currentValue = Query.impl(queryContext, queryPayload.arg)
 
