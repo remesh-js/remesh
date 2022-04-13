@@ -24,6 +24,14 @@
 - Immutable data structures
 - Type-friendly
 
+## Inspiration
+
+- Domain-Driven-Design inspired the conceptual model
+- CQRS/ES inspired the architecture model
+- [Redux](https://github.com/reduxjs/redux) inspired the implementation of command model
+- [Recoil](https://github.com/facebookexperimental/Recoil) inspired the implementation of query model
+- [Rxjs](https://github.com/ReactiveX/rxjs) inspired the implementation of the event model
+
 ## Communities
 
 ### Join WeChat Group
