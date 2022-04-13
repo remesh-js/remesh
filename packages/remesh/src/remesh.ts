@@ -1,8 +1,20 @@
 import { concatMap, exhaustMap, mergeMap, Observable, switchMap } from 'rxjs'
 
 import shallowEqual from 'shallowequal'
-
 import { isPlainObject } from 'is-plain-object'
+
+import { PromiseData } from './promise'
+
+export type SerializableType =
+  | void
+  | number
+  | string
+  | boolean
+  | null
+  | undefined
+  | SerializableType[]
+  | { toJSON(): string }
+  | { [key: string]: SerializableType }
 
 export type Undefined2Void<T> = undefined extends T ? Exclude<T, undefined> | void : T
 
@@ -14,14 +26,18 @@ export type ExtractFirstArg<T extends (...args: any) => any> = Undefined2Void<Pa
 
 export type ExtractSecondArg<T extends (...args: any) => any> = Undefined2Void<Parameters<T>[1]>
 
+export type GetterInput<T extends SerializableType, U> = RemeshStateItem<T, U> | RemeshQueryPayload<T, U>
+
 export type RemeshInjectedContext = {
-  get: <T, U>(input: RemeshStateItem<T, U> | RemeshQueryPayload<T, U>) => U
+  get: <T extends SerializableType, U>(input: GetterInput<T, U>) => U
+  unwrap: <T extends SerializableType, U>(input: RemeshQueryPayload<T, Promise<U>>) => PromiseData<U>
   fromEvent: <T, U>(Event: RemeshEvent<T, U>) => Observable<U>
-  fromQuery: <T, U>(Query: RemeshQueryPayload<T, U>) => Observable<U>
+  fromQuery: <T extends SerializableType, U>(Query: RemeshQueryPayload<T, U>) => Observable<U>
 }
 
 export type RemeshEventContext = {
   get: RemeshInjectedContext['get']
+  unwrap: RemeshInjectedContext['unwrap']
 }
 
 export type RemeshEvent<T, U = T> = {
@@ -83,7 +99,7 @@ export type RemeshStateChangedEventData<T> = {
   current: T
 }
 
-export type RemeshState<T, U> = {
+export type RemeshState<T extends SerializableType, U> = {
   type: 'RemeshState'
   stateId: number
   stateName: string
@@ -96,7 +112,7 @@ export type RemeshState<T, U> = {
   inspectable: boolean
 }
 
-export type RemeshStateItem<T, U> = {
+export type RemeshStateItem<T extends SerializableType, U> = {
   type: 'RemeshStateItem'
   arg: T
   State: RemeshState<T, U>
@@ -119,31 +135,31 @@ export const RemeshDefaultState = <T>(options: RemeshDefaultStateOptions<T>): Re
   })
 }
 
-export type RemeshDeferStateOptions<T, U> = {
+export type RemeshDeferStateOptions<T extends SerializableType, U> = {
   name: RemeshState<T, U>['stateName']
   inspectable?: boolean
   compare?: RemeshState<T, U>['compare']
 }
 
-export const RemeshDeferState = <T, U>(options: RemeshDeferStateOptions<T, U>) => {
+export const RemeshDeferState = <T extends SerializableType, U>(options: RemeshDeferStateOptions<T, U>) => {
   return RemeshState({
     name: options.name,
     defer: true,
     impl: (_arg: T): U => {
-      throw new Error(`RemeshDeferState: ${options.name} is not resolved`)
+      throw new Error(`RemeshDeferState: use ${options.name} before setting state`)
     },
     inspectable: options.inspectable,
     compare: options.compare,
   })
 }
 
-export type RemeshStatePayload<T, U> = {
+export type RemeshStatePayload<T extends SerializableType, U> = {
   type: 'RemeshStateSetterPayload'
   stateItem: RemeshStateItem<T, U>
   newState: U
 }
 
-export type RemeshStateOptions<T, U> = {
+export type RemeshStateOptions<T extends SerializableType, U> = {
   name: string
   defer?: boolean
   impl: (arg?: T) => U
@@ -155,6 +171,10 @@ let stateUid = 0
 
 export const defaultCompare = <T>(prev: T, curr: T) => {
   if (isPlainObject(prev) && isPlainObject(curr)) {
+    return shallowEqual(prev, curr)
+  }
+
+  if (Array.isArray(prev) && Array.isArray(curr)) {
     return shallowEqual(prev, curr)
   }
 
@@ -219,6 +239,7 @@ export const RemeshState = <T extends RemeshStateOptions<any, any>>(
 
 export type RemeshSchedulerContext = {
   get: RemeshInjectedContext['get']
+  unwrap: RemeshInjectedContext['unwrap']
   fromEvent: RemeshInjectedContext['fromEvent']
   fromQuery: RemeshInjectedContext['fromQuery']
 }
@@ -227,11 +248,12 @@ export type RemeshScheduler<U> = (context: RemeshSchedulerContext, input$: Obser
 
 export type RemeshQueryContext = {
   get: RemeshInjectedContext['get']
+  unwrap: RemeshInjectedContext['unwrap']
 }
 
 export type RemeshQueryPrepareOutput = RemeshStatePayload<any, any> | RemeshStatePayload<any, any>[] | null
 
-export type RemeshQuery<T, U> = {
+export type RemeshQuery<T extends SerializableType, U> = {
   type: 'RemeshQuery'
   queryId: number
   queryName: string
@@ -244,13 +266,13 @@ export type RemeshQuery<T, U> = {
   inspectable: boolean
 }
 
-export type RemeshQueryPayload<T, U> = {
+export type RemeshQueryPayload<T extends SerializableType, U> = {
   type: 'RemeshQueryPayload'
   Query: RemeshQuery<T, U>
   arg: T
 }
 
-export type RemeshQueryOptions<T, U> = {
+export type RemeshQueryOptions<T extends SerializableType, U> = {
   name: string
   inspectable?: boolean
   impl: (context: RemeshQueryContext, arg?: T) => U
@@ -303,6 +325,7 @@ export const RemeshQuery = <T extends RemeshQueryOptions<any, any>>(
 
 export type RemeshCommandContext = {
   get: RemeshInjectedContext['get']
+  unwrap: RemeshInjectedContext['unwrap']
 }
 
 export type RemeshCommandOutput =
@@ -362,6 +385,7 @@ export const RemeshCommand = <T extends RemeshCommandOptions<any>>(
 
 export type RemeshCommand$Context = {
   get: RemeshInjectedContext['get']
+  unwrap: RemeshInjectedContext['unwrap']
   fromEvent: RemeshInjectedContext['fromEvent']
   fromQuery: RemeshInjectedContext['fromQuery']
 }
@@ -487,14 +511,16 @@ export type RemeshDomainContext = {
   state<T extends RemeshStateOptions<any, any>>(
     options: T,
   ): RemeshState<ExtractFirstArg<T['impl']>, ReturnType<T['impl']>>
-  state<T, U>(options: RemeshDeferStateOptions<T, U>): RemeshState<Undefined2Void<T>, U>
+  state<T extends SerializableType, U>(options: RemeshDeferStateOptions<T, U>): RemeshState<Undefined2Void<T>, U>
   event: typeof RemeshEvent
   query: typeof RemeshQuery
   command: typeof RemeshCommand
   command$: typeof RemeshCommand$
   commandAsync: typeof RemeshCommandAsync
   // methods
-  getDomain: <T extends RemeshDomainDefinition, Arg>(domainPayload: RemeshDomainPayload<T, Arg>) => T
+  getDomain: <T extends RemeshDomainDefinition, Arg extends SerializableType>(
+    domainPayload: RemeshDomainPayload<T, Arg>,
+  ) => T
   getExtern: <T>(Extern: RemeshExtern<T>) => T
 }
 
@@ -512,7 +538,7 @@ export type RemeshDomainOutput = {
 
 export type RemeshDomainDefinition = Partial<RemeshDomainOutput>
 
-export type RemeshDomain<T extends RemeshDomainDefinition, Arg> = {
+export type RemeshDomain<T extends RemeshDomainDefinition, Arg extends SerializableType> = {
   type: 'RemeshDomain'
   domainName: string
   domainId: number
@@ -521,13 +547,13 @@ export type RemeshDomain<T extends RemeshDomainDefinition, Arg> = {
   inspectable: boolean
 }
 
-export type RemeshDomainPayload<T extends RemeshDomainDefinition, Arg> = {
+export type RemeshDomainPayload<T extends RemeshDomainDefinition, Arg extends SerializableType> = {
   type: 'RemeshDomainPayload'
   Domain: RemeshDomain<T, Arg>
   arg: Arg
 }
 
-export type RemeshDomainOptions<T extends RemeshDomainDefinition, Arg> = {
+export type RemeshDomainOptions<T extends RemeshDomainDefinition, Arg extends SerializableType> = {
   name: string
   inspectable?: boolean
   impl: (context: RemeshDomainContext, arg?: Arg) => T

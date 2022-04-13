@@ -6,7 +6,7 @@ import { Remesh } from 'remesh'
 import { debounce } from 'remesh/schedulers/debounce'
 import { throttle } from 'remesh/schedulers/throttle'
 
-import { RemeshRoot, useRemeshAsyncQuery, useRemeshDomain, useRemeshSuspenseQuery } from 'remesh-react'
+import { RemeshRoot, useRemeshAsyncQuery, useRemeshDomain, useRemeshQuery, useRemeshSuspenseQuery } from 'remesh-react'
 import { RemeshReduxDevtools } from 'remesh-redux-devtools'
 import { RemeshLogger } from 'remesh-logger'
 
@@ -60,6 +60,15 @@ const TestDomain = Remesh.domain({
       },
     })
 
+    const UnwrappedCountQuery = domain.query({
+      name: 'UnwrappedCountQuery',
+      scheduler: throttle(0),
+      impl: ({ unwrap }) => {
+        const data = unwrap(CountQuery())
+        return data
+      },
+    })
+
     const incre = domain.command({
       name: 'incre',
       impl: ({ get }) => {
@@ -79,6 +88,7 @@ const TestDomain = Remesh.domain({
     return {
       query: {
         CountQuery,
+        UnwrappedCountQuery,
       },
       command: {
         incre,
@@ -90,7 +100,10 @@ const TestDomain = Remesh.domain({
 
 const App = () => {
   const testDomain = useRemeshDomain(TestDomain())
+
   const count = useRemeshAsyncQuery(testDomain.query.CountQuery())
+  const unwrappedCount = useRemeshQuery(testDomain.query.UnwrappedCountQuery())
+
   return (
     <div>
       <h3>Commands</h3>
@@ -99,6 +112,10 @@ const App = () => {
       <div>
         <h3>Async Query</h3>
         <pre>{JSON.stringify(count, null, 2)}</pre>
+      </div>
+      <div>
+        <h3>Unwrapped Query</h3>
+        <pre>{JSON.stringify(unwrappedCount, null, 2)}</pre>
       </div>
       <div>
         <h3>Suspense Query</h3>

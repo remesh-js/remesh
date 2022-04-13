@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useContext, createContext, ReactNode, useCallback, useMemo, useReducer } from 'react'
+import React, { useEffect, useRef, useContext, createContext, ReactNode, useCallback, useMemo } from 'react'
 
 import { useSyncExternalStore } from 'use-sync-external-store/shim'
 
@@ -10,6 +10,7 @@ import {
   RemeshStore,
   PromiseData,
   getPromiseData,
+  SerializableType,
 } from 'remesh'
 
 export type RemeshReactContext = {
@@ -48,7 +49,7 @@ export const RemeshRoot = (props: RemeshRootProps) => {
   return <RemeshReactContext.Provider value={contextValue}>{props.children}</RemeshReactContext.Provider>
 }
 
-export const useRemeshQuery = function <T, U>(queryPayload: RemeshQueryPayload<T, U>): U {
+export const useRemeshQuery = function <T extends SerializableType, U>(queryPayload: RemeshQueryPayload<T, U>): U {
   const store = useRemeshStore()
 
   const triggerRef = useRef<(() => void) | null>(null)
@@ -90,37 +91,19 @@ export const useRemeshQuery = function <T, U>(queryPayload: RemeshQueryPayload<T
   return state
 }
 
-const useForceUpdate = () => {
-  const [, forceUpdate] = useReducer((state) => state + 1, 0)
-  return forceUpdate
+export const useRemeshAsyncQuery = function <T extends SerializableType, U>(
+  queryPayload: RemeshQueryPayload<T, Promise<U>>,
+): PromiseData<U> {
+  const store = useRemeshStore()
+  const unwrappedQueryPayload = store.getUnwrappedQueryPayload(queryPayload)
+  const data = useRemeshQuery(unwrappedQueryPayload)
+
+  return data
 }
 
-export const useRemeshAsyncQuery = function <T, U>(queryPayload: RemeshQueryPayload<T, Promise<U>>): PromiseData<U> {
-  const promise = useRemeshQuery(queryPayload)
-  const forceUpdate = useForceUpdate()
-  const promiseData = getPromiseData(promise)
-
-  useEffect(() => {
-    let isCancelled = false
-
-    const update = () => {
-      if (isCancelled) {
-        return
-      }
-      forceUpdate()
-    }
-
-    promise.then(update, update)
-
-    return () => {
-      isCancelled = true
-    }
-  }, [promise])
-
-  return promiseData
-}
-
-export const useRemeshSuspenseQuery = function <T, U>(queryPayload: RemeshQueryPayload<T, Promise<U>>): U {
+export const useRemeshSuspenseQuery = function <T extends SerializableType, U>(
+  queryPayload: RemeshQueryPayload<T, Promise<U>>,
+): U {
   const promise = useRemeshQuery(queryPayload)
   const promiseData = getPromiseData(promise)
 
@@ -159,7 +142,7 @@ export const useRemeshEmit = function () {
   return store.emitEvent
 }
 
-export const useRemeshDomain = function <T extends RemeshDomainDefinition, Arg>(
+export const useRemeshDomain = function <T extends RemeshDomainDefinition, Arg extends SerializableType>(
   domainPayload: RemeshDomainPayload<T, Arg>,
 ) {
   const store = useRemeshStore()
