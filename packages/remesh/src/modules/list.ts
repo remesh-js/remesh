@@ -1,9 +1,11 @@
+import { of } from 'rxjs'
 import { RemeshDomainContext } from '../index'
 import { undefined2Void } from '../remesh'
 
 export type ListModuleOptions<T> = {
   name: string
   key: (item: T) => string
+  default?: T[]
 }
 
 export type ListChangedEventData<T> = {
@@ -41,6 +43,17 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
 
   const ItemState = domain.state<string, T>({
     name: `${options.name}.ItemState`,
+  })
+
+  /**
+   * sync options.default to item list
+   */
+  domain.command$({
+    name: `${options.name}.addItemCommand$`,
+    inspectable: false,
+    impl: () => {
+      return of((options.default ?? []).map((item) => addItem(undefined2Void(item))))
+    },
   })
 
   const ItemListQuery = domain.query({

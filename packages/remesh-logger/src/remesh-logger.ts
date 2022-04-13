@@ -1,4 +1,4 @@
-import { Remesh, RemeshDomainPayload, RemeshInspectorDomain, RemeshStoreInspector } from 'remesh'
+import { Remesh, RemeshDomainPayload, RemeshInspectorDomain, RemeshStoreInspector, SerializableType } from 'remesh'
 
 import { RemeshDebugOptions, RemeshDebuggerHelper, formatNow } from 'remesh-debugger-helper'
 
@@ -43,7 +43,7 @@ export const RemeshLogger = (options?: RemeshLoggerOptions): RemeshStoreInspecto
 
     const inspectorDomain = store.getDomain(RemeshInspectorDomain())
 
-    const getOwnerInfo = <T, U>(owner: RemeshDomainPayload<T, U>) => {
+    const getOwnerInfo = <T, U extends SerializableType>(owner: RemeshDomainPayload<T, U>) => {
       const ownerInfo = {
         domainId: owner.Domain.domainId,
         domainName: owner.Domain.domainName,

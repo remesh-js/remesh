@@ -54,7 +54,7 @@ export const useRemeshQuery = function <T extends SerializableType, U>(queryPayl
 
   const triggerRef = useRef<(() => void) | null>(null)
 
-  const subscribe = useCallback((triggerUpdate) => {
+  const subscribe = useCallback((triggerUpdate: () => void) => {
     triggerRef.current = triggerUpdate
     return () => {
       triggerRef.current = null

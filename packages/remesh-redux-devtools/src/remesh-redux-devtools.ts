@@ -1,4 +1,4 @@
-import { Remesh, RemeshDomainPayload, RemeshInspectorDomain, RemeshStoreInspector, RemeshStoreOptions } from 'remesh'
+import { Remesh, RemeshDomainPayload, RemeshInspectorDomain, RemeshStoreOptions, SerializableType } from 'remesh'
 import { RemeshDebuggerHelper, RemeshDebugOptions } from 'remesh-debugger-helper'
 
 import type { Config as _Config } from '@redux-devtools/extension'
@@ -48,7 +48,7 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
 
     const inspectorDomain = store.getDomain(RemeshInspectorDomain())
 
-    const getOwnerInfo = <T, U>(owner: RemeshDomainPayload<T, U>) => {
+    const getOwnerInfo = <T, U extends SerializableType>(owner: RemeshDomainPayload<T, U>) => {
       const ownerInfo = {
         domainId: owner.Domain.domainId,
         domainName: owner.Domain.domainName,

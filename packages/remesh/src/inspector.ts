@@ -1,4 +1,10 @@
-import { RemeshDomain, RemeshCommand$Payload, RemeshCommandPayload, RemeshEventPayload } from './remesh'
+import {
+  RemeshDomain,
+  RemeshCommand$Payload,
+  RemeshCommandPayload,
+  RemeshEventPayload,
+  SerializableType,
+} from './remesh'
 
 import type {
   RemeshStoreOptions,
@@ -9,17 +15,17 @@ import type {
   RemeshStoreInspector,
 } from './store'
 
-export type RemeshDomainStorageEventData<T, U> = {
+export type RemeshDomainStorageEventData<T, U extends SerializableType> = {
   type: 'Domain::Created' | 'Domain::Destroyed' | 'Domain::Restored'
   storage: RemeshDomainStorage<T, U>
 }
 
-export type RemeshStateStorageEventData<T, U> = {
+export type RemeshStateStorageEventData<T extends SerializableType, U> = {
   type: 'State::Created' | 'State::Updated' | 'State::Destroyed' | 'State::Restored'
   storage: RemeshStateStorage<T, U>
 }
 
-export type RemeshQueryStorageEventData<T, U> = {
+export type RemeshQueryStorageEventData<T extends SerializableType, U> = {
   type: 'Query::Created' | 'Query::Updated' | 'Query::Destroyed' | 'Query::Restored'
   storage: RemeshQueryStorage<T, U>
 }
@@ -142,7 +148,7 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
     }
   }
 
-  const inspectDomainStorage = <T, U>(
+  const inspectDomainStorage = <T, U extends SerializableType>(
     type: RemeshDomainStorageEventData<T, U>['type'],
     domainStorage: RemeshDomainStorage<T, U>,
   ) => {
@@ -158,7 +164,7 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
     }
   }
 
-  const inspectStateStorage = <T, U>(
+  const inspectStateStorage = <T extends SerializableType, U>(
     type: RemeshStateStorageEventData<T, U>['type'],
     stateStorage: RemeshStateStorage<T, U>,
   ) => {
@@ -174,7 +180,7 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
     }
   }
 
-  const inspectQueryStorage = <T, U>(
+  const inspectQueryStorage = <T extends SerializableType, U>(
     type: RemeshQueryStorageEventData<T, U>['type'],
     queryStorage: RemeshQueryStorage<T, U>,
   ) => {

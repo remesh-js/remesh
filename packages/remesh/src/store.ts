@@ -504,6 +504,10 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
     const currentValue = Query.impl(queryContext, queryPayload.arg)
 
+    if (currentValue instanceof Promise) {
+      getPromiseData(currentValue)
+    }
+
     currentQueryStorage.currentValue = currentValue
 
     domainStorage.queryMap.set(key, currentQueryStorage)
@@ -1086,6 +1090,10 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     }
 
     queryStorage.currentValue = newValue
+
+    if (newValue instanceof Promise) {
+      getPromiseData(newValue)
+    }
 
     dirtySet.add(queryStorage)
 

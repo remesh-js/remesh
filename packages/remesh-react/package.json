@@ -19,6 +19,8 @@
     "use-sync-external-store": "^1.0.0"
   },
   "devDependencies": {
+    "@types/react": "^18.0.3",
+    "@types/react-dom": "^17.0.0",
     "@types/node": "^16.7.2",
     "@types/use-sync-external-store": "^0.0.3 || ^1.0.0",
     "rimraf": "^3.0.2",
