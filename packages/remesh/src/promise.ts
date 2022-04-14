@@ -23,9 +23,18 @@ export const promiseToObservable = <T>(promise: Promise<T>): Observable<PromiseD
     return promiseObservableWeakMap.get(promise)!
   }
 
-  let promiseData: PromiseData<T> | null = null
+  let cachedPromiseData: PromiseData<T> | null = null
   const observable: Observable<PromiseData<T>> = new Observable((subscriber) => {
-    if (promiseData) {
+    if (cachedPromiseData) {
+      subscriber.next(cachedPromiseData)
+      subscriber.complete()
+      return
+    }
+
+    const promiseData = getPromiseData(promise)
+
+    if (promiseData.type !== 'pending') {
+      cachedPromiseData = promiseData
       subscriber.next(promiseData)
       subscriber.complete()
       return
@@ -36,13 +45,13 @@ export const promiseToObservable = <T>(promise: Promise<T>): Observable<PromiseD
     promise.then(
       (value) => {
         const resolvedData: ResolvedPromiseData<T> = { type: 'resolved', value }
-        promiseData = resolvedData
+        cachedPromiseData = resolvedData
         subscriber.next(resolvedData)
         subscriber.complete()
       },
       (error) => {
         const rejectedData: RejectedPromiseData = { type: 'rejected', error }
-        promiseData = rejectedData
+        cachedPromiseData = rejectedData
         subscriber.next(rejectedData)
         subscriber.complete()
       },

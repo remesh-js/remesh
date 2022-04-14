@@ -1,6 +1,5 @@
 import { of } from 'rxjs'
-import { RemeshDomainContext } from '../index'
-import { undefined2Void } from '../remesh'
+import { RemeshDomainContext, undefined2Void } from '../index'
 
 export type ListModuleOptions<T> = {
   name: string

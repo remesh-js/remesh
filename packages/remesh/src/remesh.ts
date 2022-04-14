@@ -28,9 +28,15 @@ export type ExtractSecondArg<T extends (...args: any) => any> = Undefined2Void<P
 
 export type GetterInput<T extends SerializableType, U> = RemeshStateItem<T, U> | RemeshQueryPayload<T, U>
 
+export const RemeshValuePlaceholder = Symbol('RemeshValuePlaceholder')
+
+export type RemeshValuePlaceholder = typeof RemeshValuePlaceholder
+
 export type RemeshInjectedContext = {
   get: <T extends SerializableType, U>(input: GetterInput<T, U>) => U
   unwrap: <T extends SerializableType, U>(input: RemeshQueryPayload<T, Promise<U>>) => PromiseData<U>
+  peek: <T extends SerializableType, U>(input: GetterInput<T, U>) => U | RemeshValuePlaceholder
+  hasNoValue: <T extends SerializableType, U>(input: GetterInput<T, U>) => boolean
   fromEvent: <T, U>(Event: RemeshEvent<T, U>) => Observable<U>
   fromQuery: <T extends SerializableType, U>(Query: RemeshQueryPayload<T, U>) => Observable<U>
 }
@@ -38,6 +44,8 @@ export type RemeshInjectedContext = {
 export type RemeshEventContext = {
   get: RemeshInjectedContext['get']
   unwrap: RemeshInjectedContext['unwrap']
+  peek: RemeshInjectedContext['peek']
+  hasNoValue: RemeshInjectedContext['hasNoValue']
 }
 
 export type RemeshEvent<T, U = T> = {
@@ -240,6 +248,8 @@ export const RemeshState = <T extends RemeshStateOptions<any, any>>(
 export type RemeshSchedulerContext = {
   get: RemeshInjectedContext['get']
   unwrap: RemeshInjectedContext['unwrap']
+  peek: RemeshInjectedContext['peek']
+  hasNoValue: RemeshInjectedContext['hasNoValue']
   fromEvent: RemeshInjectedContext['fromEvent']
   fromQuery: RemeshInjectedContext['fromQuery']
 }
@@ -249,6 +259,8 @@ export type RemeshScheduler<U> = (context: RemeshSchedulerContext, input$: Obser
 export type RemeshQueryContext = {
   get: RemeshInjectedContext['get']
   unwrap: RemeshInjectedContext['unwrap']
+  peek: RemeshInjectedContext['peek']
+  hasNoValue: RemeshInjectedContext['hasNoValue']
 }
 
 export type RemeshQueryPrepareOutput = RemeshStatePayload<any, any> | RemeshStatePayload<any, any>[] | null
@@ -326,6 +338,8 @@ export const RemeshQuery = <T extends RemeshQueryOptions<any, any>>(
 export type RemeshCommandContext = {
   get: RemeshInjectedContext['get']
   unwrap: RemeshInjectedContext['unwrap']
+  peek: RemeshInjectedContext['peek']
+  hasNoValue: RemeshInjectedContext['hasNoValue']
 }
 
 export type RemeshCommandOutput =
@@ -335,6 +349,9 @@ export type RemeshCommandOutput =
   | RemeshCommand$Payload<any>
   | RemeshCommandOutput[]
   | null
+  | undefined
+  | void
+  | false
 
 export type RemeshCommandPayload<T> = {
   type: 'RemeshCommandPayload'
@@ -386,6 +403,8 @@ export const RemeshCommand = <T extends RemeshCommandOptions<any>>(
 export type RemeshCommand$Context = {
   get: RemeshInjectedContext['get']
   unwrap: RemeshInjectedContext['unwrap']
+  peek: RemeshInjectedContext['peek']
+  hasNoValue: RemeshInjectedContext['hasNoValue']
   fromEvent: RemeshInjectedContext['fromEvent']
   fromQuery: RemeshInjectedContext['fromQuery']
 }

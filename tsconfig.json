@@ -22,5 +22,5 @@
     "stripInternal": true,
     "lib": ["ESNext", "DOM"]
   },
-  "include": ["./packages"]
+  "include": ["./packages", "./projects"]
 }

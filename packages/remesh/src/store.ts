@@ -32,6 +32,7 @@ import {
   RemeshStateItem,
   RemeshStateOptions,
   RemeshStatePayload,
+  RemeshValuePlaceholder,
   SerializableType,
 } from './remesh'
 
@@ -39,10 +40,6 @@ import { createInspectorManager, InspectorType } from './inspector'
 import { getPromiseData, PromiseData, promiseToObservable } from './promise'
 
 export type RemeshStore = ReturnType<typeof RemeshStore>
-
-export const RemeshValuePlaceholder = Symbol('RemeshValuePlaceholder')
-
-export type RemeshValuePlaceholder = typeof RemeshValuePlaceholder
 
 let uid = 0
 
@@ -257,7 +254,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
   const getStateFromStorage = <T extends SerializableType, U>(storage: RemeshStateStorage<T, U>): U => {
     if (storage.currentState === RemeshValuePlaceholder) {
-      throw new Error(`State ${storage.key} is not found`)
+      throw new Error(`${storage.key} is not found`)
     }
     return storage.currentState
   }
@@ -430,6 +427,8 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       get unwrap() {
         return remeshInjectedContext.unwrap.bind(schedulerContext)
       },
+      peek: remeshInjectedContext.peek,
+      hasNoValue: remeshInjectedContext.hasNoValue,
       fromEvent: remeshInjectedContext.fromEvent,
       fromQuery: remeshInjectedContext.fromQuery,
     }
@@ -498,6 +497,8 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       get unwrap() {
         return remeshInjectedContext.unwrap.bind(queryContext)
       },
+      peek: remeshInjectedContext.peek,
+      hasNoValue: remeshInjectedContext.hasNoValue,
     }
 
     prepareQuery(Query, queryContext, queryPayload.arg)
@@ -622,8 +623,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
   ): RemeshDomainStorage<T, Arg> => {
     const key = getDomainStorageKey(domainPayload)
 
-    let isDomainInited = false
-
     const upstreamSet: RemeshDomainStorage<T, Arg>['upstreamSet'] = new Set()
     const command$Set: RemeshDomainStorage<T, Arg>['command$Set'] = new Set()
 
@@ -674,7 +673,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
         Command$.owner = domainPayload
         command$Set.add(Command$)
 
-        if (isDomainInited) {
+        if (currentDomainStorage.running) {
           initCommand$IfNeeded(Command$)
         }
 
@@ -686,7 +685,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
         Command$.owner = domainPayload
         command$Set.add(Command$)
 
-        if (isDomainInited) {
+        if (currentDomainStorage.running) {
           initCommand$IfNeeded(Command$)
         }
 
@@ -704,15 +703,14 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       },
     }
 
-    const domain = domainPayload.Domain.impl(domainContext, domainPayload.arg)
-
-    isDomainInited = true
     const currentDomainStorage: RemeshDomainStorage<T, Arg> = {
       id: uid++,
       type: 'RemeshDomainStorage',
       Domain: domainPayload.Domain,
       arg: domainPayload.arg,
-      domain,
+      get domain() {
+        return domain
+      },
       domainContext,
       domainPayload,
       key,
@@ -728,6 +726,8 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       refCount: 0,
       running: false,
     }
+
+    const domain = domainPayload.Domain.impl(domainContext, domainPayload.arg)
 
     domainStorageMap.set(key, currentDomainStorage)
     domainStorageWeakMap.set(domainPayload, currentDomainStorage)
@@ -1010,6 +1010,22 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
       return result
     },
+    peek: (input) => {
+      if (input.type === 'RemeshStateItem') {
+        const storage = getStateStorage(input)
+        return storage.currentState
+      }
+
+      if (input.type === 'RemeshQueryPayload') {
+        const storage = getQueryStorage(input)
+        return storage.currentValue
+      }
+
+      throw new Error(`Unexpected input in peek(..): ${input}`)
+    },
+    hasNoValue: (input) => {
+      return remeshInjectedContext.peek(input) === RemeshValuePlaceholder
+    },
     fromEvent: (Event) => {
       const eventStorage = getEventStorage(Event)
       return eventStorage.observable
@@ -1075,6 +1091,8 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       get unwrap() {
         return remeshInjectedContext.unwrap.bind(queryContext)
       },
+      peek: remeshInjectedContext.peek,
+      hasNoValue: remeshInjectedContext.hasNoValue,
     }
 
     prepareQuery(Query, queryContext, queryStorage.arg)
@@ -1193,6 +1211,8 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
         get unwrap() {
           return remeshInjectedContext.unwrap.bind(eventContext)
         },
+        peek: remeshInjectedContext.peek,
+        hasNoValue: remeshInjectedContext.hasNoValue,
       }
       const data = Event.impl(eventContext, arg)
       eventStorage.subject.next(data)
@@ -1210,6 +1230,8 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       get unwrap() {
         return remeshInjectedContext.unwrap.bind(commandContext)
       },
+      peek: remeshInjectedContext.peek,
+      hasNoValue: remeshInjectedContext.hasNoValue,
     }
 
     const commandOutput = Command.impl(commandContext, arg)
@@ -1236,6 +1258,8 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       get unwrap() {
         return remeshInjectedContext.unwrap.bind(command$Context)
       },
+      peek: remeshInjectedContext.peek,
+      hasNoValue: remeshInjectedContext.hasNoValue,
       fromEvent: remeshInjectedContext.fromEvent,
       fromQuery: remeshInjectedContext.fromQuery,
     }
@@ -1251,7 +1275,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
   }
 
   const handleCommandOutput = (commandOutput: RemeshCommandOutput) => {
-    if (commandOutput === null) {
+    if (!commandOutput) {
       return
     }
 

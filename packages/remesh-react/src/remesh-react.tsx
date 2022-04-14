@@ -1,4 +1,6 @@
-import React, { useEffect, useRef, useContext, createContext, ReactNode, useCallback, useMemo } from 'react'
+import React, { useEffect, useRef, useContext, createContext, ReactNode, useCallback, useMemo, useReducer } from 'react'
+
+import { flushSync } from 'react-dom'
 
 import { useSyncExternalStore } from 'use-sync-external-store/shim'
 
@@ -11,6 +13,7 @@ import {
   PromiseData,
   getPromiseData,
   SerializableType,
+  RemeshStoreOptions,
 } from 'remesh'
 
 export type RemeshReactContext = {
@@ -34,22 +37,41 @@ export const useRemeshStore = (): RemeshStore => {
   return context.remeshStore
 }
 
-export type RemeshRootProps = {
-  children: ReactNode
-  store: RemeshStore
-}
+export type RemeshRootProps =
+  | {
+      children: ReactNode
+      store?: RemeshStore
+    }
+  | {
+      children: ReactNode
+      store?: never
+      options: RemeshStoreOptions
+    }
 
 export const RemeshRoot = (props: RemeshRootProps) => {
+  const storeRef = useRef<RemeshStore | undefined>(props.store)
+
+  if (!storeRef.current) {
+    storeRef.current = RemeshStore('options' in props ? props.options : {})
+  }
+
+  const store = storeRef.current
+
   const contextValue: RemeshReactContext = useMemo(() => {
     return {
-      remeshStore: props.store,
+      remeshStore: store,
     }
-  }, [props.store])
+  }, [store])
 
   return <RemeshReactContext.Provider value={contextValue}>{props.children}</RemeshReactContext.Provider>
 }
 
 export const useRemeshQuery = function <T extends SerializableType, U>(queryPayload: RemeshQueryPayload<T, U>): U {
+  /**
+   * initial domain if needed
+   */
+  useRemeshDomain(queryPayload.Query.owner)
+
   const store = useRemeshStore()
 
   const triggerRef = useRef<(() => void) | null>(null)
@@ -89,6 +111,11 @@ export const useRemeshQuery = function <T extends SerializableType, U>(queryPayl
   }, [store, queryPayload])
 
   return state
+}
+
+const useForceUpdate = () => {
+  const [, forceUpdate] = useReducer((x: number) => x + 1, 0)
+  return forceUpdate
 }
 
 export const useRemeshAsyncQuery = function <T extends SerializableType, U>(
