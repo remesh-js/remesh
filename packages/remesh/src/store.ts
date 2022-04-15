@@ -145,7 +145,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
   const inspectorManager = createInspectorManager(config)
 
-  const dirtySet = new Set<RemeshQueryStorage<any, any>>()
+  const pendingEmitSet = new Set<RemeshQueryStorage<any, any> | RemeshEventPayload<any, any>>()
   /**
    * Leaf means that the query storage has no downstream query storages
    */
@@ -1035,7 +1035,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     }
 
     queryStorage.currentValue = newValue
-    dirtySet.add(queryStorage)
+    pendingEmitSet.add(queryStorage)
 
     inspectorManager.inspectQueryStorage(InspectorType.QueryUpdated, queryStorage)
 
@@ -1066,25 +1066,29 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     clearPendingStorageSetIfNeeded()
   }
 
-  const clearDirtySetIfNeeded = () => {
-    if (dirtySet.size === 0) {
+  const clearPendingEmitSetIfNeeded = () => {
+    if (pendingEmitSet.size === 0) {
       return
     }
 
-    const queryStorageList = [...dirtySet]
+    const list = [...pendingEmitSet]
 
-    dirtySet.clear()
+    pendingEmitSet.clear()
 
-    for (const queryStorage of queryStorageList) {
-      if (!dirtySet.has(queryStorage)) {
-        queryStorage.subject.next(queryStorage.currentValue)
+    for (const item of list) {
+      if (item.type === 'RemeshEventPayload') {
+        emitEvent(item)
+      } else if (item.type === 'RemeshQueryStorage') {
+        if (!pendingEmitSet.has(item)) {
+          item.subject.next(item.currentValue)
+        }
       }
     }
 
     /**
      * recursively consuming dirty set unit it become empty.
      */
-    clearDirtySetIfNeeded()
+    clearPendingEmitSetIfNeeded()
   }
 
   const mark = <T extends SerializableType, U>(queryStorage: RemeshQueryStorage<T, U>) => {
@@ -1123,7 +1127,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
   const commit = () => {
     clearPendingLeafSetIfNeeded()
-    clearDirtySetIfNeeded()
+    clearPendingEmitSetIfNeeded()
   }
 
   const handleStatePayload = <T extends SerializableType, U>(statePayload: RemeshStatePayload<T, U>) => {
@@ -1148,6 +1152,10 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
   }
 
   const handleEventPayload = <T, U = T>(eventPayload: RemeshEventPayload<T, U>) => {
+    pendingEmitSet.add(eventPayload)
+  }
+
+  const emitEvent = <T, U = T>(eventPayload: RemeshEventPayload<T, U>) => {
     const { Event, arg } = eventPayload
     const eventStorage = getEventStorage(Event)
 
@@ -1356,11 +1364,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       clearDomainStorage(domainStorage)
     }
     domainStorageMap.clear()
-    dirtySet.clear()
-  }
-
-  const emitEvent = <T, U>(eventPayload: RemeshEventPayload<T, U>) => {
-    handleEventPayload(eventPayload)
+    pendingEmitSet.clear()
   }
 
   const sendCommand = <T>(input: RemeshCommandPayload<T> | RemeshCommand$Payload<T>) => {
