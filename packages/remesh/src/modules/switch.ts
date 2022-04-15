@@ -16,8 +16,8 @@ export const SwitchModule = <T>(domain: RemeshDomainContext, options: SwitchModu
     default: options.default,
   })
 
-  const SwitchQuery = domain.query({
-    name: `${options.name}.SwitchQuery`,
+  const switchState = domain.query({
+    name: `${options.name}.SwitchStateQuery`,
     impl: ({ get }) => get(SwitchState()),
   })
 
@@ -38,7 +38,7 @@ export const SwitchModule = <T>(domain: RemeshDomainContext, options: SwitchModu
 
   return {
     query: {
-      SwitchQuery,
+      switchState,
     },
     command: {
       switchTo,

@@ -115,7 +115,7 @@ export type RemeshState<T extends SerializableType, U> = {
   impl: (arg: T) => U
   (arg: T): RemeshStateItem<T, U>
   owner: RemeshDomainPayload<any, any>
-  Query: RemeshQuery<T, U>
+  query: RemeshQuery<T, U>
   compare: CompareFn<U>
   inspectable: boolean
 }
@@ -234,7 +234,7 @@ export const RemeshState = <T extends RemeshStateOptions<any, any>>(
   State.inspectable = options.inspectable ?? true
   State.defer = options.defer ?? false
 
-  State.Query = RemeshQuery({
+  State.query = RemeshQuery({
     name: `${options.name}.Query`,
     inspectable: false,
     impl: ({ get }: RemeshQueryContext, arg: StateArg) => {
@@ -536,6 +536,7 @@ export type RemeshDomainContext = {
   command: typeof RemeshCommand
   command$: typeof RemeshCommand$
   commandAsync: typeof RemeshCommandAsync
+  ignite: (fn: RemeshCommand<void>['impl']) => void
   // methods
   getDomain: <T extends RemeshDomainDefinition, Arg extends SerializableType>(
     domainPayload: RemeshDomainPayload<T, Arg>,

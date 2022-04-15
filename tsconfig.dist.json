@@ -20,5 +20,6 @@
     {
       "path": "./packages/remesh-debugger-helper/tsconfig.json"
     }
-  ]
+  ],
+  "include": ["./packages"]
 }

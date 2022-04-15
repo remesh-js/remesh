@@ -20,8 +20,8 @@ export const TextModule = (domain: RemeshDomainContext, options: TextModuleOptio
     default: options.default ?? '',
   })
 
-  const TextQuery = domain.query({
-    name: `${options.name}.InputQuery`,
+  const text = domain.query({
+    name: `${options.name}.TextQuery`,
     impl: ({ get }) => get(TextState()),
   })
 
@@ -57,7 +57,7 @@ export const TextModule = (domain: RemeshDomainContext, options: TextModuleOptio
 
   return {
     query: {
-      TextQuery,
+      text,
     },
     command: {
       setText,

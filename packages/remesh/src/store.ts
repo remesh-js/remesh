@@ -1,4 +1,4 @@
-import { Observable, Observer, Subject, Subscription } from 'rxjs'
+import { Observable, Observer, of, Subject, Subscription } from 'rxjs'
 
 import { map, startWith, switchMap } from 'rxjs/operators'
 
@@ -261,13 +261,17 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
   const stateStorageWeakMap = new WeakMap<RemeshStateItem<any, any>, RemeshStateStorage<any, any>>()
 
+  const getStateValue = <T extends SerializableType, U>(State: RemeshState<T, U>, arg: T) => {
+    return State.defer ? RemeshValuePlaceholder : State.impl(arg)
+  }
+
   const createStateStorage = <T extends SerializableType, U>(
     stateItem: RemeshStateItem<T, U>,
   ): RemeshStateStorage<T, U> => {
     const domainStorage = getDomainStorage(stateItem.State.owner)
     const key = getStateStorageKey(stateItem)
 
-    const currentState = stateItem.State.defer ? RemeshValuePlaceholder : stateItem.State.impl(stateItem.arg)
+    const currentState = getStateValue(stateItem.State, stateItem.arg)
 
     const newStateStorage: RemeshStateStorage<T, U> = {
       id: uid++,
@@ -294,6 +298,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       return
     }
 
+    stateStorage.currentState = getStateValue(stateStorage.State, stateStorage.arg)
     domainStorage.stateMap.set(stateStorage.key, stateStorage)
     inspectorManager.inspectStateStorage(InspectorType.StateRestored, stateStorage)
   }
@@ -545,8 +550,8 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       }
     }
 
-    inspectorManager.inspectQueryStorage(InspectorType.QueryRestored, queryStorage)
     updateQueryStorage(queryStorage)
+    inspectorManager.inspectQueryStorage(InspectorType.QueryRestored, queryStorage)
   }
 
   const getQueryStorage = <T extends SerializableType, U>(
@@ -636,20 +641,20 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
         if ('default' in options) {
           const DefaultState = RemeshDefaultState(options)
           DefaultState.owner = domainPayload
-          DefaultState.Query.owner = domainPayload
+          DefaultState.query.owner = domainPayload
           return DefaultState
         }
 
         if (!('impl' in options)) {
           const DeferState = RemeshDeferState(options)
           DeferState.owner = domainPayload
-          DeferState.Query.owner = domainPayload
+          DeferState.query.owner = domainPayload
           return DeferState
         }
 
         const State = RemeshState(options)
         State.owner = domainPayload
-        State.Query.owner = domainPayload
+        State.query.owner = domainPayload
         return State
       },
       query: (options) => {
@@ -678,6 +683,15 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
         }
 
         return Command$
+      },
+      ignite: (fn) => {
+        domainContext.command$({
+          name: 'ignite',
+          inspectable: false,
+          impl: (ctx) => {
+            return of(fn(ctx))
+          },
+        })
       },
       commandAsync: (options) => {
         const Command$ = RemeshCommandAsync(options)

@@ -55,8 +55,8 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
     },
   })
 
-  const ItemListQuery = domain.query({
-    name: `${options.name}.ItemListQuery`,
+  const itemList = domain.query({
+    name: `${options.name}.itemList`,
     impl: ({ get }) => {
       return get(KeyListState()).map((key) => get(ItemState(key)))
     },
@@ -90,7 +90,7 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
     name: `${options.name}.setList`,
     impl: ({ get }, newList: T[]) => {
       const keyList = newList.map(options.key)
-      const oldList = get(ItemListQuery())
+      const oldList = get(itemList())
 
       return [
         newList.map((item, index) => ItemState(keyList[index]).new(item)),
@@ -104,7 +104,7 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
     name: `${options.name}.addItem`,
     impl: ({ get }, newItem: T) => {
       const keyList = get(KeyListState())
-      const list = get(ItemListQuery())
+      const list = get(itemList())
       const newKey = options.key(newItem)
 
       if (keyList.includes(newKey)) {
@@ -120,7 +120,7 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
   const deleteItem = domain.command({
     name: `${options.name}.deleteItem`,
     impl: ({ get }, targetKey: string) => {
-      const list = get(ItemListQuery())
+      const list = get(itemList())
       const newList = list.filter((item) => options.key(item) !== targetKey)
       const removedItem = get(ItemState(targetKey))
 
@@ -141,7 +141,7 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
         })
       }
 
-      const list = get(ItemListQuery())
+      const list = get(itemList())
       const newList = list.map((item) => {
         if (options.key(item) === key) {
           return newItem
@@ -163,9 +163,9 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
       updateItem,
     },
     query: {
-      KeyListQuery: KeyListState.Query,
-      ItemQuery: ItemState.Query,
-      ItemListQuery,
+      keyList: KeyListState.query,
+      item: ItemState.query,
+      itemList,
     },
     event: {
       ListChangedEvent,
