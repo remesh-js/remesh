@@ -11,7 +11,7 @@ export const TodoHeader = () => {
   const todoInputDomain = useRemeshDomain(TodoInputDomain())
   const todoListDomain = useRemeshDomain(TodoListDomain())
 
-  const todoInput = useRemeshQuery(todoInputDomain.query.TodoInputQuery())
+  const todoInput = useRemeshQuery(todoInputDomain.query.todoInput())
 
   const handleTodoInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     todoInputDomain.command.setTodoInput(event.target.value)

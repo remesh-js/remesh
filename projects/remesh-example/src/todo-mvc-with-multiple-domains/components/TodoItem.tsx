@@ -13,7 +13,7 @@ export type TodoItemProps = {
 export function TodoItem(props: TodoItemProps) {
   const todoListDomain = useRemeshDomain(TodoListDomain())
 
-  const todo = useRemeshQuery(todoListDomain.query.TodoQuery(props.id))
+  const todo = useRemeshQuery(todoListDomain.query.todoState(props.id))
 
   const [editing, setEditing] = useState(false)
 

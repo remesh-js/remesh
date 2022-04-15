@@ -78,7 +78,7 @@ export const CRUD = Remesh.domain({
           return SelectedState().new(null)
         }
 
-        const targetItem = get(nameListDomain.query.ItemQuery(targetItemId))
+        const targetItem = get(nameListDomain.query.item(targetItemId))
 
         return SelectedState().new(targetItem)
       },
@@ -100,11 +100,11 @@ export const CRUD = Remesh.domain({
       },
     })
 
-    const FilteredListQuery = domain.query({
+    const filteredList = domain.query({
       name: 'FilteredListQuery',
       impl: ({ get }) => {
         const filterPrefix = get(FilterPrefixState())
-        const nameList = get(nameListDomain.query.ItemListQuery())
+        const nameList = get(nameListDomain.query.itemList())
 
         if (filterPrefix === '') {
           return nameList
@@ -143,10 +143,10 @@ export const CRUD = Remesh.domain({
     return {
       query: {
         ...nameListDomain.query,
-        FilteredListQuery,
-        SelectedQuery: SelectedState.Query,
-        FilterPrefixQuery: FilterPrefixState.Query,
-        CreatedQuery: CreatedState.Query,
+        filteredList: filteredList,
+        selected: SelectedState.query,
+        filterPrefix: FilterPrefixState.query,
+        created: CreatedState.query,
       },
       command: {
         ...nameListDomain.command,
@@ -163,10 +163,10 @@ export const CRUD = Remesh.domain({
 
 export const CRUDApp = () => {
   const domain = useRemeshDomain(CRUD())
-  const filteredList = useRemeshQuery(domain.query.FilteredListQuery())
-  const filter = useRemeshQuery(domain.query.FilterPrefixQuery())
-  const created = useRemeshQuery(domain.query.CreatedQuery())
-  const selected = useRemeshQuery(domain.query.SelectedQuery())
+  const filteredList = useRemeshQuery(domain.query.filteredList())
+  const filter = useRemeshQuery(domain.query.filterPrefix())
+  const created = useRemeshQuery(domain.query.created())
+  const selected = useRemeshQuery(domain.query.selected())
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     domain.command.updateFilterPrefix(e.target.value)

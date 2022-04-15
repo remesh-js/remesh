@@ -24,7 +24,7 @@ const Counter = Remesh.domain({
 
     return {
       query: {
-        CounterQuery: CounterState.Query,
+        count: CounterState.query,
       },
       command: {
         incre,
@@ -35,7 +35,7 @@ const Counter = Remesh.domain({
 
 export const CounterApp = () => {
   const counter = useRemeshDomain(Counter());
-  const count = useRemeshQuery(counter.query.CounterQuery());
+  const count = useRemeshQuery(counter.query.count());
 
   const handleIncre = () => {
     counter.command.incre();

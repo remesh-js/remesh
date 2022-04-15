@@ -11,7 +11,7 @@ export const ChessGame = () => {
   const { left, top, gridSize } = useContext(GameConfigContext)
 
   const domain = useRemeshDomain(GameDomain())
-  const gameState = useRemeshQuery(domain.query.gameQuery())
+  const gameState = useRemeshQuery(domain.query.gameState())
 
   useRemeshEvent(domain.event.notYourMoveEvent, () => {
     alert('不该你走')

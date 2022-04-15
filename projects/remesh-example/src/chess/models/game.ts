@@ -543,12 +543,12 @@ export const GameDomain = Remesh.domain({
     })
 
     // 不需要筛选过滤了，直接返回
-    const gameQuery = GameState.Query
+    const gameState = GameState.query
 
     const gameStatusQuery = domain.query({
       name: 'gameStatus',
       impl: ({ get }): GameStatus => {
-        const { situation } = get(gameQuery())
+        const { situation } = get(gameState())
         return getGameStatus(situation)
       },
     })
@@ -627,8 +627,8 @@ export const GameDomain = Remesh.domain({
 
     return {
       query: {
-        gameQuery,
-        gameStatusQuery,
+        gameState: gameState,
+        gameStatus: gameStatusQuery,
       },
       command: {
         selectChess,

@@ -1,7 +1,7 @@
 import React from 'react'
 import { Remesh } from 'remesh'
 
-import { AsyncModule } from 'remesh/modules/async'
+import { AsyncModule, AsyncData } from 'remesh/modules/async'
 import { useRemeshDomain, useRemeshQuery } from 'remesh-react'
 import { Pagination, UserList, getUserList } from './github-users'
 
@@ -23,8 +23,8 @@ const PaginationDomain = Remesh.domain({
       default: [],
     })
 
-    const IsEmptyUserListQuery = domain.query({
-      name: 'IsEmptyUserListQuery',
+    const isEmptyUserList = domain.query({
+      name: 'isEmptyUserList',
       impl: ({ get }) => {
         const userList = get(UserListState())
         return userList.length === 0
@@ -59,28 +59,22 @@ const PaginationDomain = Remesh.domain({
         return newUserList
       },
       command: ({ get }, result) => {
-        if (result.type !== 'resolved') {
+        if (!AsyncData.isSuccess(result)) {
           return null
         }
+        const nextPagination = get(NextPaginationQuery())
         const currentUserList = get(UserListState())
-        return UserListState().new(currentUserList.concat(result.value))
+        return [PaginationState().new(nextPagination), UserListState().new(currentUserList.concat(result.value))]
       },
-      initialArg: defaultPagination,
     })
 
-    const IsFetchingUserListQuery = domain.query({
-      name: 'IsFetchingUserListQuery',
-      impl: ({ get }) => {
-        const asyncState = get(userFetcher.query.AsyncQuery())
-        return asyncState.type === 'pending'
-      },
-    })
+    domain.ignite(() => userFetcher.command.load(defaultPagination))
 
     const loadMore = domain.command({
       name: 'loadMore',
       impl: ({ get }) => {
         const nextPagination = get(NextPaginationQuery())
-        return [PaginationState().new(nextPagination), userFetcher.command.load(nextPagination)]
+        return userFetcher.command.load(nextPagination)
       },
     })
 
@@ -93,18 +87,18 @@ const PaginationDomain = Remesh.domain({
 
     return {
       query: {
-        UserListQuery: UserListState.Query,
-        IsEmptyUserListQuery,
-        IsFetchingUserListQuery,
+        userList: UserListState.query,
+        isEmptyUserList,
+        isLoading: userFetcher.query.isLoading,
       },
       command: {
         loadMore,
         reset,
       },
       event: {
-        UserFetchingEvent: userFetcher.event.PendingEvent,
-        UserFetchedSuccessEvent: userFetcher.event.ResolvedEvent,
-        UserFetchFailedEvent: userFetcher.event.RejectedEvent,
+        LoadingUsersEvent: userFetcher.event.LoadingEvent,
+        SuccessToLoadUsersEvent: userFetcher.event.SuccessEvent,
+        FailedToLoadUsersEvent: userFetcher.event.FailedEvent,
       },
     }
   },
@@ -112,7 +106,7 @@ const PaginationDomain = Remesh.domain({
 
 export default () => {
   const paginationDomain = useRemeshDomain(PaginationDomain())
-  const isEmptyUserList = useRemeshQuery(paginationDomain.query.IsEmptyUserListQuery())
+  const isEmptyUserList = useRemeshQuery(paginationDomain.query.isEmptyUserList())
 
   return (
     <div>
@@ -125,8 +119,8 @@ export default () => {
 const UserList = () => {
   const paginationDomain = useRemeshDomain(PaginationDomain())
 
-  const userList = useRemeshQuery(paginationDomain.query.UserListQuery())
-  const isFetchingUserList = useRemeshQuery(paginationDomain.query.IsFetchingUserListQuery())
+  const userList = useRemeshQuery(paginationDomain.query.userList())
+  const isLoading = useRemeshQuery(paginationDomain.query.isLoading())
 
   return (
     <>
@@ -146,8 +140,8 @@ const UserList = () => {
         })}
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-around' }}>
-        {!isFetchingUserList && <button onClick={() => paginationDomain.command.loadMore()}>load more</button>}
-        {isFetchingUserList && 'loading...'}
+        {!isLoading && <button onClick={() => paginationDomain.command.loadMore()}>load more</button>}
+        {isLoading && 'loading...'}
       </div>
     </>
   )

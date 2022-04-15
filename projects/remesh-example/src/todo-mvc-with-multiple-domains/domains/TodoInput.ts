@@ -12,7 +12,7 @@ export const TodoInputDomain = Remesh.domain({
       name: 'TodoInput',
     })
 
-    const TodoInputQuery = todoInputModule.query.TextQuery
+    const todoInput = todoInputModule.query.text
 
     const TodoInputChangedEvent = todoInputModule.event.TextChangedEvent
 
@@ -29,7 +29,7 @@ export const TodoInputDomain = Remesh.domain({
 
     return {
       query: {
-        TodoInputQuery,
+        todoInput: todoInput,
       },
       command: {
         setTodoInput,

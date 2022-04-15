@@ -27,7 +27,7 @@ export const TodoList = () => {
 
 const ToggleAllInput = () => {
   const todoListDomain = useRemeshDomain(TodoListDomain())
-  const isAllCompleted = useRemeshQuery(todoListDomain.query.IsAllCompletedQuery())
+  const isAllCompleted = useRemeshQuery(todoListDomain.query.isAllCompleted())
 
   const handleToggleAll = () => {
     todoListDomain.command.toggleAllTodos()

@@ -16,18 +16,18 @@ export const TodoAppDomain = Remesh.domain({
     const FilteredTodoKeyListQuery = domain.query({
       name: 'FilteredTodoList',
       impl: ({ get }) => {
-        const filter = get(todoFooter.query.TodoFilterQuery())
+        const filter = get(todoFooter.query.todoFilter())
 
         if (filter === 'all') {
-          return get(todoList.query.TodoListQuery()).map(getTodoId)
+          return get(todoList.query.todoList()).map(getTodoId)
         }
 
         if (filter === 'active') {
-          return get(todoList.query.ActiveTodoListQuery()).map(getTodoId)
+          return get(todoList.query.activeTodoList()).map(getTodoId)
         }
 
         if (filter === 'completed') {
-          return get(todoList.query.CompletedTodoListQuery()).map(getTodoId)
+          return get(todoList.query.completedTodoList()).map(getTodoId)
         }
 
         throw new Error(`Unknown filter: ${filter}`)
@@ -39,7 +39,7 @@ export const TodoAppDomain = Remesh.domain({
       impl: ({ fromEvent, get }) => {
         return fromEvent(todoList.event.TodoItemAddedEvent).pipe(
           filter((event) => {
-            const todoInput = get(todoHeader.query.TodoInputQuery())
+            const todoInput = get(todoHeader.query.todoInput())
             return todoInput === event.item.title
           }),
           map(() => todoHeader.command.clearTodoInput()),

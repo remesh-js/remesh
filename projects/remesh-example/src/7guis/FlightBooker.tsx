@@ -63,7 +63,7 @@ const FlightBooker = Remesh.domain({
       default: toDateInput(new Date()),
     })
 
-    const StartDateQuery = domain.query({
+    const startDateQuery = domain.query({
       name: 'StartDateQuery',
       impl: ({ get }) => {
         const startDateInput = get(StartDateInputState())
@@ -71,7 +71,7 @@ const FlightBooker = Remesh.domain({
       },
     })
 
-    const EndDateQuery = domain.query({
+    const endDateQuery = domain.query({
       name: 'EndDateQuery',
       impl: ({ get }) => {
         const endDateInput = get(EndDateInputState())
@@ -100,12 +100,12 @@ const FlightBooker = Remesh.domain({
       },
     })
 
-    const StatusQuery = domain.query({
+    const status = domain.query({
       name: 'StatusQuery',
       impl: ({ get }): FlightBookerStatus => {
         const option = get(OptionState())
-        const startDate = get(StartDateQuery())
-        const endDate = get(EndDateQuery())
+        const startDate = get(startDateQuery())
+        const endDate = get(endDateQuery())
 
         const startDateStatus = !!startDate ? 'valid' : 'invalid'
         const endDateStatus = option === 'return' ? (!!endDate ? 'valid' : 'invalid') : 'disabled'
@@ -129,12 +129,12 @@ const FlightBooker = Remesh.domain({
 
     return {
       query: {
-        StatusQuery,
-        OptionQuery: OptionState.Query,
-        StartDateQuery,
-        EndDateQuery,
-        StartDateInput: StartDateInputState.Query,
-        EndDateInput: EndDateInputState.Query,
+        status: status,
+        option: OptionState.query,
+        startDate: startDateQuery,
+        endDate: endDateQuery,
+        startDateInput: StartDateInputState.query,
+        endDateInput: EndDateInputState.query,
       },
       command: {
         updateOption: updateOption,
@@ -147,11 +147,11 @@ const FlightBooker = Remesh.domain({
 
 export const FlightBookerApp = () => {
   const flightBooker = useRemeshDomain(FlightBooker())
-  const option = useRemeshQuery(flightBooker.query.OptionQuery())
-  const status = useRemeshQuery(flightBooker.query.StatusQuery())
+  const option = useRemeshQuery(flightBooker.query.option())
+  const status = useRemeshQuery(flightBooker.query.status())
 
-  const startDateInput = useRemeshQuery(flightBooker.query.StartDateInput())
-  const endDateInput = useRemeshQuery(flightBooker.query.EndDateInput())
+  const startDateInput = useRemeshQuery(flightBooker.query.startDateInput())
+  const endDateInput = useRemeshQuery(flightBooker.query.endDateInput())
 
   const handleOptionChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     flightBooker.command.updateOption(event.target.value as FlightBookerOption)

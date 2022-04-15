@@ -69,8 +69,8 @@ const TemperatureConverter = Remesh.domain({
 
     return {
       query: {
-        CelsiusQuery: CelsiusState.Query,
-        FahrenheitQuery: FahrenheitState.Query,
+        celsius: CelsiusState.query,
+        fahrenheit: FahrenheitState.query,
       },
       command: {
         updateCelsius: updateCelsius,
@@ -82,9 +82,9 @@ const TemperatureConverter = Remesh.domain({
 
 export const TemperatureConverterApp = () => {
   const temperatureConverter = useRemeshDomain(TemperatureConverter());
-  const celsius = useRemeshQuery(temperatureConverter.query.CelsiusQuery());
+  const celsius = useRemeshQuery(temperatureConverter.query.celsius());
   const fahrenheit = useRemeshQuery(
-    temperatureConverter.query.FahrenheitQuery()
+    temperatureConverter.query.fahrenheit()
   );
 
   const handleCelsius = (event: React.ChangeEvent<HTMLInputElement>) => {

@@ -10,9 +10,9 @@ export const TodoFooter = () => {
   const todoListDomain = useRemeshDomain(TodoListDomain())
   const todoFilterDomain = useRemeshDomain(TodoFilterDomain())
 
-  const todoFilter = useRemeshQuery(todoFilterDomain.query.TodoFilterQuery())
-  const activeTodoCount = useRemeshQuery(todoListDomain.query.ActiveTodoCountQuery())
-  const completedTodoCount = useRemeshQuery(todoListDomain.query.CompletedTodoCountQuery())
+  const todoFilter = useRemeshQuery(todoFilterDomain.query.todoFilter())
+  const activeTodoCount = useRemeshQuery(todoListDomain.query.activeTodoCount())
+  const completedTodoCount = useRemeshQuery(todoListDomain.query.completedTodoCount())
 
   const hasCompleted = completedTodoCount > 0
 

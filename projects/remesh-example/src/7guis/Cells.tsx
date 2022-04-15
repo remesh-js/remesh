@@ -45,7 +45,7 @@ export const Cells = Remesh.domain({
       },
     })
 
-    const CellQuery = domain.query({
+    const cell = domain.query({
       name: 'CellQuery',
       impl: ({ get }, key: string) => {
         const state = get(CellState(key))
@@ -62,7 +62,7 @@ export const Cells = Remesh.domain({
         if (state.content.type === 'formula') {
           const evaluate = compile(state.content.formula)
           const getCellValue = (cellKey: string) => {
-            return Number(get(CellQuery(cellKey)).displayContent)
+            return Number(get(cell(cellKey)).displayContent)
           }
 
           return {
@@ -126,9 +126,9 @@ export const Cells = Remesh.domain({
 
     return {
       query: {
-        CellQuery,
-        ColumnKeyListQuery: ColumnKeyListState.Query,
-        RowKeyListQuery: RowKeyListState.Query,
+        cell: cell,
+        columnKeyList: ColumnKeyListState.query,
+        rowKeyList: RowKeyListState.query,
       },
       command: {
         selectCell,
@@ -141,8 +141,8 @@ export const Cells = Remesh.domain({
 
 export const CellsApp = () => {
   const cells = useRemeshDomain(Cells())
-  const columnKeyList = useRemeshQuery(cells.query.ColumnKeyListQuery())
-  const rowKeyList = useRemeshQuery(cells.query.RowKeyListQuery())
+  const columnKeyList = useRemeshQuery(cells.query.columnKeyList())
+  const rowKeyList = useRemeshQuery(cells.query.rowKeyList())
 
   return (
     <div>
@@ -235,7 +235,7 @@ const RowView = ({ columnKeyList, rowKey }: RowViewProps) => {
 
 const CellView = ({ cellKey }: { cellKey: string }) => {
   const cells = useRemeshDomain(Cells())
-  const cell = useRemeshQuery(cells.query.CellQuery(cellKey))
+  const cell = useRemeshQuery(cells.query.cell(cellKey))
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     cells.command.setCellContent({ key: cellKey, input: e.target.value })

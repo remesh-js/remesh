@@ -24,11 +24,11 @@ export const TodoListDomain = Remesh.domain({
       key: getTodoId,
     })
 
-    const TodoListQuery = todoListModule.query.ItemListQuery
+    const todoListQuery = todoListModule.query.itemList
 
-    const TodoQuery = todoListModule.query.ItemQuery
+    const todoQuery = todoListModule.query.item
 
-    const TodoKeyListQuery = todoListModule.query.KeyListQuery
+    const todoKeyListQuery = todoListModule.query.keyList
 
     const TodoListChangedEvent = todoListModule.event.ListChangedEvent
 
@@ -70,53 +70,53 @@ export const TodoListDomain = Remesh.domain({
           return deleteTodo(todo.id)
         }
         return todoListModule.command.updateItem(todo)
-      }
+      },
     })
 
     const deleteTodo = todoListModule.command.deleteItem
 
-    const ActiveTodoListQuery = domain.query({
+    const activeTodoList = domain.query({
       name: 'ActiveTodoListQuery',
       impl: ({ get }) => {
-        const todos = get(TodoListQuery())
+        const todos = get(todoListQuery())
         return todos.filter((todo) => !todo.completed)
       },
     })
 
-    const CompletedTodoListQuery = domain.query({
+    const completedTodoList = domain.query({
       name: 'CompletedTodoListQuery',
       impl: ({ get }) => {
-        const todos = get(TodoListQuery())
+        const todos = get(todoListQuery())
         return todos.filter((todo) => todo.completed)
       },
     })
 
-    const ActiveTodoCountQuery = domain.query({
+    const activeTodoCount = domain.query({
       name: 'ActiveTodoCountQuery',
       impl: ({ get }) => {
-        const todos = get(ActiveTodoListQuery())
+        const todos = get(activeTodoList())
         return todos.length
       },
     })
 
-    const CompletedTodoCountQuery = domain.query({
+    const completedTodoCountQuery = domain.query({
       name: 'CompletedTodoCountQuery',
       impl: ({ get }) => {
-        const todos = get(CompletedTodoListQuery())
+        const todos = get(completedTodoList())
         return todos.length
       },
     })
 
-    const IsAllCompletedQuery = domain.query({
+    const isAllCompleted = domain.query({
       name: 'IsAllCompletedQuery',
       impl: ({ get }) => {
-        const todos = get(TodoListQuery())
+        const todos = get(todoListQuery())
 
         if (todos.length === 0) {
           return false
         }
 
-        const completedTodoCount = get(CompletedTodoCountQuery())
+        const completedTodoCount = get(completedTodoCountQuery())
 
         return completedTodoCount === todos.length
       },
@@ -125,7 +125,7 @@ export const TodoListDomain = Remesh.domain({
     const toggleTodo = domain.command({
       name: 'toggleTodo',
       impl: ({ get }, id: Todo['id']) => {
-        const todo = get(TodoQuery(id))
+        const todo = get(todoQuery(id))
         const newTodo: Todo = {
           ...todo,
           completed: !todo.completed,
@@ -138,13 +138,13 @@ export const TodoListDomain = Remesh.domain({
     const toggleAllTodos = domain.command({
       name: 'toggleAllTodos',
       impl: ({ get }) => {
-        const todoList = get(TodoListQuery())
+        const todoList = get(todoListQuery())
 
         if (todoList.length === 0) {
           return null
         }
 
-        const activeCount = get(ActiveTodoCountQuery())
+        const activeCount = get(activeTodoCount())
         const completed = activeCount > 0
         const newTodoList = todoList.map((todo) => ({
           ...todo,
@@ -158,7 +158,7 @@ export const TodoListDomain = Remesh.domain({
     const clearAllCompletedTodos = domain.command({
       name: 'clearAllCompletedTodos',
       impl: ({ get }) => {
-        const todoList = get(TodoListQuery())
+        const todoList = get(todoListQuery())
 
         if (todoList.length === 0) {
           return null
@@ -177,14 +177,14 @@ export const TodoListDomain = Remesh.domain({
 
     return {
       query: {
-        TodoQuery,
-        TodoKeyListQuery,
-        TodoListQuery,
-        ActiveTodoListQuery,
-        CompletedTodoListQuery,
-        ActiveTodoCountQuery,
-        CompletedTodoCountQuery,
-        IsAllCompletedQuery
+        todoState: todoQuery,
+        todoKeyList: todoKeyListQuery,
+        todoList: todoListQuery,
+        activeTodoList: activeTodoList,
+        completedTodoList: completedTodoList,
+        activeTodoCount: activeTodoCount,
+        completedTodoCount: completedTodoCountQuery,
+        isAllCompleted: isAllCompleted,
       },
       command: {
         setTodoList,

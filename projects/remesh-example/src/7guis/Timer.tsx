@@ -100,8 +100,8 @@ const Timer = Remesh.domain({
 
     return {
       query: {
-        DurationQuery: DurationState.Query,
-        ElapsedQuery: ElapsedState.Query,
+        duration: DurationState.query,
+        elapsed: ElapsedState.query,
       },
       command: {
         resetElapsed,
@@ -113,8 +113,8 @@ const Timer = Remesh.domain({
 
 export const TimerApp = () => {
   const timer = useRemeshDomain(Timer());
-  const elapsed = useRemeshQuery(timer.query.ElapsedQuery());
-  const duration = useRemeshQuery(timer.query.DurationQuery());
+  const elapsed = useRemeshQuery(timer.query.elapsed());
+  const duration = useRemeshQuery(timer.query.duration());
 
   const handleDurationChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const duration = parseInt(event.target.value, 10);

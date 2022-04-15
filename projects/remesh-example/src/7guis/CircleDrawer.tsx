@@ -117,7 +117,7 @@ const CircleDrawer = Remesh.domain({
       name: 'undo',
       impl: ({ get }) => {
         const history = get(HistoryState())
-        const canUndo = get(CanUndoQuery())
+        const canUndo = get(canUndoQuery())
         const newIndex = history.currentIndex - 1
 
         if (!canUndo || newIndex < 0) {
@@ -146,7 +146,7 @@ const CircleDrawer = Remesh.domain({
       name: 'redo',
       impl: ({ get }) => {
         const history = get(HistoryState())
-        const canRedo = get(CanRedoQuery())
+        const canRedo = get(canRedoQuery())
 
         if (!canRedo) {
           return []
@@ -164,7 +164,7 @@ const CircleDrawer = Remesh.domain({
       },
     })
 
-    const CanUndoQuery = domain.query({
+    const canUndoQuery = domain.query({
       name: 'CanUndoQuery',
       impl: ({ get }) => {
         const history = get(HistoryState())
@@ -172,7 +172,7 @@ const CircleDrawer = Remesh.domain({
       },
     })
 
-    const CanRedoQuery = domain.query({
+    const canRedoQuery = domain.query({
       name: 'CanRedoQuery',
       impl: ({ get }) => {
         const history = get(HistoryState())
@@ -271,13 +271,13 @@ const CircleDrawer = Remesh.domain({
 
     return {
       query: {
-        HistoryQuery: HistoryState.Query,
-        DrawQuery: DrawState.Query,
-        TooltipsQuery: TooltipsState.Query,
-        SelectedIndexQuery: SelectedIndexState.Query,
-        SelectedCircleInfoQuery: SelectedCircleInfoQuery,
-        CanUndoQuery: CanUndoQuery,
-        CanRedoQuery: CanRedoQuery,
+        historyState: HistoryState.query,
+        drawState: DrawState.query,
+        tooltipsState: TooltipsState.query,
+        selectedIndex: SelectedIndexState.query,
+        selectedCircleInfo: SelectedCircleInfoQuery,
+        canUndo: canUndoQuery,
+        canRedo: canRedoQuery,
       },
       command: {
         draw,
@@ -304,11 +304,11 @@ const positionInCircle = (position: Position, circle: Circle): boolean => {
 
 export const CircleDrawerApp = () => {
   const domain = useRemeshDomain(CircleDrawer())
-  const drawState = useRemeshQuery(domain.query.DrawQuery())
-  const tooltipsState = useRemeshQuery(domain.query.TooltipsQuery())
-  const selectedCircleInfo = useRemeshQuery(domain.query.SelectedCircleInfoQuery())
-  const canUndo = useRemeshQuery(domain.query.CanUndoQuery())
-  const canRedo = useRemeshQuery(domain.query.CanRedoQuery())
+  const drawState = useRemeshQuery(domain.query.drawState())
+  const tooltipsState = useRemeshQuery(domain.query.tooltipsState())
+  const selectedCircleInfo = useRemeshQuery(domain.query.selectedCircleInfo())
+  const canUndo = useRemeshQuery(domain.query.canUndo())
+  const canRedo = useRemeshQuery(domain.query.canRedo())
 
   const getCircleInfo = (position: Position) => {
     const circle = drawState.circles.find((circle) => {

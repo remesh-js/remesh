@@ -47,6 +47,18 @@ const Menu = () => {
   )
 }
 
+const App = () => {
+  const hash = useHash()
+  const Component = ComponentMap[hash || 'pagination']
+
+  return (
+    <div>
+      <Menu />
+      <Suspense fallback="loading...">{!!Component ? <Component /> : 'Not Found'}</Suspense>
+    </div>
+  )
+}
+
 const storeOptions = {
   inspectors: [
     RemeshReduxDevtools(),
@@ -56,34 +68,16 @@ const storeOptions = {
   ],
 }
 
-const App = () => {
-  const hash = useHash()
-  const Component = ComponentMap[hash || 'pagination']
-
-  return (
-    <div>
-      <Menu />
-      <Suspense fallback="loading...">
-        {!!Component && (
-          <RemeshRoot key={hash} options={storeOptions}>
-            <Component />
-          </RemeshRoot>
-        )}
-        {!Component && 'Not Found'}
-      </Suspense>
-    </div>
-  )
-}
-
 const rootElem = document.getElementById('root')
 
 if (rootElem) {
   const root = createRoot(rootElem)
-  const store = Remesh.store()
 
   root.render(
     <StrictMode>
-      <App />
+      <RemeshRoot options={storeOptions}>
+        <App />
+      </RemeshRoot>
     </StrictMode>,
   )
 }
