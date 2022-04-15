@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useContext, createContext, ReactNode, useCallback, useMemo, useReducer } from 'react'
+import React, { useEffect, useRef, useContext, createContext, ReactNode, useCallback, useMemo } from 'react'
 
 import { flushSync } from 'react-dom'
 
@@ -10,11 +10,11 @@ import {
   RemeshEvent,
   RemeshDomainPayload,
   RemeshStore,
-  PromiseData,
-  getPromiseData,
   SerializableType,
   RemeshStoreOptions,
 } from 'remesh'
+
+import { AsyncData } from 'remesh/modules/async'
 
 export type RemeshReactContext = {
   remeshStore: RemeshStore
@@ -113,36 +113,28 @@ export const useRemeshQuery = function <T extends SerializableType, U>(queryPayl
   return state
 }
 
-const useForceUpdate = () => {
-  const [, forceUpdate] = useReducer((x: number) => x + 1, 0)
-  return forceUpdate
-}
+export const useRemeshSuspense = function <T extends SerializableType, U>(
+  queryPayload: RemeshQueryPayload<T, AsyncData<U>>,
+) {
+  const state = useRemeshQuery(queryPayload)
 
-export const useRemeshAsyncQuery = function <T extends SerializableType, U>(
-  queryPayload: RemeshQueryPayload<T, Promise<U>>,
-): PromiseData<U> {
-  const store = useRemeshStore()
-  const unwrappedQueryPayload = store.getUnwrappedQueryPayload(queryPayload)
-  const data = useRemeshQuery(unwrappedQueryPayload)
+  console.log('useRemeshSuspense', state)
 
-  return data
-}
-
-export const useRemeshSuspenseQuery = function <T extends SerializableType, U>(
-  queryPayload: RemeshQueryPayload<T, Promise<U>>,
-): U {
-  const promise = useRemeshQuery(queryPayload)
-  const promiseData = getPromiseData(promise)
-
-  if (promiseData.type === 'pending') {
-    throw promise
+  if (state.type === 'loading') {
+    console.log('throw promise')
+    throw state.promise.then((result) => {
+      console.log('suspense resolved', result)
+      return result
+    })
   }
 
-  if (promiseData.type === 'rejected') {
-    throw promiseData.error
+  if (state.type === 'failed') {
+    throw state.error
   }
 
-  return promiseData.value
+  if (state.type === 'success') {
+    return state.value
+  }
 }
 
 export const useRemeshEvent = function <T, U = T>(Event: RemeshEvent<T, U>, callback: (data: U) => unknown) {

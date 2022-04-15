@@ -3,8 +3,6 @@ import { concatMap, exhaustMap, mergeMap, Observable, switchMap } from 'rxjs'
 import shallowEqual from 'shallowequal'
 import { isPlainObject } from 'is-plain-object'
 
-import { PromiseData } from './promise'
-
 export type SerializableType =
   | void
   | number
@@ -34,7 +32,6 @@ export type RemeshValuePlaceholder = typeof RemeshValuePlaceholder
 
 export type RemeshInjectedContext = {
   get: <T extends SerializableType, U>(input: GetterInput<T, U>) => U
-  unwrap: <T extends SerializableType, U>(input: RemeshQueryPayload<T, Promise<U>>) => PromiseData<U>
   peek: <T extends SerializableType, U>(input: GetterInput<T, U>) => U | RemeshValuePlaceholder
   hasNoValue: <T extends SerializableType, U>(input: GetterInput<T, U>) => boolean
   fromEvent: <T, U>(Event: RemeshEvent<T, U>) => Observable<U>
@@ -43,7 +40,6 @@ export type RemeshInjectedContext = {
 
 export type RemeshEventContext = {
   get: RemeshInjectedContext['get']
-  unwrap: RemeshInjectedContext['unwrap']
   peek: RemeshInjectedContext['peek']
   hasNoValue: RemeshInjectedContext['hasNoValue']
 }
@@ -247,18 +243,14 @@ export const RemeshState = <T extends RemeshStateOptions<any, any>>(
 
 export type RemeshSchedulerContext = {
   get: RemeshInjectedContext['get']
-  unwrap: RemeshInjectedContext['unwrap']
   peek: RemeshInjectedContext['peek']
   hasNoValue: RemeshInjectedContext['hasNoValue']
   fromEvent: RemeshInjectedContext['fromEvent']
   fromQuery: RemeshInjectedContext['fromQuery']
 }
 
-export type RemeshScheduler<U> = (context: RemeshSchedulerContext, input$: Observable<U>) => Observable<unknown>
-
 export type RemeshQueryContext = {
   get: RemeshInjectedContext['get']
-  unwrap: RemeshInjectedContext['unwrap']
   peek: RemeshInjectedContext['peek']
   hasNoValue: RemeshInjectedContext['hasNoValue']
 }
@@ -274,7 +266,6 @@ export type RemeshQuery<T extends SerializableType, U> = {
   (arg: T): RemeshQueryPayload<T, U>
   owner: RemeshDomainPayload<any, any>
   compare: CompareFn<U>
-  scheduler?: RemeshScheduler<U>
   inspectable: boolean
 }
 
@@ -290,7 +281,6 @@ export type RemeshQueryOptions<T extends SerializableType, U> = {
   impl: (context: RemeshQueryContext, arg?: T) => U
   prepare?: RemeshQuery<T, U>['prepare']
   compare?: RemeshQuery<T, U>['compare']
-  scheduler?: RemeshQuery<T, U>['scheduler']
 }
 
 let queryUid = 0
@@ -330,14 +320,12 @@ export const RemeshQuery = <T extends RemeshQueryOptions<any, any>>(
   Query.compare = options.compare ?? defaultCompare
   Query.owner = DefaultDomain()
   Query.inspectable = options.inspectable ?? true
-  Query.scheduler = options.scheduler
 
   return Query
 }
 
 export type RemeshCommandContext = {
   get: RemeshInjectedContext['get']
-  unwrap: RemeshInjectedContext['unwrap']
   peek: RemeshInjectedContext['peek']
   hasNoValue: RemeshInjectedContext['hasNoValue']
 }
@@ -402,7 +390,6 @@ export const RemeshCommand = <T extends RemeshCommandOptions<any>>(
 
 export type RemeshCommand$Context = {
   get: RemeshInjectedContext['get']
-  unwrap: RemeshInjectedContext['unwrap']
   peek: RemeshInjectedContext['peek']
   hasNoValue: RemeshInjectedContext['hasNoValue']
   fromEvent: RemeshInjectedContext['fromEvent']

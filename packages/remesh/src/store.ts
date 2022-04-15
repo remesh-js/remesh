@@ -1,7 +1,5 @@
 import { Observable, Observer, of, Subject, Subscription } from 'rxjs'
 
-import { map, startWith, switchMap } from 'rxjs/operators'
-
 import {
   RemeshCommand,
   RemeshCommand$,
@@ -37,7 +35,6 @@ import {
 } from './remesh'
 
 import { createInspectorManager, InspectorType } from './inspector'
-import { getPromiseData, PromiseData, promiseToObservable } from './promise'
 
 export type RemeshStore = ReturnType<typeof RemeshStore>
 
@@ -64,8 +61,9 @@ export type RemeshQueryStorage<T extends SerializableType, U> = {
   downstreamSet: Set<RemeshQueryStorage<any, any>>
   subject: Subject<U>
   observable: Observable<U>
-  schedulerSubject?: Subject<U>
   refCount: number
+  status: 'default' | 'wip' | 'updated'
+  wipUpstreamSet: Set<RemeshQueryStorage<any, any> | RemeshStateStorage<any, any>>
 }
 
 export type RemeshEventStorage<T = unknown, U = T> = {
@@ -148,8 +146,14 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
   const inspectorManager = createInspectorManager(config)
 
   const dirtySet = new Set<RemeshQueryStorage<any, any>>()
+  /**
+   * Leaf means that the query storage has no downstream query storages
+   */
+  const pendingLeafSet = new Set<RemeshQueryStorage<any, any>>()
+  const pendingClearSet = new Set<PendingClearItem>()
+
   const domainStorageMap = new Map<string, RemeshDomainStorage<any, any>>()
-  const pendingStorageSet = new Set<PendingClearItem>()
+
   const externStorageWeakMap = new WeakMap<RemeshExtern<any>, RemeshExternStorage<any>>()
 
   const getExternValue = <T>(Extern: RemeshExtern<T>): T => {
@@ -337,7 +341,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       return () => {
         subscription.unsubscribe()
         currentEventStorage.refCount -= 1
-        pendingStorageSet.add(currentEventStorage)
+        pendingClearSet.add(currentEventStorage)
         clearPendingStorageSetIfNeeded()
       }
     })
@@ -382,7 +386,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       return () => {
         subscription.unsubscribe()
         queryStorage.refCount -= 1
-        pendingStorageSet.add(queryStorage)
+        pendingClearSet.add(queryStorage)
         clearPendingStorageSetIfNeeded()
       }
     })
@@ -418,34 +422,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     handleStatePayload(result)
   }
 
-  const handleQueryScheduler = <T extends SerializableType, U>(queryStorage: RemeshQueryStorage<T, U>) => {
-    if (!queryStorage.Query.scheduler) {
-      return
-    }
-
-    const schedulerSubject = new Subject<U>()
-
-    queryStorage.schedulerSubject = schedulerSubject
-
-    const schedulerContext = {
-      get: remeshInjectedContext.get,
-      get unwrap() {
-        return remeshInjectedContext.unwrap.bind(schedulerContext)
-      },
-      peek: remeshInjectedContext.peek,
-      hasNoValue: remeshInjectedContext.hasNoValue,
-      fromEvent: remeshInjectedContext.fromEvent,
-      fromQuery: remeshInjectedContext.fromQuery,
-    }
-
-    const scheduler = queryStorage.Query.scheduler(schedulerContext, schedulerSubject.asObservable())
-
-    scheduler.subscribe(() => {
-      updateQueryStorageImmediately(queryStorage)
-      commit()
-    })
-  }
-
   const createQueryStorage = <T extends SerializableType, U>(
     queryPayload: RemeshQueryPayload<T, U>,
   ): RemeshQueryStorage<T, U> => {
@@ -467,11 +443,11 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       subject,
       observable,
       refCount: 0,
+      status: 'default',
+      wipUpstreamSet: new Set(),
     }
 
     const { Query } = queryPayload
-
-    handleQueryScheduler(currentQueryStorage)
 
     const queryContext: RemeshQueryContext = {
       get: (input) => {
@@ -499,9 +475,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
         return remeshInjectedContext.get(input)
       },
-      get unwrap() {
-        return remeshInjectedContext.unwrap.bind(queryContext)
-      },
       peek: remeshInjectedContext.peek,
       hasNoValue: remeshInjectedContext.hasNoValue,
     }
@@ -509,10 +482,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     prepareQuery(Query, queryContext, queryPayload.arg)
 
     const currentValue = Query.impl(queryContext, queryPayload.arg)
-
-    if (currentValue instanceof Promise) {
-      getPromiseData(currentValue)
-    }
 
     currentQueryStorage.currentValue = currentValue
 
@@ -533,11 +502,10 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
     const { subject, observable } = createQuery$(() => queryStorage)
 
+    queryStorage.status = 'default'
     queryStorage.subject = subject
     queryStorage.observable = observable
     domainStorage.queryMap.set(queryStorage.key, queryStorage)
-
-    handleQueryScheduler(queryStorage)
 
     for (const upstream of queryStorage.upstreamSet) {
       upstream.downstreamSet.add(queryStorage)
@@ -709,6 +677,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
         const upstreamDomainStorage = getDomainStorage(UpstreamDomain)
 
         upstreamSet.add(upstreamDomainStorage)
+        upstreamDomainStorage.downstreamSet.add(currentDomainStorage)
 
         return upstreamDomainStorage.domain
       },
@@ -747,10 +716,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     domainStorageWeakMap.set(domainPayload, currentDomainStorage)
 
     inspectorManager.inspectDomainStorage(InspectorType.DomainCreated, currentDomainStorage)
-
-    for (const upstreamDomainStorage of upstreamSet) {
-      upstreamDomainStorage.downstreamSet.add(currentDomainStorage)
-    }
 
     return currentDomainStorage
   }
@@ -805,7 +770,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       }
     }
 
-    queryStorage.schedulerSubject?.complete()
     queryStorage.subject.complete()
   }
 
@@ -942,65 +906,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     return currentValue
   }
 
-  const unwrappedQueryWeakMap = new WeakMap<RemeshQueryStorage<any, any>, RemeshQueryPayload<any, any>>()
-
-  const getUnwrappedQueryPayload = <T extends SerializableType, U>(
-    queryPayload: RemeshQueryPayload<T, Promise<U>>,
-  ): RemeshQueryPayload<void, PromiseData<U>> => {
-    const queryStorage = getQueryStorage(queryPayload)
-
-    if (unwrappedQueryWeakMap.has(queryStorage)) {
-      return unwrappedQueryWeakMap.get(queryStorage)!
-    }
-
-    const domainStorage = getDomainStorage(queryPayload.Query.owner)
-    const domainContext = domainStorage.domainContext
-
-    const promise = remeshInjectedContext.get(queryPayload)
-    const promiseData = getPromiseData(promise)
-
-    const UnwrappedState = domainContext.state({
-      name: `${queryPayload.Query.queryName}.UnwrappedState`,
-      inspectable: false,
-      default: promiseData,
-    })
-
-    const UnwrappedQuery = domainContext.query({
-      name: `${queryPayload.Query.queryName}.UnwrappedQuery`,
-      inspectable: false,
-      impl: ({ get }) => {
-        const unwrappedState = get(UnwrappedState())
-        return unwrappedState
-      },
-    })
-
-    const updateUnwrappedState = domainContext.command({
-      name: `${queryPayload.Query.queryName}.updateUnwrappedState`,
-      inspectable: false,
-      impl: (_, newState: PromiseData<U>) => {
-        return UnwrappedState().new(newState)
-      },
-    })
-
-    domainContext.command$({
-      name: `${queryPayload.Query.queryName}.UnwrappedCommand$`,
-      inspectable: false,
-      impl: ({ fromQuery, get }) => {
-        return fromQuery(queryPayload).pipe(
-          startWith(get(queryPayload)),
-          switchMap(promiseToObservable),
-          map(updateUnwrappedState),
-        )
-      },
-    })
-
-    const unwrappedQueryPayload = UnwrappedQuery()
-
-    unwrappedQueryWeakMap.set(queryStorage, unwrappedQueryPayload)
-
-    return unwrappedQueryPayload
-  }
-
   const remeshInjectedContext: RemeshInjectedContext = {
     get: (input) => {
       if (input.type === 'RemeshStateItem') {
@@ -1012,17 +917,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       }
 
       throw new Error(`Unexpected input in ctx.get(..): ${input}`)
-    },
-    /**
-     * unwrap() should not use arrow functions
-     * because arrow functions do not have access to `this` keyword
-     * and we need to use the difference get() methods in query-context
-     */
-    unwrap(input) {
-      const unwrappedQueryPayload = getUnwrappedQueryPayload(input)
-      const result = this.get(unwrappedQueryPayload)
-
-      return result
     },
     peek: (input) => {
       if (input.type === 'RemeshStateItem') {
@@ -1050,25 +944,47 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     },
   }
 
-  const updateQueryStorage = <T extends SerializableType, U>(queryStorage: RemeshQueryStorage<T, U>) => {
-    if (queryStorage.schedulerSubject) {
-      if (queryStorage.currentValue !== RemeshValuePlaceholder) {
-        queryStorage.schedulerSubject.next(queryStorage.currentValue)
-      } else {
-        throw new Error(`Query ${queryStorage.key} is not ready yet.`)
+  const updateWipQueryStorage = <T extends SerializableType, U>(queryStorage: RemeshQueryStorage<T, U>) => {
+    if (queryStorage.wipUpstreamSet.size !== 0) {
+      let shouldUpdate = false
+
+      for (const upstream of queryStorage.wipUpstreamSet) {
+        if (upstream.type === 'RemeshStateStorage') {
+          shouldUpdate = true
+        } else if (upstream.type === 'RemeshQueryStorage') {
+          if (upstream.status === 'wip') {
+            updateWipQueryStorage(upstream)
+          }
+          if (upstream.status === 'updated') {
+            shouldUpdate = true
+          }
+        }
       }
+
+      queryStorage.wipUpstreamSet.clear()
+
+      if (!shouldUpdate) {
+        queryStorage.status = 'default'
+        return
+      }
+    }
+
+    const isUpdated = updateQueryStorage(queryStorage)
+
+    if (isUpdated) {
+      queryStorage.status = 'updated'
     } else {
-      updateQueryStorageImmediately(queryStorage)
+      queryStorage.status = 'default'
     }
   }
 
-  const updateQueryStorageImmediately = <T extends SerializableType, U>(queryStorage: RemeshQueryStorage<T, U>) => {
+  const updateQueryStorage = <T extends SerializableType, U>(queryStorage: RemeshQueryStorage<T, U>) => {
     const { Query } = queryStorage
 
     for (const upstream of queryStorage.upstreamSet) {
       upstream.downstreamSet.delete(queryStorage)
       if (upstream.downstreamSet.size === 0) {
-        pendingStorageSet.add(upstream)
+        pendingClearSet.add(upstream)
       }
     }
 
@@ -1102,9 +1018,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
         return remeshInjectedContext.get(input)
       },
-      get unwrap() {
-        return remeshInjectedContext.unwrap.bind(queryContext)
-      },
       peek: remeshInjectedContext.peek,
       hasNoValue: remeshInjectedContext.hasNoValue,
     }
@@ -1117,37 +1030,26 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       const isEqual = Query.compare(queryStorage.currentValue, newValue)
 
       if (isEqual) {
-        return
+        return false
       }
     }
 
     queryStorage.currentValue = newValue
-
-    if (newValue instanceof Promise) {
-      getPromiseData(newValue)
-    }
-
     dirtySet.add(queryStorage)
 
     inspectorManager.inspectQueryStorage(InspectorType.QueryUpdated, queryStorage)
 
-    /**
-     * updateQueryStorage may update upstream.downstreamSet
-     * so it should be converted to an array for avoiding infinite loop
-     */
-    for (const downstream of [...queryStorage.downstreamSet]) {
-      updateQueryStorage(downstream)
-    }
+    return true
   }
 
   const clearPendingStorageSetIfNeeded = () => {
-    if (pendingStorageSet.size === 0) {
+    if (pendingClearSet.size === 0) {
       return
     }
 
-    const storageList = [...pendingStorageSet]
+    const storageList = [...pendingClearSet]
 
-    pendingStorageSet.clear()
+    pendingClearSet.clear()
 
     for (const storage of storageList) {
       if (storage.type === 'RemeshDomainStorage') {
@@ -1185,7 +1087,42 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     clearDirtySetIfNeeded()
   }
 
+  const mark = <T extends SerializableType, U>(queryStorage: RemeshQueryStorage<T, U>) => {
+    queryStorage.status = 'wip'
+
+    if (queryStorage.downstreamSet.size > 0) {
+      for (const downstream of queryStorage.downstreamSet) {
+        if (!downstream.wipUpstreamSet.has(queryStorage)) {
+          downstream.wipUpstreamSet.add(queryStorage)
+          mark(downstream)
+        }
+      }
+    } else {
+      pendingLeafSet.add(queryStorage)
+    }
+  }
+
+  const clearPendingLeafSetIfNeeded = () => {
+    if (pendingLeafSet.size === 0) {
+      return
+    }
+
+    const queryStorageList = [...pendingLeafSet]
+
+    pendingLeafSet.clear()
+
+    for (const queryStorage of queryStorageList) {
+      updateWipQueryStorage(queryStorage)
+    }
+
+    /**
+     * recursively consuming dirty set unit it become empty.
+     */
+    clearPendingLeafSetIfNeeded()
+  }
+
   const commit = () => {
+    clearPendingLeafSetIfNeeded()
     clearDirtySetIfNeeded()
   }
 
@@ -1204,12 +1141,9 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
     inspectorManager.inspectStateStorage(InspectorType.StateUpdated, stateStorage)
 
-    /**
-     * updateQueryStorage may update upstream.downstreamSet
-     * so it should be converted to an array for avoiding infinite loop
-     */
-    for (const downstream of [...stateStorage.downstreamSet]) {
-      updateQueryStorage(downstream)
+    for (const downstream of stateStorage.downstreamSet) {
+      downstream.wipUpstreamSet.add(stateStorage)
+      mark(downstream)
     }
   }
 
@@ -1222,9 +1156,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     if (Event.impl) {
       const eventContext = {
         get: remeshInjectedContext.get,
-        get unwrap() {
-          return remeshInjectedContext.unwrap.bind(eventContext)
-        },
         peek: remeshInjectedContext.peek,
         hasNoValue: remeshInjectedContext.hasNoValue,
       }
@@ -1241,9 +1172,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     const { Command, arg } = commandPayload
     const commandContext: RemeshCommandContext = {
       get: remeshInjectedContext.get,
-      get unwrap() {
-        return remeshInjectedContext.unwrap.bind(commandContext)
-      },
       peek: remeshInjectedContext.peek,
       hasNoValue: remeshInjectedContext.hasNoValue,
     }
@@ -1269,9 +1197,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
     const command$Context: RemeshCommand$Context = {
       get: remeshInjectedContext.get,
-      get unwrap() {
-        return remeshInjectedContext.unwrap.bind(command$Context)
-      },
       peek: remeshInjectedContext.peek,
       hasNoValue: remeshInjectedContext.hasNoValue,
       fromEvent: remeshInjectedContext.fromEvent,
@@ -1331,7 +1256,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     handleSubscription(domainStorage.domainSubscriptionSet, domainSubscription)
 
     domainSubscription.add(() => {
-      pendingStorageSet.add(domainStorage)
+      pendingClearSet.add(domainStorage)
       clearPendingStorageSetIfNeeded()
     })
   }
@@ -1447,16 +1372,10 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     }
   }
 
-  const unwrap = <T extends SerializableType, U>(input: RemeshQueryPayload<T, Promise<U>>): PromiseData<U> => {
-    return remeshInjectedContext.unwrap(input)
-  }
-
   return {
     name: config.name,
     getDomain,
     query: getCurrentQueryValue,
-    unwrap,
-    getUnwrappedQueryPayload,
     emitEvent,
     sendCommand,
     destroy,

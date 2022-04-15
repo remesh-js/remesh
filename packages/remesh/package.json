@@ -7,8 +7,7 @@
   "files": [
     "dist",
     "src",
-    "modules",
-    "schedulers"
+    "modules"
   ],
   "scripts": {},
   "peerDependencies": {

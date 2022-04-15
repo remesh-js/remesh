@@ -31,7 +31,7 @@ const PaginationDomain = Remesh.domain({
       },
     })
 
-    const NextPaginationQuery = domain.query({
+    const nextPaginationQuery = domain.query({
       name: 'NextPaginationQuery',
       impl: ({ get }) => {
         const pagination = get(PaginationState())
@@ -62,7 +62,7 @@ const PaginationDomain = Remesh.domain({
         if (!AsyncData.isSuccess(result)) {
           return null
         }
-        const nextPagination = get(NextPaginationQuery())
+        const nextPagination = get(nextPaginationQuery())
         const currentUserList = get(UserListState())
         return [PaginationState().new(nextPagination), UserListState().new(currentUserList.concat(result.value))]
       },
@@ -73,7 +73,7 @@ const PaginationDomain = Remesh.domain({
     const loadMore = domain.command({
       name: 'loadMore',
       impl: ({ get }) => {
-        const nextPagination = get(NextPaginationQuery())
+        const nextPagination = get(nextPaginationQuery())
         return userFetcher.command.load(nextPagination)
       },
     })
@@ -90,6 +90,7 @@ const PaginationDomain = Remesh.domain({
         userList: UserListState.query,
         isEmptyUserList,
         isLoading: userFetcher.query.isLoading,
+        asyncState: userFetcher.query.asyncState,
       },
       command: {
         loadMore,
@@ -119,30 +120,47 @@ export default () => {
 const UserList = () => {
   const paginationDomain = useRemeshDomain(PaginationDomain())
 
-  const userList = useRemeshQuery(paginationDomain.query.userList())
   const isLoading = useRemeshQuery(paginationDomain.query.isLoading())
+
+  const handleRest = () => {
+    paginationDomain.command.reset()
+  }
+
+  const handleLoadMore = () => {
+    paginationDomain.command.loadMore()
+  }
 
   return (
     <>
       <div>
-        <button onClick={() => paginationDomain.command.reset()}>reset</button>
+        <button onClick={handleRest}>reset</button>
       </div>
+      <UserListContent />
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-around' }}>
-        {userList.map((user) => {
-          return (
-            <div style={{ width: 100, margin: 10 }} key={user.id}>
-              <img style={{ width: 100, height: 100 }} src={user.avatar_url} loading="lazy" />
-              <p>
-                <a href={user.html_url}>{user.login}</a>
-              </p>
-            </div>
-          )
-        })}
-      </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-around' }}>
-        {!isLoading && <button onClick={() => paginationDomain.command.loadMore()}>load more</button>}
+        {!isLoading && <button onClick={handleLoadMore}>load more</button>}
         {isLoading && 'loading...'}
       </div>
     </>
+  )
+}
+
+const UserListContent = () => {
+  const paginationDomain = useRemeshDomain(PaginationDomain())
+
+  const userList = useRemeshQuery(paginationDomain.query.userList())
+
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-around' }}>
+      {userList.map((user) => {
+        return (
+          <div style={{ width: 100, margin: 10 }} key={user.id}>
+            <img style={{ width: 100, height: 100 }} src={user.avatar_url} loading="lazy" />
+            <p>
+              <a href={user.html_url}>{user.login}</a>
+            </p>
+          </div>
+        )
+      })}
+    </div>
   )
 }

@@ -403,8 +403,6 @@ export const CircleDrawerApp = () => {
     }
   }
 
-  console.log('tooltipsState', tooltipsState)
-
   return (
     <div
       style={{

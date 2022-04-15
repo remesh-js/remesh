@@ -1,5 +1,5 @@
-import { of, concat } from 'rxjs'
-import { map, switchMap } from 'rxjs/operators'
+import { merge } from 'rxjs'
+import { switchMap } from 'rxjs/operators'
 
 import { RemeshDomainContext, RemeshCommandContext, RemeshCommandOutput, RemeshQueryContext } from '../remesh'
 
@@ -150,39 +150,44 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
     name: `${options.name}.FailedEvent`,
   })
 
+  const handleAsyncData = (ctx: RemeshCommandContext, data: AsyncData<U>) => {
+    if (data.type === 'loading') {
+      return [AsyncState().new(data), LoadingEvent(), options.command?.(ctx, data)]
+    }
+
+    if (data.type === 'success') {
+      return [AsyncState().new(data), SuccessEvent(data.value), options.command?.(ctx, data)]
+    }
+
+    if (data.type === 'failed') {
+      return [AsyncState().new(data), FailedEvent(data.error), options.command?.(ctx, data)]
+    }
+
+    throw new Error(`Unknown async data: ${data}`)
+  }
+
   const load = domain.command$<T>({
     name: `${options.name}.load`,
-    impl: ({ get, unwrap, peek, hasNoValue }, arg$) => {
-      const ctx = { get, unwrap, peek, hasNoValue }
+    impl: ({ get, peek, hasNoValue }, arg$) => {
+      const ctx = { get, peek, hasNoValue }
       return arg$.pipe(
         switchMap((arg) => {
           const promise = options.query(ctx, arg)
 
           const successOrFailed = promise.then(
             (value) => {
-              return AsyncData.success(value)
+              const successAsyncData = AsyncData.success(value)
+              return handleAsyncData(ctx, successAsyncData)
             },
-            (error): AsyncData<U> => {
-              return AsyncData.failed(error instanceof Error ? error : new Error(`${error}`))
+            (error) => {
+              const errorAsyncData = AsyncData.failed(error instanceof Error ? error : new Error(`${error}`))
+              return handleAsyncData(ctx, errorAsyncData as AsyncData<U>)
             },
           )
 
-          return concat(of(AsyncData.loading(promise)), successOrFailed)
-        }),
-        map((data) => {
-          if (data.type === 'loading') {
-            return [AsyncState().new(data), options.command?.(ctx, data), LoadingEvent()]
-          }
+          const loading = handleAsyncData(ctx, AsyncData.loading(promise))
 
-          if (data.type === 'success') {
-            return [AsyncState().new(data), options.command?.(ctx, data), SuccessEvent(data.value)]
-          }
-
-          if (data.type === 'failed') {
-            return [AsyncState().new(data), options.command?.(ctx, data), FailedEvent(data.error)]
-          }
-
-          throw new Error(`Unknown async data: ${data}`)
+          return merge(loading, successOrFailed)
         }),
       )
     },
