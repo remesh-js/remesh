@@ -1,7 +1,5 @@
 import React, { useEffect, useRef, useContext, createContext, ReactNode, useCallback, useMemo } from 'react'
 
-import { flushSync } from 'react-dom'
-
 import { useSyncExternalStore } from 'use-sync-external-store/shim'
 
 import {
@@ -118,14 +116,8 @@ export const useRemeshSuspense = function <T extends SerializableType, U>(
 ) {
   const state = useRemeshQuery(queryPayload)
 
-  console.log('useRemeshSuspense', state)
-
   if (state.type === 'loading') {
-    console.log('throw promise')
-    throw state.promise.then((result) => {
-      console.log('suspense resolved', result)
-      return result
-    })
+    throw state.promise
   }
 
   if (state.type === 'failed') {
