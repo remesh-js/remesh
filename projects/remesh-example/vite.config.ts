@@ -1,5 +1,5 @@
 import { defineConfig } from 'vite'
-import reactRefresh from '@vitejs/plugin-react-refresh'
+import react from '@vitejs/plugin-react'
 import { vanillaExtractPlugin } from '@vanilla-extract/vite-plugin'
 import { resolve } from 'path'
 
@@ -16,7 +16,7 @@ const entries = fg
 // https://vitejs.dev/config/
 export default defineConfig({
   base: '/remesh/dist/',
-  plugins: [reactRefresh(), vanillaExtractPlugin()],
+  plugins: [react(), vanillaExtractPlugin()],
   resolve: {
     alias: {
       remesh: resolve(__dirname, '../../packages/remesh/src'),
