@@ -112,12 +112,12 @@ export default () => {
   return (
     <div>
       <h2>Pagination</h2>
-      {isEmptyUserList ? 'loading...' : <UserList />}
+      {isEmptyUserList ? 'loading...' : <UserListView />}
     </div>
   )
 }
 
-const UserList = () => {
+const UserListView = () => {
   const paginationDomain = useRemeshDomain(PaginationDomain())
 
   const isLoading = useRemeshQuery(paginationDomain.query.isLoading())
