@@ -24,7 +24,7 @@ export const useRemeshReactContext = () => {
   const context = useContext(RemeshReactContext)
 
   if (context === null) {
-    throw new Error(`You may forgot to add <RemeshRoot />`)
+    throw new Error(`You may forget to add <RemeshRoot />`)
   }
 
   return context
