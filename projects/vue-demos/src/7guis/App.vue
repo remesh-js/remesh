@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import Counter from './Counter.vue'
 import CircleDrawer from './CircleDrawer.vue'
+import TemperatureConverter from './TemperatureConverter.vue';
 </script>
 
 <template>
@@ -8,6 +9,8 @@ import CircleDrawer from './CircleDrawer.vue'
   <p>This is a live version of an implementation (source) of 7GUIs with Vue, TypeScript and Remesh.</p>
   <hr />
   <Counter />
+  <hr />
+  <TemperatureConverter />
   <hr />
   <CircleDrawer />
   <hr />
