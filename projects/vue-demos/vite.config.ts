@@ -15,7 +15,7 @@ const entries = fg
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [vue()],
-  base: '/remesh/dist/vue',
+  base: '/remesh/dist/vue/',
   resolve: {
     alias: {
       remesh: resolve(__dirname, '../../packages/remesh/src'),

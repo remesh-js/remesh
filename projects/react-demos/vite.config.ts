@@ -15,7 +15,7 @@ const entries = fg
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: '/remesh/dist/react',
+  base: '/remesh/dist/react/',
   plugins: [react(), vanillaExtractPlugin()],
   resolve: {
     alias: {
@@ -28,7 +28,7 @@ export default defineConfig({
   },
   build: {
     sourcemap: true,
-    outDir: resolve(__dirname, '../../dist'),
+    outDir: resolve(__dirname, '../../dist/react'),
     rollupOptions: {
       input: entries,
     },

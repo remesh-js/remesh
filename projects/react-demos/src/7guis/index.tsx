@@ -24,17 +24,17 @@ const Root = () => {
       <hr />
       <CounterApp />
       <hr />
-      {/* <TemperatureConverterApp />
+      <TemperatureConverterApp />
       <hr />
       <FlightBookerApp />
       <hr />
       <TimerApp />
       <hr />
       <CRUDApp />
-      <hr /> */}
+      <hr />
       <CircleDrawerApp />
       <hr />
-      {/* <CellsApp /> */}
+      <CellsApp />
     </div>
   )
 }
