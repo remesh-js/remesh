@@ -1,0 +1,26 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./lib",
+    "composite": true,
+    "target": "ESNext",
+    "jsx": "preserve"
+  },
+  "references": [
+    {
+      "path": "../../packages/remesh/tsconfig.json"
+    },
+    {
+      "path": "../../packages/remesh-vue/tsconfig.json"
+    },
+    {
+      "path": "../../packages/remesh-redux-devtools/tsconfig.json"
+    },
+    {
+      "path": "../../packages/remesh-logger/tsconfig.json"
+    },
+    { "path": "./tsconfig.node.json" }
+  ],
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"]
+}

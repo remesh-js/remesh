@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "composite": true,
+    "module": "CommonJS"
+  },
+  "references": [
+    {
+      "path": "../remesh/tsconfig.json"
+    }
+  ],
+  "include": ["src"]
+}

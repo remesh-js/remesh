@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "composite": true,
+    "target": "ESNext"
+  },
+  "references": [
+    {
+      "path": "../../packages/remesh/tsconfig.json"
+    }
+  ],
+  "include": ["src"]
+}

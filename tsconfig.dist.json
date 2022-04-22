@@ -12,6 +12,9 @@
       "path": "./packages/remesh-react/tsconfig.json"
     },
     {
+      "path": "./packages/remesh-vue/tsconfig.json"
+    },
+    {
       "path": "./packages/remesh-redux-devtools/tsconfig.json"
     },
     {
@@ -19,7 +22,10 @@
     },
     {
       "path": "./packages/remesh-debugger-helper/tsconfig.json"
+    },
+    {
+      "path": "./projects/domains/tsconfig.json"
     }
   ],
-  "include": ["./packages"]
+  "include": ["./packages", "./projects/domains"]
 }
