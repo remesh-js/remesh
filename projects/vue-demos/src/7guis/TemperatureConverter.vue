@@ -7,22 +7,22 @@ const celsius = useRemeshQuery(temperatureConverter.query.celsius())
 const fahrenheit = useRemeshQuery(temperatureConverter.query.fahrenheit())
 
 const handleCelsius = (event: Event) => {
-    temperatureConverter.command.updateCelsius((event.target as HTMLInputElement).value)
+  temperatureConverter.command.updateCelsius((event.target as HTMLInputElement).value)
   }
 
 const handleFahrenheit = (event: Event) => {
-temperatureConverter.command.updateFahrenheit((event.target as HTMLInputElement).value)
+  temperatureConverter.command.updateFahrenheit((event.target as HTMLInputElement).value)
 }
 
 </script>
 
 <template>
-<div :style="{
+  <div :style="{
         border: '1px solid #eaeaea',
         boxSizing: 'border-box',
         padding: '10px',
       }"
-    >
+   >
       <h2>Temperature Converter</h2>
       <div>
         <input type="text" :value="celsius" @input="handleCelsius" />
@@ -30,5 +30,5 @@ temperatureConverter.command.updateFahrenheit((event.target as HTMLInputElement)
         <input type="text" :value="fahrenheit" @input="handleFahrenheit" />
         <label for="">Fahrenheit</label>
       </div>
-    </div>
+  </div>
 </template>
