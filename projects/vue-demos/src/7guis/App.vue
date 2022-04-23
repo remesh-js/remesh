@@ -2,6 +2,7 @@
 import Counter from './Counter.vue'
 import CircleDrawer from './CircleDrawer.vue'
 import TemperatureConverter from './TemperatureConverter.vue';
+import Timer from './Timer.vue';
 </script>
 
 <template>
@@ -11,6 +12,8 @@ import TemperatureConverter from './TemperatureConverter.vue';
   <Counter />
   <hr />
   <TemperatureConverter />
+  <hr />
+  <Timer />
   <hr />
   <CircleDrawer />
   <hr />
