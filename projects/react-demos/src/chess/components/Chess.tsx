@@ -1,6 +1,6 @@
 import React, { useContext } from 'react'
+import { Chess, ChessColor, ChessValue } from 'remesh-domains-for-demos/dist/chess'
 import { GameConfigContext } from '../context/game'
-import { Chess, ChessColor, ChessValue } from '../models/game'
 
 const formatChessColor = (color: ChessColor) => {
   return { [ChessColor.Red]: 'red', [ChessColor.Black]: 'black' }[color]
@@ -56,6 +56,7 @@ export const ChessRender = (props: ChessProps) => {
     borderWidth: 2,
     width: chessSize,
     height: chessSize,
+    cursor: 'pointer',
     left: left + x * gridSize + (gridSize - chessSize) / 2 - 2,
     top: top + y * gridSize + (gridSize - chessSize) / 2 - 2,
     borderStyle: selected ? 'dashed' : 'solid',
