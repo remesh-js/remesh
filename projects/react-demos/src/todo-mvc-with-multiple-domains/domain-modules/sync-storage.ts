@@ -44,7 +44,7 @@ const createOptions = <R>(storageKey: string, callback: <T, U>(options: SyncStor
 const createSyncStorage = <T, U = T>(domain: RemeshDomainContext, options: SyncStorageOptions<T, U>) => {
   const storage = domain.getExtern(Storage)
 
-  domain.command$({
+  const readStorage = domain.command$({
     name: 'readStorage',
     impl: () => {
       return from(storage.get<U>(options.storageKey)).pipe(
@@ -54,7 +54,7 @@ const createSyncStorage = <T, U = T>(domain: RemeshDomainContext, options: SyncS
     },
   })
 
-  domain.command$({
+  const writeStorage = domain.command$({
     name: 'writeStorage',
     impl: ({ fromEvent }) => {
       return fromEvent(options.TriggerEvent).pipe(
@@ -63,6 +63,9 @@ const createSyncStorage = <T, U = T>(domain: RemeshDomainContext, options: SyncS
       )
     },
   })
+
+  domain.ignite(() => readStorage())
+  domain.ignite(() => writeStorage())
 }
 
 export const syncStorage = (domain: RemeshDomainContext, storageKey: string) => {

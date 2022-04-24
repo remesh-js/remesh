@@ -204,14 +204,14 @@ export const TodoDomain = Remesh.domain({
       },
     })
 
-    domain.command$({
+    const fromRepoToState = domain.command$({
       name: 'fromRepoToState',
       impl() {
         return from(repo.getTodoList()).pipe(map((todos) => setTodoList(todos)))
       },
     })
 
-    domain.command$({
+    const fromStateToRepo = domain.command$({
       name: 'fromStateToRepo',
       impl: ({ fromEvent }) => {
         const addTodo$ = fromEvent(TodoAddedEvent).pipe(tap((todo) => repo.addTodo(todo)))
@@ -227,6 +227,9 @@ export const TodoDomain = Remesh.domain({
         return merge(addTodo$, removeTodo$, updateTodo$, toggleTodoCompleted$).pipe(map(() => null))
       },
     })
+
+    domain.ignite(() => fromRepoToState())
+    domain.ignite(() => fromStateToRepo())
 
     return {
       query: {

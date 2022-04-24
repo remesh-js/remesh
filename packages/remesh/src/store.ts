@@ -1,6 +1,7 @@
 import { Observable, Observer, of, Subject, Subscription } from 'rxjs'
 
 import {
+  DomainIgniteFn,
   RemeshCommand,
   RemeshCommand$,
   RemeshCommand$Context,
@@ -98,7 +99,7 @@ export type RemeshDomainStorage<T extends RemeshDomainDefinition, Arg extends Se
   downstreamSet: Set<RemeshDomainStorage<any, any>>
   domainSubscriptionSet: Set<Subscription>
   upstreamSubscriptionSet: Set<Subscription>
-  command$Set: Set<RemeshCommand$<any>>
+  igniteFnSet: Set<DomainIgniteFn>
   stateMap: Map<string, RemeshStateStorage<any, any>>
   queryMap: Map<string, RemeshQueryStorage<any, any>>
   eventMap: Map<RemeshEvent<any, any>, RemeshEventStorage<any, any>>
@@ -597,7 +598,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     const key = getDomainStorageKey(domainPayload)
 
     const upstreamSet: RemeshDomainStorage<T, Arg>['upstreamSet'] = new Set()
-    const command$Set: RemeshDomainStorage<T, Arg>['command$Set'] = new Set()
+    const igniteFnSet: RemeshDomainStorage<T, Arg>['igniteFnSet'] = new Set()
 
     const domainContext: RemeshDomainContext = {
       state: (
@@ -642,35 +643,19 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       },
       command$: (options) => {
         const Command$ = RemeshCommand$(options)
-
         Command$.owner = domainPayload
-        command$Set.add(Command$)
-
-        if (currentDomainStorage.running) {
-          initCommand$IfNeeded(Command$)
-        }
-
         return Command$
       },
       ignite: (fn) => {
-        domainContext.command$({
-          name: 'ignite',
-          inspectable: false,
-          impl: (ctx) => {
-            return of(fn(ctx))
-          },
-        })
+        if (currentDomainStorage.running) {
+          ignite(fn)
+        } else {
+          igniteFnSet.add(fn)
+        }
       },
       commandAsync: (options) => {
         const Command$ = RemeshCommandAsync(options)
-
         Command$.owner = domainPayload
-        command$Set.add(Command$)
-
-        if (currentDomainStorage.running) {
-          initCommand$IfNeeded(Command$)
-        }
-
         return Command$
       },
       getDomain: (UpstreamDomain) => {
@@ -697,7 +682,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       domainContext,
       domainPayload,
       key,
-      command$Set,
+      igniteFnSet,
       upstreamSet,
       downstreamSet: new Set(),
       upstreamSubscriptionSet: new Set(),
@@ -1196,6 +1181,15 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     })
   }
 
+  const ignite = (fn: DomainIgniteFn) => {
+    const igniteContext = {
+      get: remeshInjectedContext.get,
+      peek: remeshInjectedContext.peek,
+      hasNoValue: remeshInjectedContext.hasNoValue,
+    }
+    handleCommandOutput(fn(igniteContext))
+  }
+
   const initCommand$IfNeeded = <T>(Command$: RemeshCommand$<T>) => {
     const command$Storage = getCommand$Storage(Command$)
 
@@ -1322,9 +1316,11 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     return domainOutput
   }
 
-  const initCommand$Set = (command$Set: RemeshDomainStorage<any, any>['command$Set']) => {
-    for (const Command$ of command$Set) {
-      initCommand$IfNeeded(Command$)
+  const igniteDomain = <T extends RemeshDomainDefinition, Arg extends SerializableType>(
+    domainStorage: RemeshDomainStorage<T, Arg>,
+  ) => {
+    for (const igniteFn of domainStorage.igniteFnSet) {
+      ignite(igniteFn)
     }
   }
 
@@ -1342,7 +1338,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       handleSubscription(domainStorage.upstreamSubscriptionSet, upstreamDomainSubscription)
     }
 
-    initCommand$Set(domainStorage.command$Set)
+    igniteDomain(domainStorage)
   }
 
   const subscribeDomain = <T extends RemeshDomainDefinition, Arg extends SerializableType>(

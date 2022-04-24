@@ -511,6 +511,14 @@ export const RemeshExtern = <T = void>(options: RemeshExternOptions<T>): RemeshE
   return Extern
 }
 
+export type DomainIgniteContext = {
+  get: RemeshInjectedContext['get']
+  peek: RemeshInjectedContext['peek']
+  hasNoValue: RemeshInjectedContext['hasNoValue']
+}
+
+export type DomainIgniteFn = (context: DomainIgniteContext) => RemeshCommandOutput
+
 export type RemeshDomainContext = {
   // definitions
   state<T>(options: RemeshDefaultStateOptions<T>): RemeshState<void, T>
@@ -523,7 +531,7 @@ export type RemeshDomainContext = {
   command: typeof RemeshCommand
   command$: typeof RemeshCommand$
   commandAsync: typeof RemeshCommandAsync
-  ignite: (fn: RemeshCommand<void>['impl']) => void
+  ignite: (fn: DomainIgniteFn) => void
   // methods
   getDomain: <T extends RemeshDomainDefinition, Arg extends SerializableType>(
     domainPayload: RemeshDomainPayload<T, Arg>,

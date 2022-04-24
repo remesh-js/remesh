@@ -10,7 +10,7 @@
   "scripts": {
     "build": "run-s clean:build build:source clean:tests",
     "build:dist": "tsc -b ./tsconfig.dist.json",
-    "build:source": "run-s build:dist build:example",
+    "build:source": "run-s build:dist",
     "build:example": "run-s build:example:entry build:example:react build:example:vue",
     "build:example:entry": "cd projects/entry && npm run build",
     "build:example:react": "cd projects/react-demos && npm run build",
