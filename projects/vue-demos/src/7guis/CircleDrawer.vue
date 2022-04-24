@@ -119,7 +119,7 @@ const openSlideElemRef = useClickOutsideRef(() => {
     :style="{
       border: '1px solid #eaeaea',
       boxSizing: 'border-box',
-      padding: 10,
+      padding: 10 + 'px',
     }"
   >
     <h2>Circle Drawer</h2>
@@ -127,7 +127,7 @@ const openSlideElemRef = useClickOutsideRef(() => {
       :style="{
         width: '400px',
         textAlign: 'center',
-        padding: 10,
+        padding: 10 + 'px',
       }"
     >
       <button

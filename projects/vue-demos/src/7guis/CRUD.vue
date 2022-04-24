@@ -12,7 +12,7 @@ const filter = useRemeshQuery(domain.query.filterPrefix())
 const created = useRemeshQuery(domain.query.created())
 const selected = useRemeshQuery(domain.query.selected())
 
-const containerRef = ref<HTMLDivElement>(null!)
+const containerRef = ref<HTMLDivElement | null>(null)
 
 const handleFilterChange = (e: Event) => {
   domain.command.updateFilterPrefix((e.target as HTMLInputElement).value)

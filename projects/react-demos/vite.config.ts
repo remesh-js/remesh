@@ -15,6 +15,9 @@ const entries = fg
 // https://vitejs.dev/config/
 export default defineConfig({
   base: '/remesh/dist/react/',
+  server: {
+    port: 3001,
+  },
   plugins: [react(), vanillaExtractPlugin()],
   resolve: {
     alias: {
@@ -23,6 +26,7 @@ export default defineConfig({
       'remesh-debugger-helper': resolve(__dirname, '../../packages/remesh-debugger-helper/src'),
       'remesh-redux-devtools': resolve(__dirname, '../../packages/remesh-redux-devtools/src'),
       'remesh-logger': resolve(__dirname, '../../packages/remesh-logger/src'),
+      'remesh-domains-for-demos/dist': resolve(__dirname, '../domains/src'),
     },
   },
   build: {

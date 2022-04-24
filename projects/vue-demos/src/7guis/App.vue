@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import Counter from './Counter.vue'
 import CircleDrawer from './CircleDrawer.vue'
-import TemperatureConverter from './TemperatureConverter.vue';
-import Timer from './Timer.vue';
-import FlightBooker from './FlightBooker.vue';
-import CRUD from './CRUD.vue';
-import Cells from './Cells.vue';
+import TemperatureConverter from './TemperatureConverter.vue'
+import Timer from './Timer.vue'
+import FlightBooker from './FlightBooker.vue'
+import CRUD from './CRUD.vue'
+import Cells from './Cells.vue'
 </script>
 
 <template>

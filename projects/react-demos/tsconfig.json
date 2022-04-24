@@ -29,7 +29,12 @@
     {
       "path": "../../packages/remesh-logger/tsconfig.json"
     },
-    { "path": "./tsconfig.node.json" }
+    {
+      "path": "./tsconfig.node.json"
+    },
+    {
+      "path": "../domains/tsconfig.json"
+    }
   ],
   "include": ["src"]
 }
