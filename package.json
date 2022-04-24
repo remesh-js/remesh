@@ -21,7 +21,7 @@
     "lint": "eslint --report-unused-disable-directives ./packages",
     "format": "run-p format:source format:other",
     "format:other": "prettier ./**/*.{md,yml,json,html} --write",
-    "format:source": "prettier ./**/*.{ts,tsx,js} --write",
+    "format:source": "prettier ./**/*.{ts,tsx,js,vue} --write",
     "init": "pnpm install && pnpm run build",
     "test": "pnpm run test --filter ./packages",
     "test:coverage": "pnpm run test:coverage --filter ./packages",

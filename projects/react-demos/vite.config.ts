@@ -12,7 +12,6 @@ const entries = fg
   })
   .map((entry) => resolve(__dirname, entry))
 
-
 // https://vitejs.dev/config/
 export default defineConfig({
   base: '/remesh/dist/react/',

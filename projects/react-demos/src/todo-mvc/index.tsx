@@ -15,9 +15,12 @@ const container = document.getElementById('root')
 if (container) {
   const root = ReactDOMClient.createRoot(container)
   const store = Remesh.store({
-    inspectors: [RemeshReduxDevtools(), RemeshLogger({
-      include: ['command', 'query', 'event', 'domain', 'command$', 'state'],
-    })],
+    inspectors: [
+      RemeshReduxDevtools(),
+      RemeshLogger({
+        include: ['command', 'query', 'event', 'domain', 'command$', 'state'],
+      }),
+    ],
   })
 
   root.render(

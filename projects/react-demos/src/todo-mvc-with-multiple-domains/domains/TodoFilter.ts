@@ -33,7 +33,7 @@ export const TodoFilterDomain = Remesh.domain({
     const todoFilter = todoFilterModule.query.switchState
 
     const TodoFilterChangedEvent = todoFilterModule.event.SwitchedEvent
-    
+
     const switchFilter = todoFilterModule.command.switchTo
 
     const setFilter = domain.command({
@@ -43,7 +43,6 @@ export const TodoFilterDomain = Remesh.domain({
         return switchFilter(filter)
       },
     })
-
 
     syncStorage(domain, TODO_FILTER_STORAGE_KEY)
       .listenTo(TodoFilterChangedEvent)
@@ -56,7 +55,7 @@ export const TodoFilterDomain = Remesh.domain({
       },
       command: {
         setFilter,
-        switchFilter
+        switchFilter,
       },
       event: {
         TodoFilterChangedEvent,

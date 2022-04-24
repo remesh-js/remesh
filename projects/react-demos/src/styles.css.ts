@@ -1,17 +1,17 @@
-import { createTheme, style } from '@vanilla-extract/css';
+import { createTheme, style } from '@vanilla-extract/css'
 
 export const [themeClass, vars] = createTheme({
   color: {
-    brand: 'blue'
+    brand: 'blue',
   },
   font: {
-    body: 'arial'
-  }
-});
+    body: 'arial',
+  },
+})
 
 export const exampleStyle = style({
   backgroundColor: vars.color.brand,
   fontFamily: vars.font.body,
   color: 'white',
-  padding: 10
-});
+  padding: 10,
+})
