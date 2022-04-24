@@ -5,7 +5,7 @@ import { ChessRender } from './components/Chess'
 import { MarkerRender } from './components/Marker'
 import { GameConfigContext } from './context/game'
 
-import { GameDomain } from './models/game'
+import { GameDomain } from 'remesh-domains-for-demos/dist/chess'
 
 export const ChessGame = () => {
   const { left, top, gridSize } = useContext(GameConfigContext)

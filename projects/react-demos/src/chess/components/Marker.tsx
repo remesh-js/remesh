@@ -1,6 +1,6 @@
 import React, { useContext } from 'react'
+import { Marker } from 'remesh-domains-for-demos/dist/chess'
 import { GameConfigContext } from '../context/game'
-import { Marker } from '../models/game'
 
 type MarkerProps = {
   marker: Marker

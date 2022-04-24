@@ -1,6 +1,6 @@
 import React, { useContext } from 'react'
+import { Chess, ChessColor, ChessValue } from 'remesh-domains-for-demos/dist/chess'
 import { GameConfigContext } from '../context/game'
-import { Chess, ChessColor, ChessValue } from '../models/game'
 
 const formatChessColor = (color: ChessColor) => {
   return { [ChessColor.Red]: 'red', [ChessColor.Black]: 'black' }[color]
