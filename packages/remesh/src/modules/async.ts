@@ -1,5 +1,5 @@
 import { merge } from 'rxjs'
-import { switchMap } from 'rxjs/operators'
+import { switchMap, concatMap, mergeMap, exhaustMap } from 'rxjs/operators'
 
 import { RemeshDomainContext, RemeshCommandContext, RemeshCommandOutput, RemeshQueryContext } from '../remesh'
 
@@ -91,6 +91,7 @@ export type AsyncModuleOptions<T, U> = {
   query: (context: RemeshQueryContext, arg: T) => Promise<U>
   command?: (context: RemeshCommandContext, arg: AsyncData<U>) => RemeshCommandOutput
   default?: AsyncData<U>
+  mode?: 'switch' | 'merge' | 'concat' | 'exhaust'
 }
 
 export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncModuleOptions<T, U>) => {
@@ -170,26 +171,43 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
     name: `${options.name}.load`,
     impl: ({ get, peek, hasNoValue }, arg$) => {
       const ctx = { get, peek, hasNoValue }
-      return arg$.pipe(
-        switchMap((arg) => {
-          const promise = options.query(ctx, arg)
 
-          const successOrFailed = promise.then(
-            (value) => {
-              const successAsyncData = AsyncData.success(value)
-              return handleAsyncData(ctx, successAsyncData)
-            },
-            (error) => {
-              const errorAsyncData = AsyncData.failed(error instanceof Error ? error : new Error(`${error}`))
-              return handleAsyncData(ctx, errorAsyncData as AsyncData<U>)
-            },
-          )
+      const handleArg = (arg: T) => {
+        const promise = options.query(ctx, arg)
 
-          const loading = handleAsyncData(ctx, AsyncData.loading(promise))
+        const successOrFailed = promise.then(
+          (value) => {
+            const successAsyncData = AsyncData.success(value)
+            return handleAsyncData(ctx, successAsyncData)
+          },
+          (error) => {
+            const errorAsyncData = AsyncData.failed(error instanceof Error ? error : new Error(`${error}`))
+            return handleAsyncData(ctx, errorAsyncData as AsyncData<U>)
+          },
+        )
 
-          return merge(loading, successOrFailed)
-        }),
-      )
+        const loading = handleAsyncData(ctx, AsyncData.loading(promise))
+
+        return merge(loading, successOrFailed)
+      }
+
+      if (!options.mode || options.mode === 'switch') {
+        return arg$.pipe(switchMap((arg) => handleArg(arg)))
+      }
+
+      if (options.mode === 'concat') {
+        return arg$.pipe(concatMap((arg) => handleArg(arg)))
+      }
+
+      if (options.mode === 'merge') {
+        return arg$.pipe(mergeMap((arg) => handleArg(arg)))
+      }
+
+      if (options.mode === 'exhaust') {
+        return arg$.pipe(exhaustMap((arg) => handleArg(arg)))
+      }
+
+      throw new Error(`RemeshAsyncModule: invalid mode: ${options.mode}`)
     },
   })
 
