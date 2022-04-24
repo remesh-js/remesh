@@ -56,6 +56,7 @@ export const ChessRender = (props: ChessProps) => {
     borderWidth: 2,
     width: chessSize,
     height: chessSize,
+    cursor: 'pointer',
     left: left + x * gridSize + (gridSize - chessSize) / 2 - 2,
     top: top + y * gridSize + (gridSize - chessSize) / 2 - 2,
     borderStyle: selected ? 'dashed' : 'solid',
