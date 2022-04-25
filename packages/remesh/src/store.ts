@@ -104,7 +104,6 @@ export type RemeshDomainStorage<T extends RemeshDomainDefinition, Arg extends Se
   queryMap: Map<string, RemeshQueryStorage<any, any>>
   eventMap: Map<RemeshEvent<any, any>, RemeshEventStorage<any, any>>
   command$Map: Map<RemeshCommand$<any>, RemeshCommand$Storage<any>>
-  refCount: number
   running: boolean
 }
 
@@ -859,10 +858,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
   const clearDomainStorageIfNeeded = <T extends RemeshDomainDefinition, Arg extends SerializableType>(
     domainStorage: RemeshDomainStorage<T, Arg>,
   ) => {
-    if (domainStorage.refCount !== 0) {
-      return
-    }
-
     if (domainStorage.downstreamSet.size !== 0) {
       return
     }
