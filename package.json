@@ -41,7 +41,7 @@
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-jest": "^26.1.5",
     "eslint-plugin-prefer-let": "^1.1.0",
-    "eslint-plugin-prettier": "^3.3.0",
+    "eslint-plugin-prettier": "^4.0.0",
     "eslint-plugin-react": "^7.22.0",
     "husky": "^7.0.4",
     "lint-staged": "^12.4.0",
