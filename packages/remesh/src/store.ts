@@ -817,6 +817,12 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
   const clearDomainStorage = <T extends RemeshDomainDefinition, Arg extends SerializableType>(
     domainStorage: RemeshDomainStorage<T, Arg>,
   ) => {
+    if (!domainStorage.running) {
+      return
+    }
+
+    domainStorage.running = false
+
     inspectorManager.inspectDomainStorage(InspectorType.DomainDestroyed, domainStorage)
 
     clearSubscriptionSet(domainStorage.domainSubscriptionSet)
@@ -844,8 +850,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     domainStorage.stateMap.clear()
     domainStorage.queryMap.clear()
     domainStorage.eventMap.clear()
-
-    domainStorage.running = false
 
     domainStorageMap.delete(domainStorage.key)
 
