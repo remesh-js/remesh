@@ -304,7 +304,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
     stateStorage.currentState = getStateValue(stateStorage.State, stateStorage.arg)
     domainStorage.stateMap.set(stateStorage.key, stateStorage)
-    inspectorManager.inspectStateStorage(InspectorType.StateRestored, stateStorage)
+    inspectorManager.inspectStateStorage(InspectorType.StateReused, stateStorage)
   }
 
   const getStateStorage = <T extends SerializableType, U>(
@@ -492,7 +492,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     }
 
     updateQueryStorage(queryStorage)
-    inspectorManager.inspectQueryStorage(InspectorType.QueryRestored, queryStorage)
+    inspectorManager.inspectQueryStorage(InspectorType.QueryReused, queryStorage)
   }
 
   const getQueryStorage = <T extends SerializableType, U>(
@@ -697,7 +697,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
         upstreamDomainStorage.downstreamSet.add(cachedStorage)
       }
 
-      inspectorManager.inspectDomainStorage(InspectorType.DomainRestored, cachedStorage)
+      inspectorManager.inspectDomainStorage(InspectorType.DomainReused, cachedStorage)
       return cachedStorage
     }
 
@@ -713,7 +713,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
     domainStorage.queryMap.delete(queryStorage.key)
 
-    inspectorManager.inspectQueryStorage(InspectorType.QueryDestroyed, queryStorage)
+    inspectorManager.inspectQueryStorage(InspectorType.QueryDiscarded, queryStorage)
 
     for (const upstreamStorage of queryStorage.upstreamSet) {
       upstreamStorage.downstreamSet.delete(queryStorage)
@@ -749,7 +749,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       return
     }
 
-    inspectorManager.inspectStateStorage(InspectorType.StateDestroyed, stateStorage)
+    inspectorManager.inspectStateStorage(InspectorType.StateDiscarded, stateStorage)
     domainStorage.stateMap.delete(stateStorage.key)
     stateStorage.downstreamSet.clear()
   }
@@ -796,7 +796,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
     domainStorage.running = false
 
-    inspectorManager.inspectDomainStorage(InspectorType.DomainDestroyed, domainStorage)
+    inspectorManager.inspectDomainStorage(InspectorType.DomainDiscarded, domainStorage)
 
     clearSubscriptionSet(domainStorage.domainSubscriptionSet)
     clearSubscriptionSet(domainStorage.upstreamSubscriptionSet)
@@ -1328,7 +1328,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     return domainSubscription
   }
 
-  const destroy = () => {
+  const discard = () => {
     inspectorManager.destroyInspectors()
 
     for (const domainStorage of domainStorageMap.values()) {
@@ -1353,7 +1353,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     query: getCurrentQueryValue,
     emitEvent,
     sendCommand,
-    destroy,
+    discard,
     subscribeQuery,
     subscribeEvent,
     subscribeDomain,
