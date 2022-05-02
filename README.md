@@ -22,7 +22,8 @@
 - Incremental updates
 - Reactive programming
 - Immutable data structures
-- Type-friendly
+- Type-friendly APIs
+- Framework-agnostic(React/Vue supported officially)
 
 ## Inspiration
 
