@@ -1,4 +1,4 @@
-import { Observable, Observer, of, Subject, Subscription } from 'rxjs'
+import { Observable, Observer, Subject, Subscription } from 'rxjs'
 
 import {
   DomainIgniteFn,
@@ -397,31 +397,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     }
   }
 
-  const prepareQuery = <T extends SerializableType, U>(
-    Query: RemeshQuery<T, U>,
-    queryContext: RemeshQueryContext,
-    arg: T,
-  ) => {
-    if (!Query.prepare) {
-      return
-    }
-
-    const result = Query.prepare(queryContext, arg)
-
-    if (!result) {
-      return
-    }
-
-    if (Array.isArray(result)) {
-      for (const statePayload of result) {
-        handleStatePayload(statePayload)
-      }
-      return
-    }
-
-    handleStatePayload(result)
-  }
-
   const createQueryStorage = <T extends SerializableType, U>(
     queryPayload: RemeshQueryPayload<T, U>,
   ): RemeshQueryStorage<T, U> => {
@@ -478,8 +453,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       peek: remeshInjectedContext.peek,
       hasNoValue: remeshInjectedContext.hasNoValue,
     }
-
-    prepareQuery(Query, queryContext, queryPayload.arg)
 
     const currentValue = Query.impl(queryContext, queryPayload.arg)
 
@@ -1006,8 +979,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       hasNoValue: remeshInjectedContext.hasNoValue,
     }
 
-    prepareQuery(Query, queryContext, queryStorage.arg)
-
     const newValue = Query.impl(queryContext, queryStorage.arg)
 
     if (queryStorage.currentValue !== RemeshValuePlaceholder) {
@@ -1213,7 +1184,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       },
       complete: () => {
         clearCommand$Storage(command$Storage)
-      }
+      },
     })
 
     command$Storage.subscription = subscription

@@ -255,13 +255,10 @@ export type RemeshQueryContext = {
   hasNoValue: RemeshInjectedContext['hasNoValue']
 }
 
-export type RemeshQueryPrepareOutput = RemeshStatePayload<any, any> | RemeshStatePayload<any, any>[] | null
-
 export type RemeshQuery<T extends SerializableType, U> = {
   type: 'RemeshQuery'
   queryId: number
   queryName: string
-  prepare?: (context: RemeshQueryContext, arg: T) => RemeshQueryPrepareOutput
   impl: (context: RemeshQueryContext, arg: T) => U
   (arg: T): RemeshQueryPayload<T, U>
   owner: RemeshDomainPayload<any, any>
@@ -279,7 +276,6 @@ export type RemeshQueryOptions<T extends SerializableType, U> = {
   name: string
   inspectable?: boolean
   impl: (context: RemeshQueryContext, arg?: T) => U
-  prepare?: RemeshQuery<T, U>['prepare']
   compare?: RemeshQuery<T, U>['compare']
 }
 
@@ -315,7 +311,6 @@ export const RemeshQuery = <T extends RemeshQueryOptions<any, any>>(
   Query.type = 'RemeshQuery'
   Query.queryId = queryId
   Query.queryName = options.name
-  Query.prepare = options.prepare
   Query.impl = options.impl
   Query.compare = options.compare ?? defaultCompare
   Query.owner = DefaultDomain()
