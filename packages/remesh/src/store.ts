@@ -1202,9 +1202,14 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
     const command$ = Command$.impl(command$Context, command$Storage.observable)
 
-    const subscription = command$.subscribe((commandOutput) => {
-      handleCommandOutput(commandOutput)
-      commit()
+    const subscription = command$.subscribe({
+      next: (commandOutput) => {
+        handleCommandOutput(commandOutput)
+        commit()
+      },
+      complete: () => {
+        clearCommand$Storage(command$Storage)
+      }
     })
 
     command$Storage.subscription = subscription
