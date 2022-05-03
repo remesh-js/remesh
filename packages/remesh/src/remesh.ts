@@ -255,13 +255,10 @@ export type RemeshQueryContext = {
   hasNoValue: RemeshInjectedContext['hasNoValue']
 }
 
-export type RemeshQueryPrepareOutput = RemeshStatePayload<any, any> | RemeshStatePayload<any, any>[] | null
-
 export type RemeshQuery<T extends SerializableType, U> = {
   type: 'RemeshQuery'
   queryId: number
   queryName: string
-  prepare?: (context: RemeshQueryContext, arg: T) => RemeshQueryPrepareOutput
   impl: (context: RemeshQueryContext, arg: T) => U
   (arg: T): RemeshQueryPayload<T, U>
   owner: RemeshDomainPayload<any, any>
@@ -279,7 +276,6 @@ export type RemeshQueryOptions<T extends SerializableType, U> = {
   name: string
   inspectable?: boolean
   impl: (context: RemeshQueryContext, arg?: T) => U
-  prepare?: RemeshQuery<T, U>['prepare']
   compare?: RemeshQuery<T, U>['compare']
 }
 
@@ -315,7 +311,6 @@ export const RemeshQuery = <T extends RemeshQueryOptions<any, any>>(
   Query.type = 'RemeshQuery'
   Query.queryId = queryId
   Query.queryName = options.name
-  Query.prepare = options.prepare
   Query.impl = options.impl
   Query.compare = options.compare ?? defaultCompare
   Query.owner = DefaultDomain()
@@ -440,41 +435,6 @@ export const RemeshCommand$ = <T = void>(options: RemeshCommand$Options<T>): Rem
   return Command$
 }
 
-export type RemeshCommandAsyncOptions<T> = {
-  name: string
-  inspectable?: boolean
-  mode?: 'switch' | 'merge' | 'exhaust' | 'concat'
-  impl: (domain: RemeshCommand$Context, arg?: T) => Promise<RemeshCommandOutput>
-}
-
-export const RemeshCommandAsync = <T extends RemeshCommandAsyncOptions<any>>(options: T) => {
-  const Command$ = RemeshCommand$<ExtractSecondArg<T['impl']>>({
-    name: options.name,
-    inspectable: options.inspectable,
-    impl: (context, arg$) => {
-      if (!options.mode || options.mode === 'switch') {
-        return arg$.pipe(switchMap((arg) => options.impl(context, arg)))
-      }
-
-      if (options.mode === 'merge') {
-        return arg$.pipe(mergeMap((arg) => options.impl(context, arg)))
-      }
-
-      if (options.mode === 'concat') {
-        return arg$.pipe(concatMap((arg) => options.impl(context, arg)))
-      }
-
-      if (options.mode === 'exhaust') {
-        return arg$.pipe(exhaustMap((arg) => options.impl(context, arg)))
-      }
-
-      throw new Error(`RemeshCommandAsync: invalid mode: ${options.mode}`)
-    },
-  })
-
-  return Command$
-}
-
 export type RemeshExternPayload<T> = {
   type: 'RemeshExternPayload'
   Extern: RemeshExtern<T>
@@ -511,6 +471,14 @@ export const RemeshExtern = <T = void>(options: RemeshExternOptions<T>): RemeshE
   return Extern
 }
 
+export type DomainIgniteContext = {
+  get: RemeshInjectedContext['get']
+  peek: RemeshInjectedContext['peek']
+  hasNoValue: RemeshInjectedContext['hasNoValue']
+}
+
+export type DomainIgniteFn = (context: DomainIgniteContext) => RemeshCommandOutput
+
 export type RemeshDomainContext = {
   // definitions
   state<T>(options: RemeshDefaultStateOptions<T>): RemeshState<void, T>
@@ -522,8 +490,7 @@ export type RemeshDomainContext = {
   query: typeof RemeshQuery
   command: typeof RemeshCommand
   command$: typeof RemeshCommand$
-  commandAsync: typeof RemeshCommandAsync
-  ignite: (fn: RemeshCommand<void>['impl']) => void
+  ignite: (fn: DomainIgniteFn) => void
   // methods
   getDomain: <T extends RemeshDomainDefinition, Arg extends SerializableType>(
     domainPayload: RemeshDomainPayload<T, Arg>,

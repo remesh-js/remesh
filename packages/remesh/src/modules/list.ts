@@ -44,17 +44,6 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
     name: `${options.name}.ItemState`,
   })
 
-  /**
-   * sync options.default to item list
-   */
-  domain.command$({
-    name: `${options.name}.addItemCommand$`,
-    inspectable: false,
-    impl: () => {
-      return of((options.default ?? []).map((item) => addItem(undefined2Void(item))))
-    },
-  })
-
   const itemList = domain.query({
     name: `${options.name}.itemList`,
     impl: ({ get }) => {
@@ -153,6 +142,13 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
 
       return [setList(newList), ItemUpdatedEvent({ previous: oldItem, current: newItem })]
     },
+  })
+
+  /**
+   * sync options.default to item list
+   */
+  domain.ignite(() => {
+    return setList(options.default ?? [])
   })
 
   return {

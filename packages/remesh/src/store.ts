@@ -1,11 +1,11 @@
-import { Observable, Observer, of, Subject, Subscription } from 'rxjs'
+import { Observable, Observer, Subject, Subscription } from 'rxjs'
 
 import {
+  DomainIgniteFn,
   RemeshCommand,
   RemeshCommand$,
   RemeshCommand$Context,
   RemeshCommand$Payload,
-  RemeshCommandAsync,
   RemeshCommandContext,
   RemeshCommandOutput,
   RemeshCommandPayload,
@@ -98,12 +98,11 @@ export type RemeshDomainStorage<T extends RemeshDomainDefinition, Arg extends Se
   downstreamSet: Set<RemeshDomainStorage<any, any>>
   domainSubscriptionSet: Set<Subscription>
   upstreamSubscriptionSet: Set<Subscription>
-  command$Set: Set<RemeshCommand$<any>>
+  igniteFnSet: Set<DomainIgniteFn>
   stateMap: Map<string, RemeshStateStorage<any, any>>
   queryMap: Map<string, RemeshQueryStorage<any, any>>
   eventMap: Map<RemeshEvent<any, any>, RemeshEventStorage<any, any>>
   command$Map: Map<RemeshCommand$<any>, RemeshCommand$Storage<any>>
-  refCount: number
   running: boolean
 }
 
@@ -304,7 +303,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
     stateStorage.currentState = getStateValue(stateStorage.State, stateStorage.arg)
     domainStorage.stateMap.set(stateStorage.key, stateStorage)
-    inspectorManager.inspectStateStorage(InspectorType.StateRestored, stateStorage)
+    inspectorManager.inspectStateStorage(InspectorType.StateReused, stateStorage)
   }
 
   const getStateStorage = <T extends SerializableType, U>(
@@ -397,31 +396,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     }
   }
 
-  const prepareQuery = <T extends SerializableType, U>(
-    Query: RemeshQuery<T, U>,
-    queryContext: RemeshQueryContext,
-    arg: T,
-  ) => {
-    if (!Query.prepare) {
-      return
-    }
-
-    const result = Query.prepare(queryContext, arg)
-
-    if (!result) {
-      return
-    }
-
-    if (Array.isArray(result)) {
-      for (const statePayload of result) {
-        handleStatePayload(statePayload)
-      }
-      return
-    }
-
-    handleStatePayload(result)
-  }
-
   const createQueryStorage = <T extends SerializableType, U>(
     queryPayload: RemeshQueryPayload<T, U>,
   ): RemeshQueryStorage<T, U> => {
@@ -479,8 +453,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       hasNoValue: remeshInjectedContext.hasNoValue,
     }
 
-    prepareQuery(Query, queryContext, queryPayload.arg)
-
     const currentValue = Query.impl(queryContext, queryPayload.arg)
 
     currentQueryStorage.currentValue = currentValue
@@ -519,7 +491,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     }
 
     updateQueryStorage(queryStorage)
-    inspectorManager.inspectQueryStorage(InspectorType.QueryRestored, queryStorage)
+    inspectorManager.inspectQueryStorage(InspectorType.QueryReused, queryStorage)
   }
 
   const getQueryStorage = <T extends SerializableType, U>(
@@ -597,7 +569,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     const key = getDomainStorageKey(domainPayload)
 
     const upstreamSet: RemeshDomainStorage<T, Arg>['upstreamSet'] = new Set()
-    const command$Set: RemeshDomainStorage<T, Arg>['command$Set'] = new Set()
+    const igniteFnSet: RemeshDomainStorage<T, Arg>['igniteFnSet'] = new Set()
 
     const domainContext: RemeshDomainContext = {
       state: (
@@ -642,36 +614,15 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       },
       command$: (options) => {
         const Command$ = RemeshCommand$(options)
-
         Command$.owner = domainPayload
-        command$Set.add(Command$)
-
-        if (currentDomainStorage.running) {
-          initCommand$IfNeeded(Command$)
-        }
-
         return Command$
       },
       ignite: (fn) => {
-        domainContext.command$({
-          name: 'ignite',
-          inspectable: false,
-          impl: (ctx) => {
-            return of(fn(ctx))
-          },
-        })
-      },
-      commandAsync: (options) => {
-        const Command$ = RemeshCommandAsync(options)
-
-        Command$.owner = domainPayload
-        command$Set.add(Command$)
-
         if (currentDomainStorage.running) {
-          initCommand$IfNeeded(Command$)
+          ignite(fn)
+        } else {
+          igniteFnSet.add(fn)
         }
-
-        return Command$
       },
       getDomain: (UpstreamDomain) => {
         const upstreamDomainStorage = getDomainStorage(UpstreamDomain)
@@ -697,7 +648,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       domainContext,
       domainPayload,
       key,
-      command$Set,
+      igniteFnSet,
       upstreamSet,
       downstreamSet: new Set(),
       upstreamSubscriptionSet: new Set(),
@@ -740,7 +691,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
         upstreamDomainStorage.downstreamSet.add(cachedStorage)
       }
 
-      inspectorManager.inspectDomainStorage(InspectorType.DomainRestored, cachedStorage)
+      inspectorManager.inspectDomainStorage(InspectorType.DomainReused, cachedStorage)
       return cachedStorage
     }
 
@@ -756,7 +707,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
     domainStorage.queryMap.delete(queryStorage.key)
 
-    inspectorManager.inspectQueryStorage(InspectorType.QueryDestroyed, queryStorage)
+    inspectorManager.inspectQueryStorage(InspectorType.QueryDiscarded, queryStorage)
 
     for (const upstreamStorage of queryStorage.upstreamSet) {
       upstreamStorage.downstreamSet.delete(queryStorage)
@@ -792,7 +743,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       return
     }
 
-    inspectorManager.inspectStateStorage(InspectorType.StateDestroyed, stateStorage)
+    inspectorManager.inspectStateStorage(InspectorType.StateDiscarded, stateStorage)
     domainStorage.stateMap.delete(stateStorage.key)
     stateStorage.downstreamSet.clear()
   }
@@ -833,7 +784,13 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
   const clearDomainStorage = <T extends RemeshDomainDefinition, Arg extends SerializableType>(
     domainStorage: RemeshDomainStorage<T, Arg>,
   ) => {
-    inspectorManager.inspectDomainStorage(InspectorType.DomainDestroyed, domainStorage)
+    if (!domainStorage.running) {
+      return
+    }
+
+    domainStorage.running = false
+
+    inspectorManager.inspectDomainStorage(InspectorType.DomainDiscarded, domainStorage)
 
     clearSubscriptionSet(domainStorage.domainSubscriptionSet)
     clearSubscriptionSet(domainStorage.upstreamSubscriptionSet)
@@ -861,8 +818,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     domainStorage.queryMap.clear()
     domainStorage.eventMap.clear()
 
-    domainStorage.running = false
-
     domainStorageMap.delete(domainStorage.key)
 
     for (const upstreamDomainStorage of domainStorage.upstreamSet) {
@@ -874,10 +829,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
   const clearDomainStorageIfNeeded = <T extends RemeshDomainDefinition, Arg extends SerializableType>(
     domainStorage: RemeshDomainStorage<T, Arg>,
   ) => {
-    if (domainStorage.refCount !== 0) {
-      return
-    }
-
     if (domainStorage.downstreamSet.size !== 0) {
       return
     }
@@ -1021,8 +972,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       peek: remeshInjectedContext.peek,
       hasNoValue: remeshInjectedContext.hasNoValue,
     }
-
-    prepareQuery(Query, queryContext, queryStorage.arg)
 
     const newValue = Query.impl(queryContext, queryStorage.arg)
 
@@ -1196,6 +1145,15 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     })
   }
 
+  const ignite = (fn: DomainIgniteFn) => {
+    const igniteContext = {
+      get: remeshInjectedContext.get,
+      peek: remeshInjectedContext.peek,
+      hasNoValue: remeshInjectedContext.hasNoValue,
+    }
+    handleCommandOutput(fn(igniteContext))
+  }
+
   const initCommand$IfNeeded = <T>(Command$: RemeshCommand$<T>) => {
     const command$Storage = getCommand$Storage(Command$)
 
@@ -1213,9 +1171,14 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
     const command$ = Command$.impl(command$Context, command$Storage.observable)
 
-    const subscription = command$.subscribe((commandOutput) => {
-      handleCommandOutput(commandOutput)
-      commit()
+    const subscription = command$.subscribe({
+      next: (commandOutput) => {
+        handleCommandOutput(commandOutput)
+        commit()
+      },
+      complete: () => {
+        clearCommand$Storage(command$Storage)
+      },
     })
 
     command$Storage.subscription = subscription
@@ -1322,9 +1285,11 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     return domainOutput
   }
 
-  const initCommand$Set = (command$Set: RemeshDomainStorage<any, any>['command$Set']) => {
-    for (const Command$ of command$Set) {
-      initCommand$IfNeeded(Command$)
+  const igniteDomain = <T extends RemeshDomainDefinition, Arg extends SerializableType>(
+    domainStorage: RemeshDomainStorage<T, Arg>,
+  ) => {
+    for (const igniteFn of domainStorage.igniteFnSet) {
+      ignite(igniteFn)
     }
   }
 
@@ -1342,7 +1307,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       handleSubscription(domainStorage.upstreamSubscriptionSet, upstreamDomainSubscription)
     }
 
-    initCommand$Set(domainStorage.command$Set)
+    igniteDomain(domainStorage)
   }
 
   const subscribeDomain = <T extends RemeshDomainDefinition, Arg extends SerializableType>(
@@ -1357,7 +1322,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     return domainSubscription
   }
 
-  const destroy = () => {
+  const discard = () => {
     inspectorManager.destroyInspectors()
 
     for (const domainStorage of domainStorageMap.values()) {
@@ -1382,7 +1347,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     query: getCurrentQueryValue,
     emitEvent,
     sendCommand,
-    destroy,
+    discard,
     subscribeQuery,
     subscribeEvent,
     subscribeDomain,

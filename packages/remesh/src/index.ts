@@ -5,7 +5,6 @@ import {
   RemeshQuery,
   RemeshCommand,
   RemeshCommand$,
-  RemeshCommandAsync,
 } from './remesh'
 
 import { RemeshStore } from './store'
@@ -22,5 +21,4 @@ export const Remesh = {
   query: RemeshQuery,
   command: RemeshCommand,
   command$: RemeshCommand$,
-  commandAsync: RemeshCommandAsync,
 }

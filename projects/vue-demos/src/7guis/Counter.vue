@@ -13,12 +13,12 @@ const handleIncre = () => {
 
 <template>
   <div
-    style="{
-        width: 400,
-        border: '1px solid #eaeaea',
-        boxSizing: 'border-box',
-        padding: 10,
-      }"
+    :style="{
+      width: '400px',
+      border: '1px solid #eaeaea',
+      boxSizing: 'border-box',
+      padding: '10px',
+    }"
   >
     <h2>Counter</h2>
     <input type="number" readonly :value="count" />

@@ -20,7 +20,6 @@ export const useClickOutsideRef = <T extends Element>(onOuterClick?: (event: Mou
     if (isOuterClick) {
       onOuterClick?.(event)
     }
-
   }
 
   onMounted(() => {
@@ -30,7 +29,6 @@ export const useClickOutsideRef = <T extends Element>(onOuterClick?: (event: Mou
   onBeforeUnmount(() => {
     document.removeEventListener('click', handleClick)
   })
-  
 
   return elemRef
 }

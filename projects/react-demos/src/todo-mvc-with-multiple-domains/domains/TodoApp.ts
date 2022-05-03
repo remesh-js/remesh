@@ -34,7 +34,7 @@ export const TodoAppDomain = Remesh.domain({
       },
     })
 
-    domain.command$({
+    const clearTodoInputWhenSubmit = domain.command$({
       name: 'clearTodoInputWhenSubmit',
       impl: ({ fromEvent, get }) => {
         return fromEvent(todoList.event.TodoItemAddedEvent).pipe(
@@ -46,6 +46,8 @@ export const TodoAppDomain = Remesh.domain({
         )
       },
     })
+
+    domain.ignite(() => clearTodoInputWhenSubmit())
 
     return {
       query: {

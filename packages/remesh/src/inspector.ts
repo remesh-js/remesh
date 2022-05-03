@@ -16,17 +16,17 @@ import type {
 } from './store'
 
 export type RemeshDomainStorageEventData<T, U extends SerializableType> = {
-  type: 'Domain::Created' | 'Domain::Destroyed' | 'Domain::Restored'
+  type: 'Domain::Created' | 'Domain::Discarded' | 'Domain::Reused'
   storage: RemeshDomainStorage<T, U>
 }
 
 export type RemeshStateStorageEventData<T extends SerializableType, U> = {
-  type: 'State::Created' | 'State::Updated' | 'State::Destroyed' | 'State::Restored'
+  type: 'State::Created' | 'State::Updated' | 'State::Discarded' | 'State::Reused'
   storage: RemeshStateStorage<T, U>
 }
 
 export type RemeshQueryStorageEventData<T extends SerializableType, U> = {
-  type: 'Query::Created' | 'Query::Updated' | 'Query::Destroyed' | 'Query::Restored'
+  type: 'Query::Created' | 'Query::Updated' | 'Query::Discarded' | 'Query::Reused'
   storage: RemeshQueryStorage<T, U>
 }
 
@@ -47,16 +47,16 @@ export type RemeshCommand$ReceivedEventData<T> = {
 
 export const InspectorType = {
   DomainCreated: 'Domain::Created',
-  DomainDestroyed: 'Domain::Destroyed',
-  DomainRestored: 'Domain::Restored',
+  DomainDiscarded: 'Domain::Discarded',
+  DomainReused: 'Domain::Reused',
   StateCreated: 'State::Created',
   StateUpdated: 'State::Updated',
-  StateDestroyed: 'State::Destroyed',
-  StateRestored: 'State::Restored',
+  StateDiscarded: 'State::Discarded',
+  StateReused: 'State::Reused',
   QueryCreated: 'Query::Created',
   QueryUpdated: 'Query::Updated',
-  QueryDestroyed: 'Query::Destroyed',
-  QueryRestored: 'Query::Restored',
+  QueryDiscarded: 'Query::Discarded',
+  QueryReused: 'Query::Reused',
   EventEmitted: 'Event::Emitted',
   CommandReceived: 'Command::Received',
   Command$Received: 'Command$::Received',
@@ -141,7 +141,7 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
   const destroyInspectors = () => {
     if (inspectors) {
       for (const inspector of inspectors) {
-        inspector.destroy()
+        inspector.discard()
       }
 
       inspectors = null

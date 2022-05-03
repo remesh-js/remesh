@@ -32,7 +32,7 @@ export const TodoList = () => {
   const handleClearCompleted = () => {
     domain.command.clearCompleted()
   }
-  
+
   useRemeshEvent(domain.event.AddTodoFailedEvent, (message) => {
     alert(message)
   })
@@ -53,7 +53,13 @@ export const TodoList = () => {
       </header>
 
       <section className="main">
-        <input id="toggle-all" type="checkbox" className="toggle-all" checked={allCompleted} onChange={handleToggleAll} />
+        <input
+          id="toggle-all"
+          type="checkbox"
+          className="toggle-all"
+          checked={allCompleted}
+          onChange={handleToggleAll}
+        />
         <label htmlFor="toggle-all" />
         <ul className="todo-list">
           {todoList.map((todo) => (
