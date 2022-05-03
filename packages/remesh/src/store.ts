@@ -6,7 +6,6 @@ import {
   RemeshCommand$,
   RemeshCommand$Context,
   RemeshCommand$Payload,
-  RemeshCommandAsync,
   RemeshCommandContext,
   RemeshCommandOutput,
   RemeshCommandPayload,
@@ -624,11 +623,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
         } else {
           igniteFnSet.add(fn)
         }
-      },
-      commandAsync: (options) => {
-        const Command$ = RemeshCommandAsync(options)
-        Command$.owner = domainPayload
-        return Command$
       },
       getDomain: (UpstreamDomain) => {
         const upstreamDomainStorage = getDomainStorage(UpstreamDomain)
