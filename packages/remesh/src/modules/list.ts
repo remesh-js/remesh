@@ -34,6 +34,19 @@ export type ItemDeletedEventData<T> = {
   item: T
 }
 
+export type ManyItemsAddedEventData<T> = {
+  items: T[]
+}
+
+export type ManyItemsUpdatedEventData<T> = {
+  previous: T[]
+  current: T[]
+}
+
+export type ManyItemsDeletedEventData<T> = {
+  items: T[]
+}
+
 export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOptions<T>) => {
   const KeyListState = domain.state<string[]>({
     name: `${options.name}.KeyListState`,
@@ -73,6 +86,18 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
 
   const ItemDeletedEvent = domain.event<ItemDeletedEventData<T>>({
     name: `${options.name}.ItemDeletedEvent`,
+  })
+
+  const ManyItemsAddedEvent = domain.event<ManyItemsAddedEventData<T>>({
+    name: `${options.name}.ManyItemsAddedEvent`,
+  })
+
+  const ManyItemsUpdatedEvent = domain.event<ManyItemsUpdatedEventData<T>>({
+    name: `${options.name}.ManyItemsUpdatedEvent`,
+  })
+
+  const ManyItemsDeletedEvent = domain.event<ManyItemsDeletedEventData<T>>({
+    name: `${options.name}.ManyItemsDeletedEvent`,
   })
 
   const setList = domain.command({
@@ -144,6 +169,54 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
     },
   })
 
+  const addManyItems = domain.command({
+    name: `${options.name}.addManyItems`,
+    impl: ({ get }, newItems: T[]) => {
+      const list = get(itemList())
+      const keyList = get(KeyListState())
+      const itemsToBeAdded = newItems.filter((item) => !keyList.includes(options.key(item)))
+
+      return [
+        setList(list.concat(itemsToBeAdded)),
+        ManyItemsAddedEvent({ items: itemsToBeAdded })
+      ]
+    }
+  })
+
+  const updateManyItems = domain.command({
+    name: `${options.name}.updateManyItems`,
+    impl: ({ get }, newItems: T[]) => {
+      const list = get(itemList())
+      const listMap = new Map(list.map((item) => [options.key(item), item]))
+
+      newItems.forEach(item => {
+        const key = options.key(item)
+        listMap.set(key, item)
+      })
+
+      const newList = Array.from(listMap.values())
+
+      return [
+        setList(newList),
+        ManyItemsUpdatedEvent({ previous: list, current: newList })
+      ]
+    }
+  })
+
+  const deleteManyItems = domain.command({
+    name: `${options.name}.deleteManyItems`,
+    impl: ({ get }, targetKeyList: string[]) => {
+      const list = get(itemList())
+      const newList = list.filter((item) => !targetKeyList.includes(options.key(item)))
+      const removedItems = targetKeyList.map((key) => get(ItemState(key)))
+
+      return [
+        setList(newList), 
+        ManyItemsDeletedEvent({ items: removedItems })
+      ]
+    }
+  })
+
   /**
    * sync options.default to item list
    */
@@ -157,6 +230,9 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
       addItem,
       deleteItem,
       updateItem,
+      addManyItems,
+      updateManyItems,
+      deleteManyItems,
     },
     query: {
       keyList: KeyListState.query,
@@ -170,6 +246,9 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
       ItemUpdatedEvent,
       FailedToUpdateItemEvent,
       ItemDeletedEvent,
+      ManyItemsAddedEvent,
+      ManyItemsUpdatedEvent,
+      ManyItemsDeletedEvent,
     },
   }
 }
