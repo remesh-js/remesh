@@ -361,12 +361,22 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     return currentEventStorage
   }
 
-  const getEventStorage = <T, U = T>(Event: RemeshEvent<T, U>): RemeshEventStorage<T, U> => {
+  const getMaybeEventStorage = <T, U = T>(Event: RemeshEvent<T, U>): RemeshEventStorage<T, U> | null => {
     const domainStorage = getDomainStorage(Event.owner)
     const eventStorage = domainStorage.eventMap.get(Event)
 
     if (eventStorage) {
       return eventStorage as RemeshEventStorage<T, U>
+    }
+
+    return null
+  }
+
+  const getEventStorage = <T, U = T>(Event: RemeshEvent<T, U>): RemeshEventStorage<T, U> => {
+    const eventStorage = getMaybeEventStorage(Event)
+
+    if (eventStorage) {
+      return eventStorage
     }
 
     return createEventStorage(Event)
@@ -1106,7 +1116,11 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
   const emitEvent = <T, U = T>(eventPayload: RemeshEventPayload<T, U>) => {
     const { Event, arg } = eventPayload
-    const eventStorage = getEventStorage(Event)
+    const eventStorage = getMaybeEventStorage(Event)
+
+    if (!eventStorage) {
+      return
+    }
 
     inspectorManager.inspectEventEmitted(InspectorType.EventEmitted, eventPayload)
 
