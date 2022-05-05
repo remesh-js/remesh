@@ -478,10 +478,19 @@ export type RemeshDomainIgniteContext = {
 
 export type RemeshDomainIgniteFn = (context: RemeshDomainIgniteContext) => RemeshCommandOutput
 
+export type RemeshDomainPreloadCommandOutput =
+  | RemeshStatePayload<any, any>
+  | RemeshCommandPayload<any>
+  | RemeshDomainPreloadCommandOutput[]
+  | null
+  | undefined
+  | void
+  | false
+
 export type RemeshDomainPreloadOptions<T extends SerializableType> = {
   key: string
   query: (context: RemeshQueryContext) => Promise<T>
-  command: (context: RemeshCommandContext, data: T) => RemeshCommandOutput
+  command: (context: RemeshCommandContext, data: T) => RemeshDomainPreloadCommandOutput
 }
 
 export type RemeshDomainContext = {
