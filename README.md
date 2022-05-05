@@ -21,9 +21,10 @@
 - Event-driven Architecture
 - Incremental updates
 - Reactive programming
-- Immutable data structures
+- Immutable state
 - Type-friendly APIs
 - Framework-agnostic(React/Vue supported officially)
+- SSR support
 
 ## Inspiration
 
