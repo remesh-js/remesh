@@ -1,5 +1,5 @@
 import localforage from 'localforage'
-import { Storage } from '../domain-externs/storage'
+import { Storage } from 'remesh-domains-for-demos/dist/todo-mvc-with-multiple-domains/domain-externs/storage'
 
 export const StorageImpl = Storage({
   get: (key) => {

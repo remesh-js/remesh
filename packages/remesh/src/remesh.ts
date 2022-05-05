@@ -1,5 +1,4 @@
-import { concatMap, exhaustMap, mergeMap, Observable, switchMap } from 'rxjs'
-
+import { Observable } from 'rxjs'
 import shallowEqual from 'shallowequal'
 import { isPlainObject } from 'is-plain-object'
 
@@ -471,13 +470,19 @@ export const RemeshExtern = <T = void>(options: RemeshExternOptions<T>): RemeshE
   return Extern
 }
 
-export type DomainIgniteContext = {
+export type RemeshDomainIgniteContext = {
   get: RemeshInjectedContext['get']
   peek: RemeshInjectedContext['peek']
   hasNoValue: RemeshInjectedContext['hasNoValue']
 }
 
-export type DomainIgniteFn = (context: DomainIgniteContext) => RemeshCommandOutput
+export type RemeshDomainIgniteFn = (context: RemeshDomainIgniteContext) => RemeshCommandOutput
+
+export type RemeshDomainPreloadOptions<T extends SerializableType> = {
+  key: string
+  query: (context: RemeshQueryContext) => Promise<T>
+  command: (context: RemeshCommandContext, data: T) => RemeshCommandOutput
+}
 
 export type RemeshDomainContext = {
   // definitions
@@ -490,7 +495,8 @@ export type RemeshDomainContext = {
   query: typeof RemeshQuery
   command: typeof RemeshCommand
   command$: typeof RemeshCommand$
-  ignite: (fn: DomainIgniteFn) => void
+  ignite: (fn: RemeshDomainIgniteFn) => void
+  preload: <T extends SerializableType>(options: RemeshDomainPreloadOptions<T>) => void
   // methods
   getDomain: <T extends RemeshDomainDefinition, Arg extends SerializableType>(
     domainPayload: RemeshDomainPayload<T, Arg>,

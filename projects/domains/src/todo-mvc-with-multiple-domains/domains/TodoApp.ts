@@ -38,9 +38,9 @@ export const TodoAppDomain = Remesh.domain({
       name: 'clearTodoInputWhenSubmit',
       impl: ({ fromEvent, get }) => {
         return fromEvent(todoList.event.TodoItemAddedEvent).pipe(
-          filter((event) => {
+          filter((todo) => {
             const todoInput = get(todoHeader.query.todoInput())
-            return todoInput === event.item.title
+            return todoInput === todo.title
           }),
           map(() => todoHeader.command.clearTodoInput()),
         )

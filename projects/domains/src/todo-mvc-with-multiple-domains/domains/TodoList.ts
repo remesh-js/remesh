@@ -30,19 +30,24 @@ export const TodoListDomain = Remesh.domain({
 
     const todoKeyListQuery = todoListModule.query.keyList
 
-    const TodoListChangedEvent = todoListModule.event.ListChangedEvent
+    const TodoListChangedEvent = domain.event<Todos>({
+      name: 'TodoListChangedEvent',
+    })
 
-    const TodoItemAddedEvent = todoListModule.event.ItemAddedEvent
+    const setTodoList = domain.command({
+      name: 'setTodoList',
+      impl: (_, todos: Todos) => {
+        return [todoListModule.command.setList(todos), TodoListChangedEvent(todos)]
+      },
+    })
 
-    const TodoItemUpdatedEvent = todoListModule.event.ItemUpdatedEvent
+    const FailedToAddTodoEvent = domain.event<{ reason: string }>({
+      name: 'FailedToAddTodoEvent',
+    })
 
-    const TodoItemDeletedEvent = todoListModule.event.ItemDeletedEvent
-
-    const FailedToAddTodoEvent = todoListModule.event.FailedToAddItemEvent
-
-    const FailedToUpdateTodoEvent = todoListModule.event.FailedToUpdateItemEvent
-
-    const setTodoList = todoListModule.command.setList
+    const TodoItemAddedEvent = domain.event<Todo>({
+      name: 'TodoItemAddedEvent',
+    })
 
     const addTodo = domain.command({
       name: 'TodoList.addTodo',
@@ -59,7 +64,7 @@ export const TodoListDomain = Remesh.domain({
           completed: false,
         }
 
-        return todoListModule.command.addItem(todo)
+        return [todoListModule.command.addItem(todo), TodoItemAddedEvent(todo)]
       },
     })
 
@@ -172,7 +177,6 @@ export const TodoListDomain = Remesh.domain({
 
     syncStorage(domain, TODO_LIST_STORAGE_KEY)
       .listenTo(TodoListChangedEvent)
-      .saveData((event) => event.current)
       .readData((todos) => setTodoList(todos))
 
     return {
@@ -196,12 +200,9 @@ export const TodoListDomain = Remesh.domain({
         clearAllCompletedTodos,
       },
       event: {
-        TodoItemAddedEvent,
-        TodoItemUpdatedEvent,
-        TodoItemDeletedEvent,
         FailedToAddTodoEvent,
-        FailedToUpdateTodoEvent,
         TodoListChangedEvent,
+        TodoItemAddedEvent
       },
     }
   },

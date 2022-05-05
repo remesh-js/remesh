@@ -2,8 +2,8 @@ import React from 'react'
 
 import { useRemeshDomain, useRemeshEvent, useRemeshQuery } from 'remesh-react'
 
-import { TodoInputDomain } from '../domains/TodoInput'
-import { TodoListDomain } from '../domains/TodoList'
+import { TodoInputDomain } from 'remesh-domains-for-demos/dist/todo-mvc-with-multiple-domains/domains/TodoInput'
+import { TodoListDomain } from 'remesh-domains-for-demos/dist/todo-mvc-with-multiple-domains/domains/TodoList'
 
 import { useKeyPressHandler } from '../hooks/useKeyPressHandler'
 

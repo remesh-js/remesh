@@ -2,8 +2,8 @@ import React from 'react'
 
 import { useRemeshDomain, useRemeshQuery } from 'remesh-react'
 
-import { TodoAppDomain } from '../domains/TodoApp'
-import { TodoListDomain } from '../domains/TodoList'
+import { TodoAppDomain } from 'remesh-domains-for-demos/dist/todo-mvc-with-multiple-domains/domains/TodoApp'
+import { TodoListDomain } from 'remesh-domains-for-demos/dist/todo-mvc-with-multiple-domains/domains/TodoList'
 
 import { TodoItem } from './TodoItem'
 

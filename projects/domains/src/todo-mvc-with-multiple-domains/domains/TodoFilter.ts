@@ -30,23 +30,22 @@ export const TodoFilterDomain = Remesh.domain({
       default: 'all',
     })
 
+    const TodoFilterChangedEvent = domain.event<TodoFilter>({
+      name: 'TodoFilterChangedEvent',
+    })
+
     const todoFilter = todoFilterModule.query.switchState
-
-    const TodoFilterChangedEvent = todoFilterModule.event.SwitchedEvent
-
-    const switchFilter = todoFilterModule.command.switchTo
 
     const setFilter = domain.command({
       name: 'TodoFilter.setFilter',
       impl: (_, input: string) => {
         const filter = getValidTodoFilter(input)
-        return switchFilter(filter)
+        return [todoFilterModule.command.switchTo(filter), TodoFilterChangedEvent(filter)]
       },
     })
 
     syncStorage(domain, TODO_FILTER_STORAGE_KEY)
       .listenTo(TodoFilterChangedEvent)
-      .saveData((event) => event.current)
       .readData((value) => setFilter(value))
 
     return {
@@ -55,7 +54,6 @@ export const TodoFilterDomain = Remesh.domain({
       },
       command: {
         setFilter,
-        switchFilter,
       },
       event: {
         TodoFilterChangedEvent,

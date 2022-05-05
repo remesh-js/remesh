@@ -3,8 +3,8 @@ import { NavLink, useParams } from 'react-router-dom'
 
 import { useRemeshDomain, useRemeshQuery } from 'remesh-react'
 
-import { TodoListDomain } from '../domains/TodoList'
-import { TodoFilterDomain } from '../domains/TodoFilter'
+import { TodoListDomain } from 'remesh-domains-for-demos/dist/todo-mvc-with-multiple-domains/domains/TodoList'
+import { TodoFilterDomain } from 'remesh-domains-for-demos/dist/todo-mvc-with-multiple-domains/domains/TodoFilter'
 
 export const TodoFooter = () => {
   const todoListDomain = useRemeshDomain(TodoListDomain())

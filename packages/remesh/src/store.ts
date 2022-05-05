@@ -1,7 +1,7 @@
 import { Observable, Observer, Subject, Subscription } from 'rxjs'
 
 import {
-  DomainIgniteFn,
+  RemeshDomainIgniteFn,
   RemeshCommand,
   RemeshCommand$,
   RemeshCommand$Context,
@@ -32,9 +32,12 @@ import {
   RemeshStatePayload,
   RemeshValuePlaceholder,
   SerializableType,
+  RemeshDomainPreloadOptions,
 } from './remesh'
 
 import { createInspectorManager, InspectorType } from './inspector'
+
+export type PreloadedState = Record<string, SerializableType>
 
 export type RemeshStore = ReturnType<typeof RemeshStore>
 
@@ -98,7 +101,10 @@ export type RemeshDomainStorage<T extends RemeshDomainDefinition, Arg extends Se
   downstreamSet: Set<RemeshDomainStorage<any, any>>
   domainSubscriptionSet: Set<Subscription>
   upstreamSubscriptionSet: Set<Subscription>
-  igniteFnSet: Set<DomainIgniteFn>
+  igniteFnSet: Set<RemeshDomainIgniteFn>
+  preloadOptionsList: RemeshDomainPreloadOptions<any>[]
+  preloadedPromise?: Promise<void>
+  preloadedState: PreloadedState
   stateMap: Map<string, RemeshStateStorage<any, any>>
   queryMap: Map<string, RemeshQueryStorage<any, any>>
   eventMap: Map<RemeshEvent<any, any>, RemeshEventStorage<any, any>>
@@ -119,6 +125,7 @@ export type RemeshStoreOptions = {
   name?: string
   externs?: RemeshExternPayload<any>[]
   inspectors?: (RemeshStoreInspector | false | undefined | null)[]
+  preloadedState?: PreloadedState
 }
 
 export type BindingCommand<T extends RemeshDomainDefinition['command']> = T extends {}
@@ -634,6 +641,11 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
           igniteFnSet.add(fn)
         }
       },
+      preload: (preloadOptions) => {
+        if (!currentDomainStorage.running) {
+          currentDomainStorage.preloadOptionsList.push(preloadOptions)
+        }
+      },
       getDomain: (UpstreamDomain) => {
         const upstreamDomainStorage = getDomainStorage(UpstreamDomain)
 
@@ -667,6 +679,8 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       queryMap: new Map(),
       eventMap: new Map(),
       command$Map: new Map(),
+      preloadOptionsList: [],
+      preloadedState: {},
       refCount: 0,
       running: false,
     }
@@ -678,7 +692,31 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
     inspectorManager.inspectDomainStorage(InspectorType.DomainCreated, currentDomainStorage)
 
+    injectPreloadState(currentDomainStorage)
+
     return currentDomainStorage
+  }
+
+  const injectPreloadState = <T extends RemeshDomainDefinition, Arg extends SerializableType>(
+    domainStorage: RemeshDomainStorage<T, Arg>,
+  ) => {
+    if (!options?.preloadedState) {
+      return
+    }
+
+    const commandContext = {
+      get: remeshInjectedContext.get,
+      peek: remeshInjectedContext.peek,
+      hasNoValue: remeshInjectedContext.hasNoValue,
+    }
+
+    for (const preloadOptions of domainStorage.preloadOptionsList) {
+      if (options.preloadedState.hasOwnProperty(preloadOptions.key)) {
+        const data = options.preloadedState[preloadOptions.key]
+        const commandOutput = preloadOptions.command(commandContext, data)
+        handleCommandOutput(commandOutput)
+      }
+    }
   }
 
   const getDomainStorage = <T extends RemeshDomainDefinition, Arg extends SerializableType>(
@@ -1159,7 +1197,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     })
   }
 
-  const ignite = (fn: DomainIgniteFn) => {
+  const ignite = (fn: RemeshDomainIgniteFn) => {
     const igniteContext = {
       get: remeshInjectedContext.get,
       peek: remeshInjectedContext.peek,
@@ -1355,6 +1393,82 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     }
   }
 
+  const preload = <T extends RemeshDomainDefinition, Arg extends SerializableType>(
+    domainPayload: RemeshDomainPayload<T, Arg>,
+  ) => {
+    const domainStorage = getDomainStorage(domainPayload)
+
+    if (domainStorage.running) {
+      throw new Error(`Domain ${domainPayload.Domain.domainName} was ignited before preloading`)
+    }
+
+    if (domainStorage.preloadedPromise) {
+      return domainStorage.preloadedPromise
+    }
+
+    const preloadedPromise = preloadDomain(domainPayload)
+
+    domainStorage.preloadedPromise = preloadedPromise
+
+    return preloadedPromise
+  }
+
+  const preloadDomain = async <T extends RemeshDomainDefinition, Arg extends SerializableType>(
+    domainPayload: RemeshDomainPayload<T, Arg>,
+  ) => {
+    const domainStorage = getDomainStorage(domainPayload)
+
+    await Promise.all(
+      Array.from(domainStorage.upstreamSet).map((upstreamDomainStorage) => {
+        return preload(upstreamDomainStorage.domainPayload)
+      }),
+    )
+
+    await Promise.all(
+      domainStorage.preloadOptionsList.map(async (preloadOptions) => {
+        const queryContext = {
+          get: remeshInjectedContext['get'],
+          peek: remeshInjectedContext['peek'],
+          hasNoValue: remeshInjectedContext['hasNoValue'],
+        }
+
+        const data = await preloadOptions.query(queryContext)
+
+        if (domainStorage.preloadedState.hasOwnProperty(preloadOptions.key)) {
+          throw new Error(`Duplicate key ${preloadOptions.key}`)
+        }
+
+        domainStorage.preloadedState[preloadOptions.key] = data
+
+        const commandContext = {
+          ...queryContext,
+        }
+
+        const commandOutput = preloadOptions.command(commandContext, data)
+
+        handleCommandOutput(commandOutput)
+      }),
+    )
+  }
+
+  const getPreloadedState = () => {
+    const preloadedState = {} as PreloadedState
+
+    for (const domainStorage of domainStorageMap.values()) {
+      Object.assign(preloadedState, domainStorage.preloadedState)
+    }
+
+    return preloadedState
+  }
+
+  const getDomainPreloadedState = <T extends RemeshDomainDefinition, Arg extends SerializableType>(
+    domainPayload: RemeshDomainPayload<T, Arg>,
+  ): PreloadedState => {
+    const domainStorage = getDomainStorage(domainPayload)
+
+    return domainStorage.preloadedState
+  }
+
   return {
     name: config.name,
     getDomain,
@@ -1362,6 +1476,9 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     emitEvent,
     sendCommand,
     discard,
+    preload,
+    getPreloadedState,
+    getDomainPreloadedState,
     subscribeQuery,
     subscribeEvent,
     subscribeDomain,

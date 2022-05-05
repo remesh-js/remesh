@@ -86,7 +86,7 @@ export const useRemeshQuery = function <T extends SerializableType, U>(queryPayl
     return snapshot
   }, [store, queryPayload])
 
-  const state = useSyncExternalStore(subscribe, getSnapshot)
+  const state = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 
   const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null)
 

@@ -18,6 +18,7 @@
     "clean": "run-p clean:build",
     "clean:build": "shx rm -rf ./packages/*/*.tsbuildinfo && shx rm -rf ./packages/*/{dist,esm} && shx rm -rf ./dist",
     "clean:tests": "shx rm -rf ./packages/*/{dist,esm}/**/__tests__",
+    "clean:deps": "shx rm -rf ./node_modules && shx rm -rf ./packages/*/node_modules && shx rm -rf ./projects/*/node_modules",
     "lint": "eslint --report-unused-disable-directives ./packages",
     "format": "run-p format:source format:other",
     "format:other": "prettier ./**/*.{md,yml,json,html} --write",

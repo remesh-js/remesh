@@ -1,0 +1,34 @@
+{
+  "private": true,
+  "scripts": {
+    "dev": "next",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "classnames": "2.3.1",
+    "date-fns": "2.21.3",
+    "gray-matter": "4.0.3",
+    "next": "latest",
+    "react": "^18.1.0",
+    "react-dom": "^18.1.0",
+    "remark": "14.0.2",
+    "remark-html": "15.0.1",
+    "typescript": "^4.2.4",
+    "remesh": "^1.0.0",
+    "remesh-logger": "^1.0.0",
+    "remesh-react": "^1.0.0",
+    "remesh-redux-devtools": "^1.0.0",
+    "rxjs": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^26.0.23",
+    "@types/node": "^15.6.0",
+    "@types/react": "^18.0.3",
+    "@types/react-dom": "^18.0.3",
+    "autoprefixer": "10.4.0",
+    "postcss": "8.4.5",
+    "tailwindcss": "3.0.5"
+  }
+}
