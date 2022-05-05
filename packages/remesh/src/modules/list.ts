@@ -6,39 +6,6 @@ export type ListModuleOptions<T> = {
   default?: T[]
 }
 
-export type ListChangedEventData<T> = {
-  previous: T[]
-  current: T[]
-}
-
-export type ItemAddedEventData<T> = {
-  item: T
-}
-
-export type FailedToAddItemEventData<T> = {
-  reason: string
-  items: T[]
-}
-
-export type FailedToInsertItemEventData<T> = {
-  reason: string
-  item: T
-}
-
-export type ItemUpdatedEventData<T> = {
-  previous: T
-  current: T
-}
-
-export type FailedToUpdateItemEventData<T> = {
-  item: T
-  reason: string
-}
-
-export type ItemDeletedEventData<T> = {
-  item: T
-}
-
 export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOptions<T>) => {
   const KeyListState = domain.state<string[]>({
     name: `${options.name}.KeyListState`,
@@ -56,45 +23,12 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
     },
   })
 
-  const ListChangedEvent = domain.event<ListChangedEventData<T>>({
-    name: `${options.name}.ListChangedEvent`,
-  })
-
-  const ItemAddedEvent = domain.event<ItemAddedEventData<T>>({
-    name: `${options.name}.ItemAddedEvent`,
-  })
-
-  const FailedToAddItemEvent = domain.event<FailedToAddItemEventData<T>>({
-    name: `${options.name}.FailedToAddItemEvent`,
-  })
-
-  const ItemUpdatedEvent = domain.event<ItemUpdatedEventData<T>>({
-    name: `${options.name}.ItemUpdatedEvent`,
-  })
-
-  const FailedToUpdateItemEvent = domain.event<FailedToUpdateItemEventData<T>>({
-    name: `${options.name}.FailedToUpdateItemEvent`,
-  })
-
-  const FailedToInsertItemEvent = domain.event<FailedToAddItemEventData<T>>({
-    name: `${options.name}.FailedToInsertItemEvent`,
-  })
-
-  const ItemDeletedEvent = domain.event<ItemDeletedEventData<T>>({
-    name: `${options.name}.ItemDeletedEvent`,
-  })
-
   const setList = domain.command({
     name: `${options.name}.setList`,
-    impl: ({ get }, newList: T[]) => {
+    impl: ({}, newList: T[]) => {
       const keyList = newList.map(options.key)
-      const oldList = get(itemList())
 
-      return [
-        newList.map((item, index) => ItemState(keyList[index]).new(item)),
-        KeyListState().new(keyList),
-        ListChangedEvent({ previous: oldList, current: newList }),
-      ]
+      return [newList.map((item, index) => ItemState(keyList[index]).new(item)), KeyListState().new(keyList)]
     },
   })
 
@@ -106,13 +40,10 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
       const newKey = options.key(newItem)
 
       if (keyList.includes(newKey)) {
-        return FailedToAddItemEvent({
-          reason: 'item already exists',
-          items: [newItem],
-        })
+        return null
       }
 
-      return [setList(list.concat(newItem)), ItemAddedEvent({ item: newItem })]
+      return setList(list.concat(newItem))
     },
   })
 
@@ -122,16 +53,23 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
       const keyList = get(KeyListState())
       const list = get(itemList())
 
-      const duplicatedItems = newItems.filter((item) => keyList.includes(options.key(item)))
+      const newList = [] as T[]
 
-      if (duplicatedItems.length) {
-        return FailedToAddItemEvent({
-          reason: 'These items already exists',
-          items: duplicatedItems,
-        })
+      for (const newItem of newItems) {
+        const newItemKey = options.key(newItem)
+
+        if (keyList.includes(newItemKey)) {
+          continue
+        }
+
+        newList.push(newItem)
       }
 
-      return [setList(list.concat(...newItems)), newItems.map((item) => ItemAddedEvent({ item }))]
+      if (newList.length === 0) {
+        return null
+      }
+
+      return setList(list.concat(newList))
     },
   })
 
@@ -140,9 +78,8 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
     impl: ({ get }, targetKey: string) => {
       const list = get(itemList())
       const newList = list.filter((item) => options.key(item) !== targetKey)
-      const deletedItem = get(ItemState(targetKey))
 
-      return [setList(newList), ItemDeletedEvent({ item: deletedItem })]
+      return setList(newList)
     },
   })
 
@@ -151,18 +88,15 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
     impl: ({ get }, targetKeys: string[]) => {
       const list = get(itemList())
       const newList = list.filter((item) => !targetKeys.includes(options.key(item)))
-      const deletedItems = targetKeys.map((key) => get(ItemState(key)))
 
-      return [setList(newList), deletedItems.map((item) => ItemDeletedEvent({ item }))]
+      return setList(newList)
     },
   })
 
   const deleteAll = domain.command({
     name: `${options.name}.deleteAll`,
-    impl: ({ get }) => {
-      const list = get(itemList())
-
-      return [setList([]), list.map((item) => ItemDeletedEvent({ item }))]
+    impl: ({}) => {
+      return setList([])
     },
   })
 
@@ -173,10 +107,7 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
       const keyList = get(KeyListState())
 
       if (!keyList.includes(key)) {
-        return FailedToUpdateItemEvent({
-          item: newItem,
-          reason: 'item does not exist',
-        })
+        return null
       }
 
       const list = get(itemList())
@@ -187,9 +118,7 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
         return item
       })
 
-      const oldItem = get(ItemState(key))
-
-      return [setList(newList), ItemUpdatedEvent({ previous: oldItem, current: newItem })]
+      return setList(newList)
     },
   })
 
@@ -201,40 +130,35 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
 
       const updateItemKeys = newItems.map((item) => options.key(item))
       const newList = [] as T[]
-      const eventList = [] as RemeshEventPayload<ItemUpdatedEventData<T>, ItemUpdatedEventData<T>>[]
 
       for (const [index, key] of keyList.entries()) {
         const updateItemIndex = updateItemKeys.indexOf(key)
-        const oldItem = list[index]
 
         if (updateItemIndex !== -1) {
           const newItem = newItems[updateItemIndex]
           newList.push(newItem)
-          eventList.push(ItemUpdatedEvent({ previous: oldItem, current: newItems[updateItemIndex] }))
         } else {
           newList.push(list[index])
         }
       }
 
-      return [setList(newList), eventList]
+      return setList(newList)
     },
   })
 
-  const insertItem = domain.command({
-    name: `${options.name}.insertItem`,
+  const insertAt = domain.command({
+    name: `${options.name}.insertAt`,
     impl: ({ get }, { index, item }: { index: number; item: T }) => {
       const keyList = get(KeyListState())
 
       if (keyList.includes(options.key(item))) {
-        return FailedToAddItemEvent({
-          reason: 'item already exists',
-          items: [item],
-        })
+        return null
       }
 
       const list = get(itemList())
+      const newList = list.slice(0, index).concat(item).concat(list.slice(index))
 
-      return [setList(list.slice(0, index).concat(item).concat(list.slice(index))), ItemAddedEvent({ item })]
+      return setList(newList)
     },
   })
 
@@ -246,10 +170,7 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
       const beforeKey = options.key(before)
 
       if (keyList.includes(itemKey)) {
-        return FailedToAddItemEvent({
-          reason: 'item already exists',
-          items: [item],
-        })
+        return null
       }
 
       const list = get(itemList())
@@ -265,7 +186,7 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
         newList.push(current)
       }
 
-      return [setList(newList), ItemAddedEvent({ item })]
+      return setList(newList)
     },
   })
 
@@ -277,10 +198,7 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
       const afterKey = options.key(after)
 
       if (keyList.includes(itemKey)) {
-        return FailedToAddItemEvent({
-          reason: 'item already exists',
-          items: [item],
-        })
+        return null
       }
 
       const list = get(itemList())
@@ -296,7 +214,14 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
         }
       }
 
-      return [setList(newList), ItemAddedEvent({ item })]
+      return setList(newList)
+    },
+  })
+
+  const reset = domain.command({
+    name: `${options.name}.reset`,
+    impl: () => {
+      return setList(options.default ?? [])
     },
   })
 
@@ -317,22 +242,15 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
       deleteAll,
       updateItem,
       updateItems,
-      insertItem,
+      insertAt,
       insertBefore,
       insertAfter,
+      reset,
     },
     query: {
       keyList: KeyListState.query,
       item: ItemState.query,
       itemList,
-    },
-    event: {
-      ListChangedEvent,
-      ItemAddedEvent,
-      FailedToAddItemEvent,
-      ItemUpdatedEvent,
-      FailedToUpdateItemEvent,
-      ItemDeletedEvent,
     },
   }
 }

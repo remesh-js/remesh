@@ -5,11 +5,6 @@ export type SwitchModuleOptions<T> = {
   default: T
 }
 
-export type SwitchedEventData<T> = {
-  previous: T
-  current: T
-}
-
 export const SwitchModule = <T>(domain: RemeshDomainContext, options: SwitchModuleOptions<T>) => {
   const SwitchState = domain.state({
     name: `${options.name}.SwitchState`,
@@ -21,18 +16,17 @@ export const SwitchModule = <T>(domain: RemeshDomainContext, options: SwitchModu
     impl: ({ get }) => get(SwitchState()),
   })
 
-  const SwitchedEvent = domain.event<SwitchedEventData<T>>({
-    name: `${options.name}.SwitchedEvent`,
-  })
-
   const switchTo = domain.command({
     name: `${options.name}.switchTo`,
     impl: ({ get }, current: T) => {
-      const previous = get(SwitchState())
+      return SwitchState().new(current)
+    },
+  })
 
-      const result = [SwitchState().new(current), SwitchedEvent({ previous, current })]
-
-      return result
+  const reset = domain.command({
+    name: `${options.name}.reset`,
+    impl: ({}, defaultValue: T) => {
+      return SwitchState().new(defaultValue)
     },
   })
 
@@ -42,9 +36,7 @@ export const SwitchModule = <T>(domain: RemeshDomainContext, options: SwitchModu
     },
     command: {
       switchTo,
-    },
-    event: {
-      SwitchedEvent,
+      reset,
     },
   }
 }

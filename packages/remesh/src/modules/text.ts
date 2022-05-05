@@ -5,15 +5,6 @@ export type TextModuleOptions = {
   default?: string
 }
 
-export type TextChangedEventData = {
-  previous: string
-  current: string
-}
-
-export type TextClearedEventData = {
-  previous: string
-}
-
 export const TextModule = (domain: RemeshDomainContext, options: TextModuleOptions) => {
   const TextState = domain.state({
     name: `${options.name}.TextState`,
@@ -25,33 +16,24 @@ export const TextModule = (domain: RemeshDomainContext, options: TextModuleOptio
     impl: ({ get }) => get(TextState()),
   })
 
-  const TextChangedEvent = domain.event<TextChangedEventData>({
-    name: `${options.name}.TextChangedEvent`,
-  })
-
   const setText = domain.command({
     name: `${options.name}.setText`,
-    impl: ({ get }, current: string) => {
-      const previous = get(TextState())
-
-      const result = [TextState().new(current), TextChangedEvent({ previous, current })]
-
-      if (current === '') {
-        return [...result, TextClearedEvent({ previous })]
-      }
-
-      return result
+    impl: ({}, current: string) => {
+      return TextState().new(current)
     },
-  })
-
-  const TextClearedEvent = domain.event<TextClearedEventData>({
-    name: `${options.name}.InputClearedEvent`,
   })
 
   const clearText = domain.command({
     name: `${options.name}.clearText`,
     impl: () => {
       return setText('')
+    },
+  })
+
+  const reset = domain.command({
+    name: `${options.name}.reset`,
+    impl: ({}) => {
+      return TextState().new(options.default ?? '')
     },
   })
 
@@ -62,10 +44,7 @@ export const TextModule = (domain: RemeshDomainContext, options: TextModuleOptio
     command: {
       setText,
       clearText,
-    },
-    event: {
-      TextChangedEvent,
-      TextClearedEvent,
+      reset,
     },
   }
 }
