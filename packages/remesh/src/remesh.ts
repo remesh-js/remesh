@@ -32,7 +32,6 @@ export type RemeshValuePlaceholder = typeof RemeshValuePlaceholder
 export type RemeshInjectedContext = {
   get: <T extends SerializableType, U>(input: GetterInput<T, U>) => U
   peek: <T extends SerializableType, U>(input: GetterInput<T, U>) => U | RemeshValuePlaceholder
-  hasNoValue: <T extends SerializableType, U>(input: GetterInput<T, U>) => boolean
   fromEvent: <T, U>(Event: RemeshEvent<T, U>) => Observable<U>
   fromQuery: <T extends SerializableType, U>(Query: RemeshQueryPayload<T, U>) => Observable<U>
 }
@@ -40,7 +39,6 @@ export type RemeshInjectedContext = {
 export type RemeshEventContext = {
   get: RemeshInjectedContext['get']
   peek: RemeshInjectedContext['peek']
-  hasNoValue: RemeshInjectedContext['hasNoValue']
 }
 
 export type RemeshEvent<T, U = T> = {
@@ -243,7 +241,6 @@ export const RemeshState = <T extends RemeshStateOptions<any, any>>(
 export type RemeshSchedulerContext = {
   get: RemeshInjectedContext['get']
   peek: RemeshInjectedContext['peek']
-  hasNoValue: RemeshInjectedContext['hasNoValue']
   fromEvent: RemeshInjectedContext['fromEvent']
   fromQuery: RemeshInjectedContext['fromQuery']
 }
@@ -251,7 +248,6 @@ export type RemeshSchedulerContext = {
 export type RemeshQueryContext = {
   get: RemeshInjectedContext['get']
   peek: RemeshInjectedContext['peek']
-  hasNoValue: RemeshInjectedContext['hasNoValue']
 }
 
 export type RemeshQuery<T extends SerializableType, U> = {
@@ -321,7 +317,6 @@ export const RemeshQuery = <T extends RemeshQueryOptions<any, any>>(
 export type RemeshCommandContext = {
   get: RemeshInjectedContext['get']
   peek: RemeshInjectedContext['peek']
-  hasNoValue: RemeshInjectedContext['hasNoValue']
 }
 
 export type RemeshCommandOutput =
@@ -385,7 +380,6 @@ export const RemeshCommand = <T extends RemeshCommandOptions<any>>(
 export type RemeshCommand$Context = {
   get: RemeshInjectedContext['get']
   peek: RemeshInjectedContext['peek']
-  hasNoValue: RemeshInjectedContext['hasNoValue']
   fromEvent: RemeshInjectedContext['fromEvent']
   fromQuery: RemeshInjectedContext['fromQuery']
 }
@@ -473,7 +467,6 @@ export const RemeshExtern = <T = void>(options: RemeshExternOptions<T>): RemeshE
 export type RemeshDomainIgniteContext = {
   get: RemeshInjectedContext['get']
   peek: RemeshInjectedContext['peek']
-  hasNoValue: RemeshInjectedContext['hasNoValue']
 }
 
 export type RemeshDomainIgniteFn = (context: RemeshDomainIgniteContext) => RemeshCommandOutput

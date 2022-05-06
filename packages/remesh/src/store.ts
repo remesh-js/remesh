@@ -467,7 +467,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
         return remeshInjectedContext.get(input)
       },
       peek: remeshInjectedContext.peek,
-      hasNoValue: remeshInjectedContext.hasNoValue,
     }
 
     const currentValue = Query.impl(queryContext, queryPayload.arg)
@@ -707,7 +706,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     const commandContext = {
       get: remeshInjectedContext.get,
       peek: remeshInjectedContext.peek,
-      hasNoValue: remeshInjectedContext.hasNoValue,
     }
 
     for (const preloadOptions of domainStorage.preloadOptionsList) {
@@ -930,9 +928,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
       throw new Error(`Unexpected input in peek(..): ${input}`)
     },
-    hasNoValue: (input) => {
-      return remeshInjectedContext.peek(input) === RemeshValuePlaceholder
-    },
     fromEvent: (Event) => {
       const eventStorage = getEventStorage(Event)
       return eventStorage.observable
@@ -1018,7 +1013,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
         return remeshInjectedContext.get(input)
       },
       peek: remeshInjectedContext.peek,
-      hasNoValue: remeshInjectedContext.hasNoValue,
     }
 
     const newValue = Query.impl(queryContext, queryStorage.arg)
@@ -1166,7 +1160,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       const eventContext = {
         get: remeshInjectedContext.get,
         peek: remeshInjectedContext.peek,
-        hasNoValue: remeshInjectedContext.hasNoValue,
       }
       const data = Event.impl(eventContext, arg)
       eventStorage.subject.next(data)
@@ -1182,7 +1175,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     const commandContext: RemeshCommandContext = {
       get: remeshInjectedContext.get,
       peek: remeshInjectedContext.peek,
-      hasNoValue: remeshInjectedContext.hasNoValue,
     }
 
     const commandOutput = Command.impl(commandContext, arg)
@@ -1201,7 +1193,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     const igniteContext = {
       get: remeshInjectedContext.get,
       peek: remeshInjectedContext.peek,
-      hasNoValue: remeshInjectedContext.hasNoValue,
     }
     handleCommandOutput(fn(igniteContext))
   }
@@ -1216,7 +1207,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     const command$Context: RemeshCommand$Context = {
       get: remeshInjectedContext.get,
       peek: remeshInjectedContext.peek,
-      hasNoValue: remeshInjectedContext.hasNoValue,
       fromEvent: remeshInjectedContext.fromEvent,
       fromQuery: remeshInjectedContext.fromQuery,
     }
@@ -1429,7 +1419,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
         const queryContext = {
           get: remeshInjectedContext['get'],
           peek: remeshInjectedContext['peek'],
-          hasNoValue: remeshInjectedContext['hasNoValue'],
         }
 
         const data = await preloadOptions.query(queryContext)

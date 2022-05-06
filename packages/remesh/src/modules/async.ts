@@ -169,8 +169,8 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
 
   const load = domain.command$<T>({
     name: `${options.name}.load`,
-    impl: ({ get, peek, hasNoValue }, arg$) => {
-      const ctx = { get, peek, hasNoValue }
+    impl: ({ get, peek }, arg$) => {
+      const ctx = { get, peek }
 
       const handleArg = (arg: T) => {
         const promise = options.query(ctx, arg)
