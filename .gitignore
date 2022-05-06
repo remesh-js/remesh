@@ -160,3 +160,5 @@ lib
 .idea
 
 .clinic
+
+projects/builder/
