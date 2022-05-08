@@ -1,4 +1,4 @@
-import { RemeshDomainContext, RemeshEventPayload } from '../index'
+import { RemeshDomainContext } from '../index'
 
 export type ListModuleOptions<T> = {
   name: string
@@ -25,7 +25,7 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
 
   const setList = domain.command({
     name: `${options.name}.setList`,
-    impl: ({}, newList: T[]) => {
+    impl: ( _ , newList: T[]) => {
       const keyList = newList.map(options.key)
 
       return [newList.map((item, index) => ItemState(keyList[index]).new(item)), KeyListState().new(keyList)]
@@ -95,7 +95,7 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
 
   const deleteAll = domain.command({
     name: `${options.name}.deleteAll`,
-    impl: ({}) => {
+    impl: ( _ ) => {
       return setList([])
     },
   })

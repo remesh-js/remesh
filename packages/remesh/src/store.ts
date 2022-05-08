@@ -709,7 +709,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     }
 
     for (const preloadOptions of domainStorage.preloadOptionsList) {
-      if (options.preloadedState.hasOwnProperty(preloadOptions.key)) {
+      if (Object.prototype.hasOwnProperty.call(options.preloadedState, preloadOptions.key)) {
         const data = options.preloadedState[preloadOptions.key]
         const commandOutput = preloadOptions.command(commandContext, data)
         handleCommandOutput(commandOutput)
@@ -1423,7 +1423,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
         const data = await preloadOptions.query(queryContext)
 
-        if (domainStorage.preloadedState.hasOwnProperty(preloadOptions.key)) {
+        if (Object.prototype.hasOwnProperty.call(domainStorage.preloadedState, preloadOptions.key)) {
           throw new Error(`Duplicate key ${preloadOptions.key}`)
         }
 
