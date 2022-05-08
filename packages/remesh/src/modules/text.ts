@@ -18,7 +18,7 @@ export const TextModule = (domain: RemeshDomainContext, options: TextModuleOptio
 
   const setText = domain.command({
     name: `${options.name}.setText`,
-    impl: ({}, current: string) => {
+    impl: ( _ , current: string) => {
       return TextState().new(current)
     },
   })
@@ -32,7 +32,7 @@ export const TextModule = (domain: RemeshDomainContext, options: TextModuleOptio
 
   const reset = domain.command({
     name: `${options.name}.reset`,
-    impl: ({}) => {
+    impl: ( _ ) => {
       return TextState().new(options.default ?? '')
     },
   })
