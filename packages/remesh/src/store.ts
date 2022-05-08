@@ -1423,7 +1423,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
         const data = await preloadOptions.query(queryContext)
 
-        if (domainStorage.preloadedState.hasOwnProperty(preloadOptions.key)) {
+        if (Object.prototype.hasOwnProperty.call(domainStorage.preloadedState, preloadOptions.key)) {
           throw new Error(`Duplicate key ${preloadOptions.key}`)
         }
 
