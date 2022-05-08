@@ -9,7 +9,10 @@
     "src",
     "modules"
   ],
-  "scripts": {},
+  "scripts": {
+    "test": "jest --config=../../jest.config.js",
+    "test:coverage": "jest --config=../../jest.config.js --collectCoverage --coverage"
+  },
   "peerDependencies": {
     "rxjs": "^7.0.0"
   },
