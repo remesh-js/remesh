@@ -439,7 +439,7 @@ export type RemeshExtern<T> = {
   externName: string
   externId: number
   default: T
-  (value: T): RemeshExternPayload<T>
+  impl(value: T): RemeshExternPayload<T>
 }
 
 export type RemeshExternOptions<T> = {
@@ -449,17 +449,19 @@ export type RemeshExternOptions<T> = {
 
 let externUid = 0
 export const RemeshExtern = <T = void>(options: RemeshExternOptions<T>): RemeshExtern<T> => {
-  const Extern = ((value) => {
-    return {
-      type: 'RemeshExternPayload',
-      Extern,
-      value,
-    }
-  }) as RemeshExtern<T>
-
-  Extern.externId = externUid++
-  Extern.externName = options.name
-  Extern.default = options.default
+  const Extern: RemeshExtern<T> = {
+    type: 'RemeshExtern',
+    externName: options.name,
+    externId: externUid++,
+    default: options.default,
+    impl: (value) => {
+      return {
+        type: 'RemeshExternPayload',
+        Extern,
+        value,
+      }
+    },
+  }
 
   return Extern
 }

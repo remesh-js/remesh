@@ -186,7 +186,7 @@ describe('store', () => {
     const store2 = RemeshStore({
       name: 'store',
       externs: [
-        StorageExtern({
+        StorageExtern.impl({
           get(key: string): any {
             return cache[key]
           },
