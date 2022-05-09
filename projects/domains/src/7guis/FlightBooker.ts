@@ -42,12 +42,19 @@ export const compareDate = (date1: Date, date2: Date) => {
   return date1.getDate() - date2.getDate()
 }
 
-export const FlightBooker = Remesh.domain({
-  name: 'FlightBooker',
+export const FlightBookerDomain = Remesh.domain({
+  name: 'FlightBookerDomain',
   impl: (domain) => {
     const OptionState = domain.state<FlightBookerOption>({
       name: 'OptionState',
       default: 'one-way',
+    })
+
+    const OptionQuery = domain.query({
+      name: 'OptionQuery',
+      impl: ({ get }) => {
+        return get(OptionState())
+      },
     })
 
     const StartDateInputState = domain.state({
@@ -55,12 +62,26 @@ export const FlightBooker = Remesh.domain({
       default: toDateInput(new Date()),
     })
 
+    const StartDateInputQuery = domain.query({
+      name: 'StartDateInputQuery',
+      impl: ({ get }) => {
+        return get(StartDateInputState())
+      },
+    })
+
     const EndDateInputState = domain.state({
       name: 'EndDateInputState',
       default: toDateInput(new Date()),
     })
 
-    const startDateQuery = domain.query({
+    const EndDateInputQuery = domain.query({
+      name: 'EndDateInputQuery',
+      impl: ({ get }) => {
+        return get(EndDateInputState())
+      },
+    })
+
+    const StartDateQuery = domain.query({
       name: 'StartDateQuery',
       impl: ({ get }) => {
         const startDateInput = get(StartDateInputState())
@@ -68,7 +89,7 @@ export const FlightBooker = Remesh.domain({
       },
     })
 
-    const endDateQuery = domain.query({
+    const EndDateQuery = domain.query({
       name: 'EndDateQuery',
       impl: ({ get }) => {
         const endDateInput = get(EndDateInputState())
@@ -76,33 +97,33 @@ export const FlightBooker = Remesh.domain({
       },
     })
 
-    const updateOption = domain.command({
-      name: 'updateOption',
+    const UpdateOptionCommand = domain.command({
+      name: 'UpdateOptionCommand',
       impl: ({}, option: FlightBookerOption) => {
         return OptionState().new(option)
       },
     })
 
-    const updateStartDate = domain.command({
-      name: 'updateStartDate',
+    const UpdateStartDateCommand = domain.command({
+      name: 'UpdateStartDateCommand',
       impl: ({}, dateInput: string) => {
         return StartDateInputState().new(dateInput)
       },
     })
 
-    const updateEndDate = domain.command({
-      name: 'updateEndDate',
+    const UpdateEndDateCommand = domain.command({
+      name: 'UpdateEndDateCommand',
       impl: ({}, dateInput: string) => {
         return EndDateInputState().new(dateInput)
       },
     })
 
-    const status = domain.query({
+    const StatusQuery = domain.query({
       name: 'StatusQuery',
       impl: ({ get }): FlightBookerStatus => {
         const option = get(OptionState())
-        const startDate = get(startDateQuery())
-        const endDate = get(endDateQuery())
+        const startDate = get(StartDateQuery())
+        const endDate = get(EndDateQuery())
 
         const startDateStatus = !!startDate ? 'valid' : 'invalid'
         const endDateStatus = option === 'return' ? (!!endDate ? 'valid' : 'invalid') : 'disabled'
@@ -126,17 +147,17 @@ export const FlightBooker = Remesh.domain({
 
     return {
       query: {
-        status: status,
-        option: OptionState.query,
-        startDate: startDateQuery,
-        endDate: endDateQuery,
-        startDateInput: StartDateInputState.query,
-        endDateInput: EndDateInputState.query,
+        StatusQuery,
+        OptionQuery,
+        StartDateQuery,
+        EndDateQuery,
+        StartDateInputQuery,
+        EndDateInputQuery,
       },
       command: {
-        updateOption: updateOption,
-        updateStartDate: updateStartDate,
-        updateEndDate: updateEndDate,
+        UpdateOptionCommand,
+        UpdateStartDateCommand,
+        UpdateEndDateCommand,
       },
     }
   },

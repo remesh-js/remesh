@@ -14,7 +14,7 @@ export function TodoItem({ todo }: { todo: Todo }) {
   const [todoName, handleTodoNameChange] = useInputHandler(todo.name)
 
   const handlePressEnter = useKeyPressHandler('Enter', () => {
-    domain.command.updateTodo({ ...todo, name: todoName })
+    domain.command.UpdateTodoCommand({ ...todo, name: todoName })
     setEditing(false)
   })
 
@@ -23,11 +23,11 @@ export function TodoItem({ todo }: { todo: Todo }) {
   }
 
   const handleSave = () => {
-    domain.command.toggleTodoCompleted(todo.id)
+    domain.command.ToggleTodoCompletedCommand(todo.id)
   }
 
   const handleDelete = () => {
-    domain.command.removeTodo(todo.id)
+    domain.command.RemoveTodoCommand(todo.id)
   }
 
   useEffect(() => {

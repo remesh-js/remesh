@@ -2,62 +2,62 @@
 import { ref } from 'vue'
 import { useRemeshDomain, useRemeshQuery } from 'remesh-vue'
 
-import { CRUD } from 'remesh-domains-for-demos/dist/7guis/CRUD'
+import { CRUDDomain } from 'remesh-domains-for-demos/dist/7guis/CRUD'
 
 import { onClickOutside } from '@vueuse/core'
 
-const domain = useRemeshDomain(CRUD())
-const filteredList = useRemeshQuery(domain.query.filteredList())
-const filter = useRemeshQuery(domain.query.filterPrefix())
-const created = useRemeshQuery(domain.query.created())
-const selected = useRemeshQuery(domain.query.selected())
+const domain = useRemeshDomain(CRUDDomain())
+const filteredList = useRemeshQuery(domain.query.FilteredListQuery())
+const filter = useRemeshQuery(domain.query.FilterPrefixQuery())
+const created = useRemeshQuery(domain.query.CreatedQuery())
+const selected = useRemeshQuery(domain.query.SelectedQuery())
 
 const containerRef = ref<HTMLDivElement | null>(null)
 
 const handleFilterChange = (e: Event) => {
-  domain.command.updateFilterPrefix((e.target as HTMLInputElement).value)
+  domain.command.UpdateFilterPrefixCommand((e.target as HTMLInputElement).value)
 }
 
 const handleSelect = (itemId: string | null) => {
-  domain.command.selectItem(itemId)
+  domain.command.SelectItemCommand(itemId)
 }
 
 const handleNameChange = (e: Event) => {
   if (selected.value) {
-    domain.command.updateSelectedName({
+    domain.command.UpdateSelectedNameCommand({
       name: (e.target as HTMLInputElement).value,
     })
   } else {
-    domain.command.updateCreated({ name: (e.target as HTMLInputElement).value })
+    domain.command.UpdateCreatedCommand({ name: (e.target as HTMLInputElement).value })
   }
 }
 
 const handleSurnameChange = (e: Event) => {
   if (selected.value) {
-    domain.command.updateSelectedName({
+    domain.command.UpdateSelectedNameCommand({
       surname: (e.target as HTMLInputElement).value,
     })
   } else {
-    domain.command.updateCreated({ surname: (e.target as HTMLInputElement).value })
+    domain.command.UpdateCreatedCommand({ surname: (e.target as HTMLInputElement).value })
   }
 }
 
 const handleCreate = () => {
   if (selected.value === null) {
-    domain.command.createNameItem()
+    domain.command.CreateNameItemCommand()
   }
 }
 
 const handleSync = () => {
   if (selected.value) {
-    domain.command.syncSelected()
+    domain.command.SyncSelectedCommand()
   }
 }
 
 const handleDelete = () => {
   if (selected.value) {
-    domain.command.deleteItem(selected.value.id)
-    domain.command.selectItem(null)
+    domain.command.DeleteItemCommand(selected.value.id)
+    domain.command.SelectItemCommand(null)
   }
 }
 

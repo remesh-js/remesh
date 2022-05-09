@@ -1,13 +1,13 @@
 import { useRemeshDomain, useRemeshQuery } from 'remesh-react'
 
-import { Counter } from 'remesh-domains-for-demos/dist/7guis/Counter'
+import { CounterDomain } from 'remesh-domains-for-demos/dist/7guis/Counter'
 
 export const CounterApp = () => {
-  const counter = useRemeshDomain(Counter())
-  const count = useRemeshQuery(counter.query.count())
+  const counterDomain = useRemeshDomain(CounterDomain())
+  const count = useRemeshQuery(counterDomain.query.CountQuery())
 
   const handleIncre = () => {
-    counter.command.incre()
+    counterDomain.command.IncreCommand()
   }
 
   return (

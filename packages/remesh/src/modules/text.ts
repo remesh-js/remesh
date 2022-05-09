@@ -11,40 +11,40 @@ export const TextModule = (domain: RemeshDomainContext, options: TextModuleOptio
     default: options.default ?? '',
   })
 
-  const text = domain.query({
+  const TextQuery = domain.query({
     name: `${options.name}.TextQuery`,
     impl: ({ get }) => get(TextState()),
   })
 
-  const setText = domain.command({
-    name: `${options.name}.setText`,
-    impl: ( _ , current: string) => {
+  const SetTextCommand = domain.command({
+    name: `${options.name}.SetTextCommand`,
+    impl: (_, current: string) => {
       return TextState().new(current)
     },
   })
 
-  const clearText = domain.command({
-    name: `${options.name}.clearText`,
+  const ClearTextCommand = domain.command({
+    name: `${options.name}.ClearTextCommand`,
     impl: () => {
-      return setText('')
+      return TextState().new('')
     },
   })
 
-  const reset = domain.command({
-    name: `${options.name}.reset`,
-    impl: ( _ ) => {
+  const ResetCommand = domain.command({
+    name: `${options.name}.ResetCommand`,
+    impl: () => {
       return TextState().new(options.default ?? '')
     },
   })
 
   return {
     query: {
-      text,
+      TextQuery,
     },
     command: {
-      setText,
-      clearText,
-      reset,
+      SetTextCommand,
+      ClearTextCommand,
+      ResetCommand,
     },
   }
 }

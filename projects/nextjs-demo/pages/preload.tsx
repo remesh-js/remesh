@@ -42,14 +42,14 @@ export default (props: Props) => {
 
 const Counter = () => {
   const domain = useRemeshDomain(PreloadDomain())
-  const state = useRemeshQuery(domain.query.state())
+  const state = useRemeshQuery(domain.query.CountQuery())
 
   const incre = () => {
-    domain.command.incre()
+    domain.command.IncreCommand()
   }
 
   const decre = () => {
-    domain.command.decre()
+    domain.command.DecreCommand()
   }
 
   return (

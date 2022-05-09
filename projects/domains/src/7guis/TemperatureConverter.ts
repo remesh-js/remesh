@@ -1,11 +1,18 @@
 import { Remesh } from 'remesh'
 
-export const TemperatureConverter = Remesh.domain({
-  name: 'TemperatureConverter',
+export const TemperatureConverterDomain = Remesh.domain({
+  name: 'TemperatureConverterDomain',
   impl: (domain) => {
     const CelsiusState = domain.state({
       name: 'CelsiusState',
       default: '',
+    })
+
+    const CelsiusQuery = domain.query({
+      name: 'CelsiusQuery',
+      impl: ({ get }) => {
+        return get(CelsiusState())
+      },
     })
 
     const FahrenheitState = domain.state({
@@ -13,18 +20,25 @@ export const TemperatureConverter = Remesh.domain({
       default: '',
     })
 
-    const resetBoth = domain.command({
-      name: 'resetBoth',
+    const FahrenheitQuery = domain.query({
+      name: 'FahrenheitQuery',
+      impl: ({ get }) => {
+        return get(FahrenheitState())
+      },
+    })
+
+    const ResetBothCommand = domain.command({
+      name: 'ResetBothCommand',
       impl: () => {
         return [CelsiusState().new(''), FahrenheitState().new('')]
       },
     })
 
-    const updateCelsius = domain.command({
-      name: 'updateCelsius',
+    const UpdateCelsiusCommand = domain.command({
+      name: 'UpdateCelsiusCommand',
       impl: ({}, input: string) => {
         if (input === '') {
-          return resetBoth()
+          return ResetBothCommand()
         }
 
         const celsius = parseFloat(input)
@@ -39,11 +53,11 @@ export const TemperatureConverter = Remesh.domain({
       },
     })
 
-    const updateFahrenheit = domain.command({
-      name: 'updateFahrenheit',
+    const UpdateFahrenheitCommand = domain.command({
+      name: 'UpdateFahrenheitCommand',
       impl: ({}, input: string) => {
         if (input === '') {
-          return resetBoth()
+          return ResetBothCommand()
         }
 
         const fahrenheit = parseFloat(input)
@@ -60,12 +74,12 @@ export const TemperatureConverter = Remesh.domain({
 
     return {
       query: {
-        celsius: CelsiusState.query,
-        fahrenheit: FahrenheitState.query,
+        CelsiusQuery,
+        FahrenheitQuery,
       },
       command: {
-        updateCelsius: updateCelsius,
-        updateFahrenheit: updateFahrenheit,
+        UpdateCelsiusCommand,
+        UpdateFahrenheitCommand,
       },
     }
   },

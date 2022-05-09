@@ -38,24 +38,24 @@ const CounterDomain = Remesh.domain({
       },
     })
 
-    const countQuery = domain.query({
-      name: 'CountQuery',
+    const CountInfoQuery = domain.query({
+      name: 'CountInfoQuery',
       impl: ({ get }) => {
         const [incre, decre, double] = [get(CountIncreQuery()), get(CountDecreQuery()), get(CountDoubleQuery())]
         return { incre, decre, double }
       },
     })
 
-    const incre = domain.command({
-      name: 'incre',
+    const IncreCommand = domain.command({
+      name: 'IncreCommand',
       impl: ({ get }) => {
         const count = get(CountState())
         return CountState().new(count + 1)
       },
     })
 
-    const decre = domain.command({
-      name: 'decre',
+    const DecreCommand = domain.command({
+      name: 'DecreCommand',
       impl: ({ get }) => {
         const count = get(CountState())
         return CountState().new(count - 1)
@@ -64,11 +64,11 @@ const CounterDomain = Remesh.domain({
 
     return {
       query: {
-        count: countQuery,
+        CountInfoQuery: CountInfoQuery,
       },
       command: {
-        incre,
-        decre,
+        IncreCommand: IncreCommand,
+        DecreCommand: DecreCommand,
       },
     }
   },
@@ -77,16 +77,16 @@ const CounterDomain = Remesh.domain({
 export default () => {
   const counterDomain = useRemeshDomain(CounterDomain())
 
-  const count = useRemeshQuery(counterDomain.query.count())
+  const countInfo = useRemeshQuery(counterDomain.query.CountInfoQuery())
 
   return (
     <div>
       <h2>Counter</h2>
-      <button onClick={() => counterDomain.command.incre()}>Increment</button>{' '}
-      <button onClick={() => counterDomain.command.decre()}>Decrement</button>
+      <button onClick={() => counterDomain.command.IncreCommand()}>Increment</button>{' '}
+      <button onClick={() => counterDomain.command.DecreCommand()}>Decrement</button>
       <div>
         <h3>Count Query</h3>
-        <pre>{JSON.stringify(count, null, 2)}</pre>
+        <pre>{JSON.stringify(countInfo, null, 2)}</pre>
       </div>
     </div>
   )

@@ -19,36 +19,22 @@ beforeEach(() => {
 })
 
 describe('state', () => {
-  it('use RemeshState to declare state', () => {
-    const NameState = RemeshState({
-      name: 'NameState',
-      impl: () => 'remesh',
-    })
-
-    const NameStateQuery = RemeshQuery({
-      name: 'NameStateQuery',
-      impl: ({ get }) => get(NameState()),
-    })
-
-    expect(store.query(NameStateQuery())).toBe('remesh')
+  const NameState = RemeshState({
+    name: 'NameState',
+    impl: () => 'remesh',
   })
 
-  it('use RemeshState built-in State.Query to replace RemeshQuery', () => {
-    const NameState = RemeshState({
-      name: 'NameState',
-      impl: () => 'remesh',
-    })
+  const NameQuery = RemeshQuery({
+    name: 'NameStateQuery',
+    impl: ({ get }) => get(NameState()),
+  })
 
-    expect(store.query(NameState.query())).toBe('remesh')
+  it('use RemeshState to declare state', () => {
+    expect(store.query(NameQuery())).toBe('remesh')
   })
 
   it('use RemeshCommand + State().new() to update state and store.subscribeQuery to subscribe to changes', () => {
-    const NameState = RemeshState({
-      name: 'NameState',
-      impl: () => 'remesh',
-    })
-
-    expect(store.query(NameState.query())).toBe('remesh')
+    expect(store.query(NameQuery())).toBe('remesh')
 
     const NameChangeCommand = RemeshCommand({
       name: 'NameChangeCommand',
@@ -58,12 +44,12 @@ describe('state', () => {
     })
 
     const changed = jest.fn()
-    store.subscribeQuery(NameState.query(), changed)
+    store.subscribeQuery(NameQuery(), changed)
 
     store.sendCommand(NameChangeCommand())
 
     expect(changed).toHaveBeenCalled()
-    expect(store.query(NameState.query())).toBe('ddd')
+    expect(store.query(NameQuery())).toBe('ddd')
   })
 
   it('use RemeshDefaultState to set default value', () => {
@@ -72,7 +58,13 @@ describe('state', () => {
       default: 'remesh',
     })
 
-    expect(store.query(NameState.query())).toBe('remesh')
+    const NameQuery = RemeshQuery({
+      name: 'NameStateQuery',
+      impl: ({ get }) => get(NameState()),
+    })
+
+
+    expect(store.query(NameQuery())).toBe('remesh')
   })
 
   it('use RemeshDeferState for defer state', () => {
@@ -80,7 +72,12 @@ describe('state', () => {
       name: 'NameState',
     })
 
-    expect(() => store.query(NameState.query())).toThrow()
+    const NameQuery = RemeshQuery({
+      name: 'NameQuery',
+      impl: ({ get }) => get(NameState()),
+    })
+
+    expect(() => store.query(NameQuery())).toThrow()
 
     const HasValueEvent = RemeshEvent({ name: 'HasValueEvent' })
 
@@ -92,12 +89,12 @@ describe('state', () => {
     })
 
     store.sendCommand(NameChangeCommand('remesh'))
-    expect(store.query(NameState.query())).toBe('remesh')
+    expect(store.query(NameQuery())).toBe('remesh')
 
     const changed = jest.fn()
     store.subscribeEvent(HasValueEvent, changed)
     store.sendCommand(NameChangeCommand('ddd'))
-    expect(store.query(NameState.query())).not.toBe('ddd')
+    expect(store.query(NameQuery())).not.toBe('ddd')
     expect(changed).toHaveBeenCalled()
   })
 
@@ -109,6 +106,7 @@ describe('state', () => {
         },
       },
     }
+
     const NestedState = RemeshDefaultState({
       name: 'NestedState',
       default: defaultState,
@@ -117,7 +115,14 @@ describe('state', () => {
       },
     })
 
-    expect(store.query(NestedState.query())).toBe(defaultState)
+    const NestedQuery = RemeshQuery({
+      name: 'NestedQuery',
+      impl({ get }) {
+        return get(NestedState())
+      },
+    })
+
+    expect(store.query(NestedQuery())).toBe(defaultState)
 
     const newState = {
       bar: {
@@ -135,14 +140,14 @@ describe('state', () => {
     })
 
     const changed = jest.fn()
-    store.subscribeQuery(NestedState.query(), changed)
+    store.subscribeQuery(NestedQuery(), changed)
 
     store.sendCommand(NewStateCommand())
 
     expect(changed).not.toHaveBeenCalled()
-    expect(store.query(NestedState.query())).not.toBe(newState)
+    expect(store.query(NestedQuery())).not.toBe(newState)
 
-    expect(store.query(NestedState.query())).toBe(defaultState)
+    expect(store.query(NestedQuery())).toBe(defaultState)
   })
 
   it('the owner domain of RemeshState is DefaultDomain', () => {
@@ -158,15 +163,17 @@ describe('state', () => {
     const TestDomain = RemeshDomain({
       name: 'domain',
       impl(domain) {
-        const NameState = domain.state({
-          name: 'NameState',
-          default: 'remesh',
-        })
-
         const AgeState = domain.state({
           name: 'AgeState',
           impl() {
             return 18
+          },
+        })
+
+        const AgeQuery = domain.query({
+          name: 'AgeQuery',
+          impl({ get }) {
+            return get(AgeState())
           },
         })
 
@@ -182,6 +189,13 @@ describe('state', () => {
           name: 'SalaryState',
         })
 
+        const SalaryQuery = domain.query({
+          name: 'SalaryQuery',
+          impl({ get }) {
+            return get(SalaryState())
+          },
+        })
+
         const SaveSalaryCommand = domain.command({
           name: 'SaveSalaryCommand',
           impl(_, salary: number) {
@@ -191,9 +205,9 @@ describe('state', () => {
 
         return {
           query: {
-            AgeQuery: AgeState.query,
-            NameQuery: NameState.query,
-            SalaryQuery: SalaryState.query,
+            AgeQuery: AgeQuery,
+            NameQuery: NameQuery,
+            SalaryQuery: SalaryQuery,
           },
           command: {
             UpdateAgeCommand,
@@ -208,12 +222,16 @@ describe('state', () => {
     expect(store.query(domain.query.NameQuery())).toBe('remesh')
 
     expect(store.query(domain.query.AgeQuery())).toBe(18)
+
     domain.command.UpdateAgeCommand(20)
+
     expect(store.query(domain.query.AgeQuery())).toBe(20)
+
 
     expect(() => store.query(domain.query.SalaryQuery())).toThrow()
 
     domain.command.SaveSalaryCommand(20000)
+
     expect(store.query(domain.query.SalaryQuery())).toBe(20000)
   })
 })

@@ -6,7 +6,7 @@ import { syncStorage } from '../domain-modules/sync-storage'
 export const TODO_INPUT_STORAGE_KEY = 'remesh-example/todo-input'
 
 export const TodoInputDomain = Remesh.domain({
-  name: 'TodoInput',
+  name: 'TodoInputDomain',
   impl: (domain) => {
     const todoInputModule = TextModule(domain, {
       name: 'TodoInput',
@@ -16,31 +16,31 @@ export const TodoInputDomain = Remesh.domain({
       name: 'TodoInputChangedEvent',
     })
 
-    const todoInput = todoInputModule.query.text
+    const TodoInputQuery = todoInputModule.query.TextQuery
 
-    const setTodoInput = domain.command({
+    const SetTodoInputCommand = domain.command({
       name: 'setTodoInput',
       impl: ({}, newTodoInput: string) => {
-        return [todoInputModule.command.setText(newTodoInput), TodoInputChangedEvent(newTodoInput)]
+        return [todoInputModule.command.SetTextCommand(newTodoInput), TodoInputChangedEvent(newTodoInput)]
       },
     })
 
-    const clearTodoInput = todoInputModule.command.clearText
+    const ClearTodoInputCommand = todoInputModule.command.ClearTextCommand
 
     syncStorage(domain, TODO_INPUT_STORAGE_KEY)
       .listenTo(TodoInputChangedEvent)
-      .readData((value) => setTodoInput(value))
+      .readData((value) => SetTodoInputCommand(value))
 
     return {
       query: {
-        todoInput: todoInput,
+        TodoInputQuery,
       },
       command: {
-        setTodoInput,
-        clearTodoInput,
+        SetTodoInputCommand,
+        ClearTodoInputCommand,
       },
       event: {
-        TodoInputChangedEvent
+        TodoInputChangedEvent,
       },
     }
   },

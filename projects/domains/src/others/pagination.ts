@@ -4,7 +4,7 @@ import { AsyncModule, AsyncData } from 'remesh/modules/async'
 import { Pagination, UserList, getUserList } from './github-users'
 
 export const PaginationDomain = Remesh.domain({
-  name: 'pagination',
+  name: 'PaginationDomain',
   impl: (domain) => {
     const defaultPagination: Pagination = {
       offset: 0,
@@ -12,7 +12,7 @@ export const PaginationDomain = Remesh.domain({
     }
 
     const PaginationState = domain.state({
-      name: 'Pagination',
+      name: 'PaginationState',
       default: defaultPagination,
     })
 
@@ -21,19 +21,26 @@ export const PaginationDomain = Remesh.domain({
       default: [],
     })
 
-    const isEmptyUserList = domain.query({
-      name: 'isEmptyUserList',
+    const UserListQuery = domain.query({
+      name: 'UserListQuery',
       impl: ({ get }) => {
-        const userList = get(UserListState())
+        return get(UserListState())
+      },
+    })
+
+    const IsEmptyUserListQuery = domain.query({
+      name: 'IsEmptyUserListQuery',
+      impl: ({ get }) => {
+        const userList = get(UserListQuery())
         return userList.length === 0
       },
     })
 
-    const nextPaginationQuery = domain.query({
+    const NextPaginationQuery = domain.query({
       name: 'NextPaginationQuery',
       impl: ({ get }) => {
         const pagination = get(PaginationState())
-        const userList = get(UserListState())
+        const userList = get(UserListQuery())
 
         if (userList.length === 0) {
           return pagination
@@ -60,39 +67,39 @@ export const PaginationDomain = Remesh.domain({
         if (!AsyncData.isSuccess(result)) {
           return null
         }
-        const nextPagination = get(nextPaginationQuery())
+        const nextPagination = get(NextPaginationQuery())
         const currentUserList = get(UserListState())
         return [PaginationState().new(nextPagination), UserListState().new(currentUserList.concat(result.value))]
       },
     })
 
-    domain.ignite(() => userFetcher.command.load(defaultPagination))
+    domain.ignite(() => userFetcher.command.LoadCommand(defaultPagination))
 
-    const loadMore = domain.command({
+    const LoadMoreCommand = domain.command({
       name: 'loadMore',
       impl: ({ get }) => {
-        const nextPagination = get(nextPaginationQuery())
-        return userFetcher.command.load(nextPagination)
+        const nextPagination = get(NextPaginationQuery())
+        return userFetcher.command.LoadCommand(nextPagination)
       },
     })
 
-    const reset = domain.command({
-      name: 'reset',
+    const ResetCommand = domain.command({
+      name: 'ResetCommand',
       impl: ({}) => {
-        return [PaginationState().new(defaultPagination), UserListState().new([]), loadMore()]
+        return [PaginationState().new(defaultPagination), UserListState().new([]), LoadMoreCommand()]
       },
     })
 
     return {
       query: {
-        userList: UserListState.query,
-        isEmptyUserList,
-        isLoading: userFetcher.query.isLoading,
-        asyncState: userFetcher.query.asyncState,
+        UserListQuery,
+        IsEmptyUserListQuery,
+        IsLoadingQuery: userFetcher.query.IsLoadingQuery,
+        AsyncDataQuery: userFetcher.query.AsyncDataQuery,
       },
       command: {
-        loadMore,
-        reset,
+        LoadMoreCommand: LoadMoreCommand,
+        ResetCommand: ResetCommand,
       },
       event: {
         LoadingUsersEvent: userFetcher.event.LoadingEvent,

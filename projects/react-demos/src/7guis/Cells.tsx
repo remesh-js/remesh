@@ -1,12 +1,12 @@
 import React from 'react'
 import { useRemeshDomain, useRemeshQuery } from 'remesh-react'
 
-import { Cells } from 'remesh-domains-for-demos/dist/7guis/Cells'
+import { CellsDomain } from 'remesh-domains-for-demos/dist/7guis/Cells'
 
 export const CellsApp = () => {
-  const cells = useRemeshDomain(Cells())
-  const columnKeyList = useRemeshQuery(cells.query.columnKeyList())
-  const rowKeyList = useRemeshQuery(cells.query.rowKeyList())
+  const cellsDomain = useRemeshDomain(CellsDomain())
+  const columnKeyList = useRemeshQuery(cellsDomain.query.ColumnKeyListQuery())
+  const rowKeyList = useRemeshQuery(cellsDomain.query.RowKeyListQuery())
 
   return (
     <div>
@@ -58,7 +58,7 @@ type RowViewProps = {
 }
 
 const RowView = ({ columnKeyList, rowKey }: RowViewProps) => {
-  const cells = useRemeshDomain(Cells())
+  const cells = useRemeshDomain(CellsDomain())
 
   return (
     <>
@@ -86,7 +86,7 @@ const RowView = ({ columnKeyList, rowKey }: RowViewProps) => {
               if (event.target instanceof HTMLInputElement) {
                 return
               }
-              cells.command.selectCell(cellKey)
+              cells.command.SelectCellCommand(cellKey)
             }}
           >
             <CellView cellKey={cellKey} />
@@ -98,11 +98,11 @@ const RowView = ({ columnKeyList, rowKey }: RowViewProps) => {
 }
 
 const CellView = ({ cellKey }: { cellKey: string }) => {
-  const cells = useRemeshDomain(Cells())
-  const cell = useRemeshQuery(cells.query.cell(cellKey))
+  const cellsDomain = useRemeshDomain(CellsDomain())
+  const cell = useRemeshQuery(cellsDomain.query.CellQuery(cellKey))
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    cells.command.setCellContent({ key: cellKey, input: e.target.value })
+    cellsDomain.command.SetCellContentCommand({ key: cellKey, input: e.target.value })
   }
 
   return (
@@ -120,7 +120,7 @@ const CellView = ({ cellKey }: { cellKey: string }) => {
           onChange={handleChange}
           onBlur={() => {
             if (cell.isEditing) {
-              cells.command.unselectCell(cellKey)
+              cellsDomain.command.UnselectCellCommand(cellKey)
             }
           }}
           autoFocus

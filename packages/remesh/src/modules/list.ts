@@ -12,46 +12,61 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
     default: [],
   })
 
+  const KeyListQuery = domain.query({
+    name: `${options.name}.KeyListQuery`,
+    impl: ({ get }) => {
+      return get(KeyListState())
+    },
+  })
+
   const ItemState = domain.state<string, T>({
     name: `${options.name}.ItemState`,
   })
 
-  const itemList = domain.query({
-    name: `${options.name}.itemList`,
-    impl: ({ get }) => {
-      return get(KeyListState()).map((key) => get(ItemState(key)))
+  const ItemQuery = domain.query({
+    name: `${options.name}.ItemQuery`,
+    impl: ({ get }, key: string) => {
+      return get(ItemState(key))
     },
   })
 
-  const setList = domain.command({
-    name: `${options.name}.setList`,
-    impl: ( _ , newList: T[]) => {
+  const ItemListQuery = domain.query({
+    name: `${options.name}.ItemListQuery`,
+    impl: ({ get }) => {
+      const keyList = get(KeyListQuery())
+      return keyList.map((key) => get(ItemState(key)))
+    },
+  })
+
+  const SetListCommand = domain.command({
+    name: `${options.name}.SetListCommand`,
+    impl: (_, newList: T[]) => {
       const keyList = newList.map(options.key)
 
       return [newList.map((item, index) => ItemState(keyList[index]).new(item)), KeyListState().new(keyList)]
     },
   })
 
-  const addItem = domain.command({
-    name: `${options.name}.addItem`,
+  const AddItemCommand = domain.command({
+    name: `${options.name}.AddItemCommand`,
     impl: ({ get }, newItem: T) => {
       const keyList = get(KeyListState())
-      const list = get(itemList())
+      const list = get(ItemListQuery())
       const newKey = options.key(newItem)
 
       if (keyList.includes(newKey)) {
         return null
       }
 
-      return setList(list.concat(newItem))
+      return SetListCommand(list.concat(newItem))
     },
   })
 
-  const addItems = domain.command({
-    name: `${options.name}.addItems`,
+  const AddItemListCommand = domain.command({
+    name: `${options.name}.AddItemListCommand`,
     impl: ({ get }, newItems: T[]) => {
       const keyList = get(KeyListState())
-      const list = get(itemList())
+      const list = get(ItemListQuery())
 
       const newList = [] as T[]
 
@@ -69,39 +84,39 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
         return null
       }
 
-      return setList(list.concat(newList))
+      return SetListCommand(list.concat(newList))
     },
   })
 
-  const deleteItem = domain.command({
-    name: `${options.name}.deleteItem`,
+  const DeleteItemCommand = domain.command({
+    name: `${options.name}.DeleteItemCommand`,
     impl: ({ get }, targetKey: string) => {
-      const list = get(itemList())
+      const list = get(ItemListQuery())
       const newList = list.filter((item) => options.key(item) !== targetKey)
 
-      return setList(newList)
+      return SetListCommand(newList)
     },
   })
 
-  const deleteItems = domain.command({
-    name: `${options.name}.deleteItems`,
+  const DeleteItemListCommand = domain.command({
+    name: `${options.name}.DeleteItemListCommand`,
     impl: ({ get }, targetKeys: string[]) => {
-      const list = get(itemList())
+      const list = get(ItemListQuery())
       const newList = list.filter((item) => !targetKeys.includes(options.key(item)))
 
-      return setList(newList)
+      return SetListCommand(newList)
     },
   })
 
-  const deleteAll = domain.command({
-    name: `${options.name}.deleteAll`,
-    impl: ( _ ) => {
-      return setList([])
+  const DeleteAllCommand = domain.command({
+    name: `${options.name}.DeleteAllCommand`,
+    impl: (_) => {
+      return SetListCommand([])
     },
   })
 
-  const updateItem = domain.command({
-    name: `${options.name}.updateItem`,
+  const UpdateItemCommand = domain.command({
+    name: `${options.name}.UpdateItemCommand`,
     impl: ({ get }, newItem: T) => {
       const key = options.key(newItem)
       const keyList = get(KeyListState())
@@ -110,7 +125,7 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
         return null
       }
 
-      const list = get(itemList())
+      const list = get(ItemListQuery())
       const newList = list.map((item) => {
         if (options.key(item) === key) {
           return newItem
@@ -118,15 +133,15 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
         return item
       })
 
-      return setList(newList)
+      return SetListCommand(newList)
     },
   })
 
-  const updateItems = domain.command({
-    name: `${options.name}.updateItems`,
+  const UpdateItemListCommand = domain.command({
+    name: `${options.name}.UpdateItemListCommand`,
     impl: ({ get }, newItems: T[]) => {
       const keyList = get(KeyListState())
-      const list = get(itemList())
+      const list = get(ItemListQuery())
 
       const updateItemKeys = newItems.map((item) => options.key(item))
       const newList = [] as T[]
@@ -142,12 +157,12 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
         }
       }
 
-      return setList(newList)
+      return SetListCommand(newList)
     },
   })
 
-  const insertAt = domain.command({
-    name: `${options.name}.insertAt`,
+  const InsertAtCommand = domain.command({
+    name: `${options.name}.InsertAtCommand`,
     impl: ({ get }, { index, item }: { index: number; item: T }) => {
       const keyList = get(KeyListState())
 
@@ -155,15 +170,15 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
         return null
       }
 
-      const list = get(itemList())
+      const list = get(ItemListQuery())
       const newList = list.slice(0, index).concat(item).concat(list.slice(index))
 
-      return setList(newList)
+      return SetListCommand(newList)
     },
   })
 
-  const insertBefore = domain.command({
-    name: `${options.name}.insertBefore`,
+  const InsertBeforeCommand = domain.command({
+    name: `${options.name}.InsertBeforeCommand`,
     impl: ({ get }, { before, item }: { before: T; item: T }) => {
       const keyList = get(KeyListState())
       const itemKey = options.key(item)
@@ -173,7 +188,7 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
         return null
       }
 
-      const list = get(itemList())
+      const list = get(ItemListQuery())
       const newList = [] as T[]
 
       for (const current of list) {
@@ -186,12 +201,12 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
         newList.push(current)
       }
 
-      return setList(newList)
+      return SetListCommand(newList)
     },
   })
 
-  const insertAfter = domain.command({
-    name: `${options.name}.insertAfter`,
+  const InsertAfterCommand = domain.command({
+    name: `${options.name}.InsertAfterCommand`,
     impl: ({ get }, { after, item }: { after: T; item: T }) => {
       const keyList = get(KeyListState())
       const itemKey = options.key(item)
@@ -201,7 +216,7 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
         return null
       }
 
-      const list = get(itemList())
+      const list = get(ItemListQuery())
       const newList = [] as T[]
 
       for (const current of list) {
@@ -214,14 +229,14 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
         }
       }
 
-      return setList(newList)
+      return SetListCommand(newList)
     },
   })
 
-  const reset = domain.command({
-    name: `${options.name}.reset`,
+  const ResetCommand = domain.command({
+    name: `${options.name}.ResetCommand`,
     impl: () => {
-      return setList(options.default ?? [])
+      return SetListCommand(options.default ?? [])
     },
   })
 
@@ -229,28 +244,28 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
    * sync options.default to item list
    */
   domain.ignite(() => {
-    return setList(options.default ?? [])
+    return SetListCommand(options.default ?? [])
   })
 
   return {
     command: {
-      setList,
-      addItem,
-      addItems,
-      deleteItem,
-      deleteItems,
-      deleteAll,
-      updateItem,
-      updateItems,
-      insertAt,
-      insertBefore,
-      insertAfter,
-      reset,
+      SetListCommand,
+      AddItemCommand,
+      AddItemListCommand,
+      DeleteItemCommand,
+      DeleteItemListCommand,
+      DeleteAllCommand,
+      UpdateItemCommand,
+      UpdateItemListCommand,
+      InsertAtCommand,
+      InsertBeforeCommand,
+      InsertAfterCommand,
+      ResetCommand,
     },
     query: {
-      keyList: KeyListState.query,
-      item: ItemState.query,
-      itemList,
+      KeyListQuery,
+      ItemQuery,
+      ItemListQuery,
     },
   }
 }

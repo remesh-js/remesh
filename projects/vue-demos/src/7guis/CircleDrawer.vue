@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { useRemeshDomain, useRemeshQuery } from 'remesh-vue'
-import { CircleDrawer, positionInCircle, Position } from 'remesh-domains-for-demos/dist/7guis/CircleDrawer'
+import { CircleDrawerDomain, positionInCircle, Position } from 'remesh-domains-for-demos/dist/7guis/CircleDrawer'
 import { useClickOutsideRef } from '../composition-api/useClickOutsideRef'
 
-const domain = useRemeshDomain(CircleDrawer())
-const drawState = useRemeshQuery(domain.query.drawState())
-const tooltipsState = useRemeshQuery(domain.query.tooltipsState())
-const selectedCircleInfo = useRemeshQuery(domain.query.selectedCircleInfo())
-const canUndo = useRemeshQuery(domain.query.canUndo())
-const canRedo = useRemeshQuery(domain.query.canRedo())
+const domain = useRemeshDomain(CircleDrawerDomain())
+const drawState = useRemeshQuery(domain.query.DrawQuery())
+const tooltipsState = useRemeshQuery(domain.query.TooltipsQuery())
+const selectedCircleInfo = useRemeshQuery(domain.query.SelectedCircleInfoQuery())
+const canUndo = useRemeshQuery(domain.query.CanUndoQuery())
+const canRedo = useRemeshQuery(domain.query.CanRedoQuery())
 
 const getCircleInfo = (position: Position) => {
   const circle = drawState.value.circles.find((circle) => {
@@ -34,8 +34,8 @@ const handleRightClick = (e: MouseEvent) => {
   const circleInfo = getCircleInfo(position)
 
   if (circleInfo) {
-    domain.command.setSelectedIndex(circleInfo.index)
-    domain.command.updateTooltips({
+    domain.command.SetSelectedIndexCommand(circleInfo.index)
+    domain.command.UpdateTooltipsCommand({
       type: 'show-tips',
       index: circleInfo.index,
       circle: circleInfo.circle,
@@ -54,7 +54,7 @@ const handleLeftClick = (e: MouseEvent) => {
   const circleInfo = getCircleInfo(position)
 
   if (!circleInfo) {
-    domain.command.draw({ position, diameter: 30 })
+    domain.command.DrawCommand({ position, diameter: 30 })
   }
 }
 
@@ -67,15 +67,15 @@ const handleMouseMove = (e: MouseEvent) => {
   const circleInfo = getCircleInfo(position)
 
   if (circleInfo) {
-    domain.command.setSelectedIndex(circleInfo.index)
+    domain.command.SetSelectedIndexCommand(circleInfo.index)
   } else {
-    domain.command.setSelectedIndex(-1)
+    domain.command.SetSelectedIndexCommand(-1)
   }
 }
 
 const handleOpenSlider = () => {
   if (tooltipsState.value.type === 'show-tips') {
-    domain.command.updateTooltips({
+    domain.command.UpdateTooltipsCommand({
       type: 'open-slider',
       index: tooltipsState.value.index,
       circle: tooltipsState.value.circle,
@@ -86,7 +86,7 @@ const handleOpenSlider = () => {
 }
 
 const handleCloseSlider = () => {
-  domain.command.updateTooltips({
+  domain.command.UpdateTooltipsCommand({
     type: 'default',
   })
 }
@@ -98,7 +98,7 @@ const handleAdust = (event: Event) => {
   const value = parseInt((event.target as any).value, 10)
 
   if (selectedCircleInfo.value && !isNaN(value)) {
-    domain.command.adjust({
+    domain.command.AdjustCommand({
       index: selectedCircleInfo.value.index,
       diameter: value,
     })
@@ -131,7 +131,7 @@ const openSlideElemRef = useClickOutsideRef(() => {
       }"
     >
       <button
-        @click="domain.command.undo()"
+        @click="domain.command.UndoCommand()"
         :style="{
           margin: '0 10px',
         }"
@@ -140,7 +140,7 @@ const openSlideElemRef = useClickOutsideRef(() => {
         Undo
       </button>
       <button
-        @click="domain.command.redo()"
+        @click="domain.command.RedoCommand()"
         :style="{
           margin: '0 10px',
         }"

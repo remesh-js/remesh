@@ -17,27 +17,31 @@ export type Todos = Todo[]
 export const getTodoId = (todo: Todo) => todo.id
 
 export const TodoListDomain = Remesh.domain({
-  name: 'TodoList',
+  name: 'TodoListDomain',
   impl: (domain) => {
     const todoListModule = ListModule<Todo>(domain, {
       name: 'TodoList',
       key: getTodoId,
     })
 
-    const todoListQuery = todoListModule.query.itemList
+    const TodoListQuery = todoListModule.query.ItemListQuery
 
-    const todoQuery = todoListModule.query.item
+    const TodoQuery = todoListModule.query.ItemQuery
 
-    const todoKeyListQuery = todoListModule.query.keyList
+    const TodoKeyListQuery = todoListModule.query.KeyListQuery
 
-    const TodoListChangedEvent = domain.event<Todos>({
+    const TodoListChangedEvent = domain.event({
       name: 'TodoListChangedEvent',
+      impl: ({ get }) => {
+        const todos = get(TodoListQuery())
+        return todos
+      },
     })
 
-    const setTodoList = domain.command({
-      name: 'setTodoList',
+    const SetTodoListCommand = domain.command({
+      name: 'SetTodoListCommand',
       impl: (_, todos: Todos) => {
-        return [todoListModule.command.setList(todos), TodoListChangedEvent(todos)]
+        return [todoListModule.command.SetListCommand(todos), TodoListChangedEvent()]
       },
     })
 
@@ -49,8 +53,8 @@ export const TodoListDomain = Remesh.domain({
       name: 'TodoItemAddedEvent',
     })
 
-    const addTodo = domain.command({
-      name: 'TodoList.addTodo',
+    const AddTodoCommand = domain.command({
+      name: 'AddTodoCommand',
       impl: (_, title: string) => {
         if (title === '') {
           return FailedToAddTodoEvent({
@@ -64,106 +68,115 @@ export const TodoListDomain = Remesh.domain({
           completed: false,
         }
 
-        return [todoListModule.command.addItem(todo), TodoItemAddedEvent(todo)]
+        return [
+          todoListModule.command.AddItemCommand(todo),
+          TodoItemAddedEvent(todo),
+          TodoListChangedEvent(),
+        ]
       },
     })
 
-    const updateTodo = domain.command({
-      name: 'TodoList.updateTodo',
+    const UpdateTodoCommand = domain.command({
+      name: 'UpdateTodoCommand',
       impl: (_, todo: Todo) => {
         if (todo.title === '') {
-          return deleteTodo(todo.id)
+          return DeleteTodoCommand(todo.id)
         }
-        return todoListModule.command.updateItem(todo)
+        return [todoListModule.command.UpdateItemCommand(todo), TodoListChangedEvent()]
       },
     })
 
-    const deleteTodo = todoListModule.command.deleteItem
+    const DeleteTodoCommand = domain.command({
+      name: 'DeleteTodoCommand',
+      impl: (_, id: string) => {
+        return [todoListModule.command.DeleteItemCommand(id), TodoListChangedEvent()]
+      },
+    })
 
-    const activeTodoList = domain.query({
+    const ActiveTodoListQuery = domain.query({
       name: 'ActiveTodoListQuery',
       impl: ({ get }) => {
-        const todos = get(todoListQuery())
+        const todos = get(TodoListQuery())
         return todos.filter((todo) => !todo.completed)
       },
     })
 
-    const completedTodoList = domain.query({
+    const CompletedTodoListQuery = domain.query({
       name: 'CompletedTodoListQuery',
       impl: ({ get }) => {
-        const todos = get(todoListQuery())
+        const todos = get(TodoListQuery())
         return todos.filter((todo) => todo.completed)
       },
     })
 
-    const activeTodoCount = domain.query({
+    const ActiveTodoCountQuery = domain.query({
       name: 'ActiveTodoCountQuery',
       impl: ({ get }) => {
-        const todos = get(activeTodoList())
+        const todos = get(ActiveTodoListQuery())
         return todos.length
       },
     })
 
-    const completedTodoCountQuery = domain.query({
+    const CompletedTodoCountQuery = domain.query({
       name: 'CompletedTodoCountQuery',
       impl: ({ get }) => {
-        const todos = get(completedTodoList())
+        const todos = get(CompletedTodoListQuery())
         return todos.length
       },
     })
 
-    const isAllCompleted = domain.query({
+    const IsAllCompletedQuery = domain.query({
       name: 'IsAllCompletedQuery',
       impl: ({ get }) => {
-        const todos = get(todoListQuery())
+        const todos = get(TodoListQuery())
 
         if (todos.length === 0) {
           return false
         }
 
-        const completedTodoCount = get(completedTodoCountQuery())
+        const completedTodoCount = get(CompletedTodoCountQuery())
 
         return completedTodoCount === todos.length
       },
     })
 
-    const toggleTodo = domain.command({
-      name: 'toggleTodo',
+    const ToggleTodoCommand = domain.command({
+      name: 'ToggleTodoCommand',
       impl: ({ get }, id: Todo['id']) => {
-        const todo = get(todoQuery(id))
+        const todo = get(TodoQuery(id))
         const newTodo: Todo = {
           ...todo,
           completed: !todo.completed,
         }
 
-        return todoListModule.command.updateItem(newTodo)
+        return UpdateTodoCommand(newTodo)
       },
     })
 
-    const toggleAllTodos = domain.command({
-      name: 'toggleAllTodos',
+    const ToggleAllCommand = domain.command({
+      name: 'ToggleAllCommand',
       impl: ({ get }) => {
-        const todoList = get(todoListQuery())
+        const todoList = get(TodoListQuery())
 
         if (todoList.length === 0) {
           return null
         }
 
-        const activeCount = get(activeTodoCount())
+        const activeCount = get(ActiveTodoCountQuery())
         const completed = activeCount > 0
         const newTodoList = todoList.map((todo) => ({
           ...todo,
           completed,
         }))
 
-        return setTodoList(newTodoList)
+        return SetTodoListCommand(newTodoList)
       },
     })
 
-    const clearAllCompletedTodos = domain.command({
-      name: 'clearAllCompletedTodos',
+    const ClearAllCompletedCommand = domain.command({
+      name: 'ClearAllCompletedCommand',
       impl: ({ get }) => {
-        const todoList = get(todoListQuery())
+        const todoList = get(TodoListQuery())
 
         if (todoList.length === 0) {
           return null
@@ -171,38 +184,38 @@ export const TodoListDomain = Remesh.domain({
 
         const newTodoList = todoList.filter((todo) => !todo.completed)
 
-        return setTodoList(newTodoList)
+        return SetTodoListCommand(newTodoList)
       },
     })
 
     syncStorage(domain, TODO_LIST_STORAGE_KEY)
       .listenTo(TodoListChangedEvent)
-      .readData((todos) => setTodoList(todos))
+      .readData((todos) => SetTodoListCommand(todos))
 
     return {
       query: {
-        todoState: todoQuery,
-        todoKeyList: todoKeyListQuery,
-        todoList: todoListQuery,
-        activeTodoList: activeTodoList,
-        completedTodoList: completedTodoList,
-        activeTodoCount: activeTodoCount,
-        completedTodoCount: completedTodoCountQuery,
-        isAllCompleted: isAllCompleted,
+        TodoQuery,
+        TodoKeyListQuery,
+        TodoListQuery,
+        ActiveTodoListQuery,
+        CompletedTodoListQuery,
+        ActiveTodoCountQuery,
+        CompletedTodoCountQuery,
+        IsAllCompletedQuery,
       },
       command: {
-        setTodoList,
-        addTodo,
-        updateTodo,
-        deleteTodo,
-        toggleTodo,
-        toggleAllTodos,
-        clearAllCompletedTodos,
+        SetTodoListCommand,
+        AddTodoCommand,
+        UpdateTodoCommand,
+        DeleteTodoCommand,
+        ToggleTodoCommand,
+        ToggleAllCommand,
+        ClearAllCompletedCommand,
       },
       event: {
         FailedToAddTodoEvent,
         TodoListChangedEvent,
-        TodoItemAddedEvent
+        TodoItemAddedEvent,
       },
     }
   },

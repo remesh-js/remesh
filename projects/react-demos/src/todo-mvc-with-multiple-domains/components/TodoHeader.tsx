@@ -11,14 +11,14 @@ export const TodoHeader = () => {
   const todoInputDomain = useRemeshDomain(TodoInputDomain())
   const todoListDomain = useRemeshDomain(TodoListDomain())
 
-  const todoInput = useRemeshQuery(todoInputDomain.query.todoInput())
+  const todoInput = useRemeshQuery(todoInputDomain.query.TodoInputQuery())
 
   const handleTodoInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    todoInputDomain.command.setTodoInput(event.target.value)
+    todoInputDomain.command.SetTodoInputCommand(event.target.value)
   }
 
   const handlePressEnter = useKeyPressHandler('Enter', () => {
-    todoListDomain.command.addTodo(todoInput)
+    todoListDomain.command.AddTodoCommand(todoInput)
   })
 
   useRemeshEvent(todoListDomain.event.FailedToAddTodoEvent, (event) => {

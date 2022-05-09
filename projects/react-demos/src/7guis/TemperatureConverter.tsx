@@ -1,19 +1,19 @@
 import React from 'react'
 import { useRemeshDomain, useRemeshQuery } from 'remesh-react'
 
-import { TemperatureConverter } from 'remesh-domains-for-demos/dist/7guis/TemperatureConverter'
+import { TemperatureConverterDomain } from 'remesh-domains-for-demos/dist/7guis/TemperatureConverter'
 
 export const TemperatureConverterApp = () => {
-  const temperatureConverter = useRemeshDomain(TemperatureConverter())
-  const celsius = useRemeshQuery(temperatureConverter.query.celsius())
-  const fahrenheit = useRemeshQuery(temperatureConverter.query.fahrenheit())
+  const domain = useRemeshDomain(TemperatureConverterDomain())
+  const celsius = useRemeshQuery(domain.query.CelsiusQuery())
+  const fahrenheit = useRemeshQuery(domain.query.FahrenheitQuery())
 
   const handleCelsius = (event: React.ChangeEvent<HTMLInputElement>) => {
-    temperatureConverter.command.updateCelsius(event.target.value)
+    domain.command.UpdateCelsiusCommand(event.target.value)
   }
 
   const handleFahrenheit = (event: React.ChangeEvent<HTMLInputElement>) => {
-    temperatureConverter.command.updateFahrenheit(event.target.value)
+    domain.command.UpdateFahrenheitCommand(event.target.value)
   }
 
   return (

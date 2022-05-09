@@ -1,5 +1,3 @@
-import React from 'react'
-
 import { useRemeshDomain, useRemeshQuery } from 'remesh-react'
 
 import { TodoAppDomain } from 'remesh-domains-for-demos/dist/todo-mvc-with-multiple-domains/domains/TodoApp'
@@ -27,10 +25,10 @@ export const TodoList = () => {
 
 const ToggleAllInput = () => {
   const todoListDomain = useRemeshDomain(TodoListDomain())
-  const isAllCompleted = useRemeshQuery(todoListDomain.query.isAllCompleted())
+  const isAllCompleted = useRemeshQuery(todoListDomain.query.IsAllCompletedQuery())
 
   const handleToggleAll = () => {
-    todoListDomain.command.toggleAllTodos()
+    todoListDomain.command.ToggleAllCommand()
   }
   return (
     <>

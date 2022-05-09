@@ -10,14 +10,14 @@ export const TodoFooter = () => {
   const todoListDomain = useRemeshDomain(TodoListDomain())
   const todoFilterDomain = useRemeshDomain(TodoFilterDomain())
 
-  const todoFilter = useRemeshQuery(todoFilterDomain.query.todoFilter())
-  const activeTodoCount = useRemeshQuery(todoListDomain.query.activeTodoCount())
-  const completedTodoCount = useRemeshQuery(todoListDomain.query.completedTodoCount())
+  const todoFilter = useRemeshQuery(todoFilterDomain.query.TodoFilterQuery())
+  const activeTodoCount = useRemeshQuery(todoListDomain.query.ActiveTodoCountQuery())
+  const completedTodoCount = useRemeshQuery(todoListDomain.query.CompletedTodoCountQuery())
 
   const hasCompleted = completedTodoCount > 0
 
   const handleClearCompleted = () => {
-    todoListDomain.command.clearAllCompletedTodos()
+    todoListDomain.command.ClearAllCompletedCommand()
   }
 
   const getClassName = (navData: { isActive: boolean }) => {
@@ -29,7 +29,7 @@ export const TodoFooter = () => {
   useEffect(() => {
     const filter = params.filter ?? 'all'
     if (filter !== todoFilter) {
-      todoFilterDomain.command.setFilter(filter)
+      todoFilterDomain.command.SetFilterCommand(filter)
     }
   }, [params, todoFilter])
 

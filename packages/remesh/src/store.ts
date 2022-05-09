@@ -597,20 +597,17 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
         if ('default' in options) {
           const DefaultState = RemeshDefaultState(options)
           DefaultState.owner = domainPayload
-          DefaultState.query.owner = domainPayload
           return DefaultState
         }
 
         if (!('impl' in options)) {
           const DeferState = RemeshDeferState(options)
           DeferState.owner = domainPayload
-          DeferState.query.owner = domainPayload
           return DeferState
         }
 
         const State = RemeshState(options)
         State.owner = domainPayload
-        State.query.owner = domainPayload
         return State
       },
       query: (options) => {

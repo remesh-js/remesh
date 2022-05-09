@@ -11,20 +11,20 @@ export const SwitchModule = <T>(domain: RemeshDomainContext, options: SwitchModu
     default: options.default,
   })
 
-  const switchState = domain.query({
-    name: `${options.name}.SwitchStateQuery`,
+  const SwitchQuery = domain.query({
+    name: `${options.name}.SwitchQuery`,
     impl: ({ get }) => get(SwitchState()),
   })
 
-  const switchTo = domain.command({
-    name: `${options.name}.switchTo`,
+  const SwitchCommand = domain.command({
+    name: `${options.name}.SwitchCommand`,
     impl: ( _ , current: T) => {
       return SwitchState().new(current)
     },
   })
 
-  const reset = domain.command({
-    name: `${options.name}.reset`,
+  const ResetCommand = domain.command({
+    name: `${options.name}.ResetCommand`,
     impl: ( _ , defaultValue: T) => {
       return SwitchState().new(defaultValue)
     },
@@ -32,11 +32,11 @@ export const SwitchModule = <T>(domain: RemeshDomainContext, options: SwitchModu
 
   return {
     query: {
-      switchState,
+      SwitchQuery,
     },
     command: {
-      switchTo,
-      reset,
+      SwitchCommand,
+      ResetCommand
     },
   }
 }

@@ -29,7 +29,7 @@ const PaginationApp = React.lazy(() => import('./pagination'))
 const ComponentMap = {
   counter: CounterApp,
   pagination: PaginationApp,
-}
+} as Record<string, React.LazyExoticComponent<() => JSX.Element>>
 
 const Menu = () => {
   return (

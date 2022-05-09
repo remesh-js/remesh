@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { useRemeshDomain, useRemeshQuery } from 'remesh-vue'
-import { TemperatureConverter } from 'remesh-domains-for-demos/dist/7guis/TemperatureConverter'
+import { TemperatureConverterDomain } from 'remesh-domains-for-demos/dist/7guis/TemperatureConverter'
 
-const temperatureConverter = useRemeshDomain(TemperatureConverter())
-const celsius = useRemeshQuery(temperatureConverter.query.celsius())
-const fahrenheit = useRemeshQuery(temperatureConverter.query.fahrenheit())
+const domain = useRemeshDomain(TemperatureConverterDomain())
+const celsius = useRemeshQuery(domain.query.CelsiusQuery())
+const fahrenheit = useRemeshQuery(domain.query.FahrenheitQuery())
 
 const handleCelsius = (event: Event) => {
-  temperatureConverter.command.updateCelsius((event.target as HTMLInputElement).value)
+  domain.command.UpdateCelsiusCommand((event.target as HTMLInputElement).value)
 }
 
 const handleFahrenheit = (event: Event) => {
-  temperatureConverter.command.updateFahrenheit((event.target as HTMLInputElement).value)
+  domain.command.UpdateFahrenheitCommand((event.target as HTMLInputElement).value)
 }
 </script>
 

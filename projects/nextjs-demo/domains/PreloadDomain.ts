@@ -9,33 +9,41 @@ export type State = {
 export const PreloadDomain = Remesh.domain({
   name: 'PreloadDomain',
   impl: (domain) => {
-    const State = domain.state<State>({
-      name: 'State',
+    const CountState = domain.state<State>({
+      name: 'CountState',
       default: {
         count: 0,
       },
     })
 
-    const setCount = domain.command({
-      name: 'setState',
+    const CountQuery = domain.query({
+      name: 'CountQuery',
+      impl: ({ get }) => {
+        return get(CountState())
+      }
+    })
+
+
+    const SetCountCommand = domain.command({
+      name: 'SetCountCommand',
       impl: ({}, newCount: number) => {
-        return State().new({ count: newCount })
+        return CountState().new({ count: newCount })
       },
     })
 
-    const incre = domain.command({
-      name: 'incre',
+    const IncreCommand = domain.command({
+      name: 'IncreCommand',
       impl: ({ get }) => {
-        const state = get(State())
-        return State().new({ count: state.count + 1 })
+        const state = get(CountState())
+        return CountState().new({ count: state.count + 1 })
       },
     })
 
-    const decre = domain.command({
-      name: 'decre',
+    const DecreCommand = domain.command({
+      name: 'DecreCommand',
       impl: ({ get }) => {
-        const state = get(State())
-        return State().new({ count: state.count - 1 })
+        const state = get(CountState())
+        return CountState().new({ count: state.count - 1 })
       },
     })
 
@@ -48,18 +56,18 @@ export const PreloadDomain = Remesh.domain({
         }
       },
       command: ({}, data) => {
-        return setCount(data.count)
+        return SetCountCommand(data.count)
       },
     })
 
     return {
       query: {
-        state: State.query,
+        CountQuery
       },
       command: {
-        setCount,
-        incre,
-        decre,
+        SetCountCommand: SetCountCommand,
+        IncreCommand: IncreCommand,
+        DecreCommand: DecreCommand,
       },
     }
   },

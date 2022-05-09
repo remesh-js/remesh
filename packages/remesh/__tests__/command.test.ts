@@ -5,6 +5,7 @@ import {
   RemeshDefaultState,
   RemeshDomain,
   RemeshEvent,
+  RemeshQuery,
   RemeshStore,
 } from '../src'
 import { delay, Observable, switchMap } from 'rxjs'
@@ -23,13 +24,36 @@ afterEach(() => {
 })
 
 describe('command', () => {
-  it('use RemeshCommand + store.sendCommand to drive update state', () => {
-    const NameState = RemeshDefaultState({
-      name: 'NameState',
-      default: 'remesh',
-    })
+  const NameState = RemeshDefaultState({
+    name: 'NameState',
+    default: 'remesh',
+  })
 
-    expect(store.query(NameState.query())).toBe('remesh')
+  const NameQuery = RemeshQuery({
+    name: 'NameQuery',
+    impl: ({ get }) => {
+      return get(NameState())
+    },
+  })
+
+  const NameChangeEvent = RemeshEvent({
+    name: 'NameChangeEvent',
+  })
+
+  const AgeState = RemeshDefaultState({
+    name: 'AgeState',
+    default: 0,
+  })
+
+  const AgeQuery = RemeshQuery({
+    name: 'AgeQuery',
+    impl: ({ get }) => {
+      return get(AgeState())
+    },
+  })
+
+  it('use RemeshCommand + store.sendCommand to drive update state', () => {
+    expect(store.query(NameQuery())).toBe('remesh')
 
     const NameChangeCommand = RemeshCommand({
       name: 'NameChangeCommand',
@@ -40,15 +64,10 @@ describe('command', () => {
 
     store.sendCommand(NameChangeCommand())
 
-    expect(store.query(NameState.query())).toBe('ddd')
+    expect(store.query(NameQuery())).toBe('ddd')
   })
 
   it('get state with RemeshCommandContext.get, and can receive data with the second arg', () => {
-    const NameState = RemeshDefaultState({
-      name: 'NameState',
-      default: 'remesh',
-    })
-
     const NameChangeCommand = RemeshCommand({
       name: 'NameChangeCommand',
       impl({ get }, hi: string) {
@@ -58,20 +77,10 @@ describe('command', () => {
 
     store.sendCommand(NameChangeCommand('hello'))
 
-    expect(store.query(NameState.query())).toBe('hello,remesh')
+    expect(store.query(NameQuery())).toBe('hello,remesh')
   })
 
   it('can return an array to output multiple values, can contain any RemeshCommandPayload，RemeshEventPayload，RemeshStateSetterPayload，RemeshCommand$Payload', () => {
-    const NameState = RemeshDefaultState({
-      name: 'NameState',
-      default: 'remesh',
-    })
-
-    const AgeState = RemeshDefaultState({
-      name: 'AgeState',
-      default: 0,
-    })
-
     const UpdateAgeCommand = RemeshCommand({
       name: 'UpdateAgeCommand',
       impl(_, age: number) {
@@ -89,10 +98,6 @@ describe('command', () => {
       },
     })
 
-    const NameChangeEvent = RemeshEvent({
-      name: 'NameChangeEvent',
-    })
-
     const NameChangeCommand = RemeshCommand({
       name: 'NameChangeCommand',
       impl() {
@@ -107,9 +112,9 @@ describe('command', () => {
     store.sendCommand(NameChangeCommand())
 
     expect(changed).toHaveBeenCalled()
-    expect(store.query(AgeState.query())).toBe(1)
+    expect(store.query(AgeQuery())).toBe(1)
     const ageChanged = jest.fn()
-    store.subscribeQuery(AgeState.query(), ageChanged)
+    store.subscribeQuery(AgeQuery(), ageChanged)
     expect(ageChanged).not.toHaveBeenCalled()
     jest.runOnlyPendingTimers()
     expect(ageChanged).toHaveBeenCalledWith(2)
@@ -124,6 +129,13 @@ describe('command', () => {
           default: 0,
         })
 
+        const RankingQuery = domain.query({
+          name: 'RankingQuery',
+          impl: ({ get }) => {
+            return get(RankingState())
+          },
+        })
+
         const RankingUpdateCommand = domain.command({
           name: 'RankingUpdateCommand',
           impl(_, ranking: number) {
@@ -133,7 +145,7 @@ describe('command', () => {
 
         domain.ignite(() => RankingUpdateCommand(99))
 
-        return { query: { RankingQuery: RankingState.query }, command: { RankingUpdate: RankingUpdateCommand } }
+        return { query: { RankingQuery: RankingQuery }, command: { RankingUpdateCommand: RankingUpdateCommand } }
       },
     })
 
@@ -153,6 +165,13 @@ describe('command$', () => {
       default: [],
     })
 
+    const FeaturesQuery = RemeshQuery({
+      name: 'FeaturesQuery',
+      impl({ get }) {
+        return get(FeaturesState())
+      },
+    })
+
     const fetchFeaturesCommand$ = RemeshCommand$({
       name: 'fetchFeaturesCommand$',
       impl(_, payload$: Observable<void>) {
@@ -167,7 +186,7 @@ describe('command$', () => {
 
     jest.useFakeTimers()
     const changed = jest.fn()
-    store.subscribeQuery(FeaturesState.query(), changed)
+    store.subscribeQuery(FeaturesQuery(), changed)
     store.sendCommand(fetchFeaturesCommand$())
     jest.runOnlyPendingTimers()
 
@@ -180,6 +199,13 @@ describe('command$', () => {
     const CountState = RemeshDefaultState({
       name: 'CountState',
       default: 0,
+    })
+
+    const CountQuery = RemeshQuery({
+      name: 'CountQuery',
+      impl({ get }) {
+        return get(CountState())
+      },
     })
 
     const UpdateCountCommand = RemeshCommand({
@@ -209,7 +235,7 @@ describe('command$', () => {
     const fromQueryToEvent$ = RemeshCommand$({
       name: 'fromQueryToEvent',
       impl({ fromQuery }) {
-        return fromQuery(CountState.query()).pipe(map((count) => CountChangedEvent(count)))
+        return fromQuery(CountQuery()).pipe(map((count) => CountChangedEvent(count)))
       },
     })
 
@@ -221,6 +247,6 @@ describe('command$', () => {
     store.emitEvent(CountIncreaseEvent())
 
     expect(changed).toHaveBeenCalledWith(1)
-    expect(store.query(CountState.query())).toBe(1)
+    expect(store.query(CountQuery())).toBe(1)
   })
 })

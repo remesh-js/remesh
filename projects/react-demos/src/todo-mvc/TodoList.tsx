@@ -21,16 +21,16 @@ export const TodoList = () => {
   const [newTodo, handleTodoNameInput, setNewTodo] = useInputHandler('')
 
   const handlePressEnter = useKeyPressHandler('Enter', () => {
-    domain.command.addTodo(newTodo)
+    domain.command.AddTodoCommand(newTodo)
     setNewTodo('')
   })
 
   const handleToggleAll = () => {
-    domain.command.toggleAllTodoCompleted(!allCompleted)
+    domain.command.ToggleAllTodoCompletedCommand(!allCompleted)
   }
 
   const handleClearCompleted = () => {
-    domain.command.clearCompleted()
+    domain.command.ClearCompletedCommand()
   }
 
   useRemeshEvent(domain.event.AddTodoFailedEvent, (message) => {

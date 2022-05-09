@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { useRemeshDomain, useRemeshQuery } from 'remesh-vue'
-import { Cells } from 'remesh-domains-for-demos/dist/7guis/Cells'
+import { CellsDomain } from 'remesh-domains-for-demos/dist/7guis/Cells'
 import RowView from './RowView.vue'
 
-const cells = useRemeshDomain(Cells())
-const columnKeyList = useRemeshQuery(cells.query.columnKeyList())
-const rowKeyList = useRemeshQuery(cells.query.rowKeyList())
+const cellsDomain = useRemeshDomain(CellsDomain())
+const columnKeyList = useRemeshQuery(cellsDomain.query.ColumnKeyListQuery())
+const rowKeyList = useRemeshQuery(cellsDomain.query.RowKeyListQuery())
 </script>
 
 <template>

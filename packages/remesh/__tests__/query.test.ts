@@ -55,23 +55,6 @@ describe('query', () => {
     expect(store.query(CQuery())).toBe(6)
   })
 
-  it('use RemeshState built-in State.Query to replace RemeshQuery', () => {
-    const NameState = RemeshState({
-      name: 'NameState',
-      impl: () => 'remesh',
-    })
-
-    const NameQuery = RemeshQuery({
-      name: 'NameQuery',
-      impl({ get }) {
-        return get(NameState())
-      },
-    })
-    expect(store.query(NameQuery())).toBe('remesh')
-
-    expect(store.query(NameState.query())).toBe('remesh')
-  })
-
   it('use args to query state', () => {
     type Swimming = { type: 'swimming'; name: string }
     type Jumping = { type: 'jumping'; name: string }

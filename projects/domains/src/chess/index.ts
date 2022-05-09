@@ -538,44 +538,47 @@ export const GameDomain = Remesh.domain({
     }
 
     const GameState = domain.state<Game>({
-      name: 'Game',
+      name: 'GameState',
       default: defaultGameState,
     })
 
-    // 不需要筛选过滤了，直接返回
-    const gameState = GameState.query
+    const GameQuery = domain.query({
+      name: 'GameQuery',
+      impl: ({ get }) => {
+        return get(GameState())
+      }
+    })
 
-    const gameStatusQuery = domain.query({
-      name: 'gameStatus',
+    const GameStatusQuery = domain.query({
+      name: 'GameStatusQuery',
       impl: ({ get }): GameStatus => {
-        const { situation } = get(gameState())
+        const { situation } = get(GameQuery())
         return getGameStatus(situation)
       },
     })
 
-    const gameOverEvent = domain.event({
-      name: 'gameOverEvent',
+    const GameOverEvent = domain.event({
+      name: 'GameOverEvent',
     })
 
-    // 不需要区分前因后果，知道他不能走就可以了，所以参数跟返回值都不用了
-    const notYourMoveEvent = domain.event({
-      name: 'notYourMoveEvent',
+    const NotYourMoveEvent = domain.event({
+      name: 'NotYourMoveEvent',
     })
 
-    const resetGameState = domain.command({
-      name: 'resetGameState',
+    const ResetGameStateCommand = domain.command({
+      name: 'ResetGameStateCommand',
       impl: () => {
         return GameState().new(defaultGameState)
       },
     })
 
-    const selectChess = domain.command({
-      name: 'selectChess',
+    const SelectChessCommand = domain.command({
+      name: 'SelectChessCommand',
       impl({ get }, chess: Chess) {
-        const gameStatus = get(gameStatusQuery())
+        const gameStatus = get(GameStatusQuery())
 
         if (gameStatus !== 'playing') {
-          return gameOverEvent()
+          return GameOverEvent()
         }
 
         const game = get(GameState())
@@ -587,19 +590,19 @@ export const GameDomain = Remesh.domain({
           if (selectedChess) {
             return [GameState().new(attack(chess.position)(game))]
           } else {
-            return [notYourMoveEvent()]
+            return [NotYourMoveEvent()]
           }
         }
       },
     })
 
-    const moveChess = domain.command({
-      name: 'moveChess',
+    const MoveChessCommand = domain.command({
+      name: 'MoveChessCommand',
       impl({ get }, position: Marker) {
-        const gameStatus = get(gameStatusQuery())
+        const gameStatus = get(GameStatusQuery())
 
         if (gameStatus !== 'playing') {
-          return gameOverEvent()
+          return GameOverEvent()
         }
 
         const game = get(GameState())
@@ -609,37 +612,37 @@ export const GameDomain = Remesh.domain({
         if (selectedChess) {
           return [GameState().new(moveChessInGame(position)(game))]
         } else {
-          return [notYourMoveEvent()]
+          return [NotYourMoveEvent()]
         }
       },
     })
 
-    const checkGameStatus = domain.command$({
-      name: 'checkGameStatus',
+    const CheckGameStatusCommand = domain.command$({
+      name: 'CheckGameStatusCommand',
       impl: ({ fromQuery }) => {
-        return fromQuery(gameStatusQuery()).pipe(
+        return fromQuery(GameStatusQuery()).pipe(
           filter((gameStatus) => gameStatus !== 'playing'),
           delay(100),
-          map(() => gameOverEvent()),
+          map(() => GameOverEvent()),
         )
       },
     })
 
-    domain.ignite(() => checkGameStatus())
+    domain.ignite(() => CheckGameStatusCommand())
 
     return {
       query: {
-        gameState: gameState,
-        gameStatus: gameStatusQuery,
+        GameQuery,
+        GameStatusQuery,
       },
       command: {
-        selectChess,
-        moveChess,
-        resetGameState,
+        SelectChessCommand,
+        MoveChessCommand,
+        ResetGameStateCommand,
       },
       event: {
-        notYourMoveEvent,
-        gameOverEvent,
+        NotYourMoveEvent,
+        GameOverEvent,
       },
     }
   },

@@ -4,18 +4,32 @@ import { distinctUntilChanged, map, mapTo, pairwise, switchMap, takeUntil } from
 
 import { Remesh } from 'remesh'
 
-export const Timer = Remesh.domain({
-  name: 'timer',
+export const TimerDomain = Remesh.domain({
+  name: 'TimerDomain',
   inspectable: false,
   impl: (domain) => {
     const DurationState = domain.state({
-      name: 'duration',
+      name: 'DurationState',
       default: 15000,
     })
 
+    const DurationQuery = domain.query({
+      name: 'DurationQuery',
+      impl: ({ get }) => {
+        return get(DurationState())
+      },
+    })
+
     const ElapsedState = domain.state({
-      name: 'elapsed',
+      name: 'ElapsedState',
       default: 0,
+    })
+
+    const ElapsedQuery = domain.query({
+      name: 'ElapsedQuery',
+      impl: ({ get }) => {
+        return get(ElapsedState())
+      },
     })
 
     const StartEvent = domain.event({
@@ -26,8 +40,8 @@ export const Timer = Remesh.domain({
       name: 'StopEvent',
     })
 
-    const updateElapsed = domain.command({
-      name: 'updateElapsed',
+    const UpdateElapsedCommand = domain.command({
+      name: 'UpdateElapsedCommand',
       impl: ({ get }, increment: number) => {
         const duration = get(DurationState())
         const elapsed = get(ElapsedState())
@@ -40,8 +54,8 @@ export const Timer = Remesh.domain({
       },
     })
 
-    const updateDuration = domain.command({
-      name: 'updateDuration',
+    const UpdateDurationCommand = domain.command({
+      name: 'UpdateDurationCommand',
       impl: ({ get }, newDuration: number) => {
         const elapsed = get(ElapsedState())
 
@@ -53,15 +67,15 @@ export const Timer = Remesh.domain({
       },
     })
 
-    const resetElapsed = domain.command({
+    const ResetElapsedCommand = domain.command({
       name: 'resetElapsed',
       impl: ({}) => {
         return [ElapsedState().new(0), StartEvent()]
       },
     })
 
-    const updateElapsed$ = domain.command$({
-      name: 'updateElapsed$',
+    const UpdateElapsedCommand$ = domain.command$({
+      name: 'UpdateElapsedCommand$',
       impl: ({ fromEvent }) => {
         const startEvent$ = fromEvent(StartEvent).pipe(map(() => 1))
         const stopEvent$ = fromEvent(StopEvent).pipe(map(() => 0))
@@ -75,7 +89,7 @@ export const Timer = Remesh.domain({
             return animationFrames().pipe(
               pairwise(),
               map(([a, b]) => b.elapsed - a.elapsed),
-              map((increment) => updateElapsed(increment)),
+              map((increment) => UpdateElapsedCommand(increment)),
               takeUntil(fromEvent(StopEvent)),
             )
           }),
@@ -85,16 +99,16 @@ export const Timer = Remesh.domain({
       },
     })
 
-    domain.ignite(() => updateElapsed$())
+    domain.ignite(() => UpdateElapsedCommand$())
 
     return {
       query: {
-        duration: DurationState.query,
-        elapsed: ElapsedState.query,
+        DurationQuery,
+        ElapsedQuery,
       },
       command: {
-        resetElapsed,
-        updateDuration,
+        ResetElapsedCommand,
+        UpdateDurationCommand,
       },
     }
   },

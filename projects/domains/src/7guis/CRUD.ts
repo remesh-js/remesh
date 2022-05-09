@@ -10,23 +10,30 @@ export type NameItem = {
   id: string
 } & Name
 
-export const CRUD = Remesh.domain({
-  name: 'CRUD',
+export const CRUDDomain = Remesh.domain({
+  name: 'CRUDDomain',
   impl: (domain) => {
     let nameUid = 0
 
-    const nameListDomain = ListModule<NameItem>(domain, {
-      name: 'Name',
+    const nameListModule = ListModule<NameItem>(domain, {
+      name: 'NameListModule',
       key: (item) => item.id,
     })
 
     const FilterPrefixState = domain.state({
-      name: 'FilterPrefix',
+      name: 'FilterPrefixState',
       default: '',
     })
 
-    const updateFilterPrefix = domain.command({
-      name: 'updateFilterPrefix',
+    const FilterPrefixQuery = domain.query({
+      name: 'FilterPrefixQuery',
+      impl: ({ get }) => {
+        return get(FilterPrefixState())
+      },
+    })
+
+    const UpdateFilterPrefixCommand = domain.command({
+      name: 'UpdateFilterPrefixCommand',
       impl: ({}, prefix: string) => {
         return FilterPrefixState().new(prefix)
       },
@@ -40,7 +47,14 @@ export const CRUD = Remesh.domain({
       },
     })
 
-    const updateCreated = domain.command({
+    const CreatedQuery = domain.query({
+      name: 'CreatedQuery',
+      impl: ({ get }) => {
+        return get(CreatedState())
+      },
+    })
+
+    const UpdateCreatedCommand = domain.command({
       name: 'UpdateCreated',
       impl: ({ get }, name: Partial<Name>) => {
         const currentName = get(CreatedState())
@@ -52,12 +66,19 @@ export const CRUD = Remesh.domain({
     })
 
     const SelectedState = domain.state<NameItem | null>({
-      name: 'Selected',
+      name: 'SelectedState',
       default: null,
     })
 
-    const selectItem = domain.command({
-      name: 'Select',
+    const SelectedQuery = domain.query({
+      name: 'SelectedQuery',
+      impl: ({ get }) => {
+        return get(SelectedState())
+      },
+    })
+
+    const SelectItemCommand = domain.command({
+      name: 'SelectItemCommand',
       impl: ({ get }, targetItemId: string | null) => {
         const currentSelected = get(SelectedState())
 
@@ -73,13 +94,13 @@ export const CRUD = Remesh.domain({
           return SelectedState().new(null)
         }
 
-        const targetItem = get(nameListDomain.query.item(targetItemId))
+        const targetItem = get(nameListModule.query.ItemQuery(targetItemId))
 
         return SelectedState().new(targetItem)
       },
     })
 
-    const updateSelectedName = domain.command({
+    const UpdateSelectedNameCommand = domain.command({
       name: 'UpdateSelectedName',
       impl: ({ get }, name: Partial<Name>) => {
         const selected = get(SelectedState())
@@ -95,11 +116,11 @@ export const CRUD = Remesh.domain({
       },
     })
 
-    const filteredList = domain.query({
+    const FilteredListQuery = domain.query({
       name: 'FilteredListQuery',
       impl: ({ get }) => {
         const filterPrefix = get(FilterPrefixState())
-        const nameList = get(nameListDomain.query.itemList())
+        const nameList = get(nameListModule.query.ItemListQuery())
 
         if (filterPrefix === '') {
           return nameList
@@ -109,7 +130,7 @@ export const CRUD = Remesh.domain({
       },
     })
 
-    const syncSelected = domain.command({
+    const SyncSelectedCommand = domain.command({
       name: 'SyncSelected',
       impl: ({ get }) => {
         const selected = get(SelectedState())
@@ -118,12 +139,12 @@ export const CRUD = Remesh.domain({
           return []
         }
 
-        return nameListDomain.command.updateItem(selected)
+        return nameListModule.command.UpdateItemCommand(selected)
       },
     })
 
-    const createNameItem = domain.command({
-      name: 'CreateNameItem',
+    const CreateNameItemCommand = domain.command({
+      name: 'CreateNameItemCommand',
       impl: ({ get }) => {
         const created = get(CreatedState())
         const newItem = {
@@ -131,26 +152,26 @@ export const CRUD = Remesh.domain({
           ...created,
         }
 
-        return [nameListDomain.command.addItem(newItem), updateCreated({ name: '', surname: '' })]
+        return [nameListModule.command.AddItemCommand(newItem), UpdateCreatedCommand({ name: '', surname: '' })]
       },
     })
 
     return {
       query: {
-        ...nameListDomain.query,
-        filteredList: filteredList,
-        selected: SelectedState.query,
-        filterPrefix: FilterPrefixState.query,
-        created: CreatedState.query,
+        ...nameListModule.query,
+        FilteredListQuery,
+        SelectedQuery,
+        FilterPrefixQuery,
+        CreatedQuery,
       },
       command: {
-        ...nameListDomain.command,
-        updateFilterPrefix: updateFilterPrefix,
-        selectItem: selectItem,
-        updateCreated: updateCreated,
-        updateSelectedName: updateSelectedName,
-        createNameItem: createNameItem,
-        syncSelected: syncSelected,
+        ...nameListModule.command,
+        UpdateFilterPrefixCommand,
+        SelectItemCommand,
+        UpdateCreatedCommand,
+        UpdateSelectedNameCommand,
+        CreateNameItemCommand,
+        SyncSelectedCommand,
       },
     }
   },

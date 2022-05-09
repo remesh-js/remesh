@@ -97,45 +97,52 @@ export type AsyncModuleOptions<T, U> = {
 export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncModuleOptions<T, U>) => {
   const defaultValue: AsyncData<U> = 'default' in options && options.default ? options.default : AsyncData.default()
 
-  const AsyncState = domain.state<AsyncData<U>>({
-    name: `${options.name}.AsyncState`,
+  const AsyncDataState = domain.state<AsyncData<U>>({
+    name: `${options.name}.AsyncDataState`,
     default: defaultValue,
   })
 
-  const isType = domain.query({
-    name: `${options.name}.isType`,
+  const AsyncDataQuery = domain.query({
+    name: `${options.name}.AsyncDataQuery`,
+    impl: ({ get }) => {
+      return get(AsyncDataState())
+    },
+  })
+
+  const IsTypeQuery = domain.query({
+    name: `${options.name}.IsTypeQuery`,
     inspectable: false,
     impl: ({ get }, type: AsyncData<U>['type']) => {
-      const asyncData = get(AsyncState())
+      const asyncData = get(AsyncDataState())
       return asyncData.type === type
     },
   })
 
-  const isDefault = domain.query({
-    name: `${options.name}.isDefault`,
+  const IsDefaultQuery = domain.query({
+    name: `${options.name}.IsDefaultQuery`,
     impl: ({ get }) => {
-      return get(isType('default'))
+      return get(IsTypeQuery('default'))
     },
   })
 
-  const isLoading = domain.query({
-    name: `${options.name}.isLoading`,
+  const IsLoadingQuery = domain.query({
+    name: `${options.name}.IsLoadingQuery`,
     impl: ({ get }) => {
-      return get(isType('loading'))
+      return get(IsTypeQuery('loading'))
     },
   })
 
-  const isSuccess = domain.query({
-    name: `${options.name}.isSuccess`,
+  const IsSuccessQuery = domain.query({
+    name: `${options.name}.IsSuccessQuery`,
     impl: ({ get }) => {
-      return get(isType('success'))
+      return get(IsTypeQuery('success'))
     },
   })
 
-  const isFailed = domain.query({
-    name: `${options.name}.isFailed`,
+  const IsFailedQuery = domain.query({
+    name: `${options.name}.IsFailedQuery`,
     impl: ({ get }) => {
-      return get(isType('failed'))
+      return get(IsTypeQuery('failed'))
     },
   })
 
@@ -153,22 +160,22 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
 
   const handleAsyncData = (ctx: RemeshCommandContext, data: AsyncData<U>) => {
     if (data.type === 'loading') {
-      return [AsyncState().new(data), LoadingEvent(), options.command?.(ctx, data)]
+      return [AsyncDataState().new(data), LoadingEvent(), options.command?.(ctx, data)]
     }
 
     if (data.type === 'success') {
-      return [AsyncState().new(data), SuccessEvent(data.value), options.command?.(ctx, data)]
+      return [AsyncDataState().new(data), SuccessEvent(data.value), options.command?.(ctx, data)]
     }
 
     if (data.type === 'failed') {
-      return [AsyncState().new(data), FailedEvent(data.error), options.command?.(ctx, data)]
+      return [AsyncDataState().new(data), FailedEvent(data.error), options.command?.(ctx, data)]
     }
 
     throw new Error(`Unknown async data: ${data}`)
   }
 
-  const load = domain.command$<T>({
-    name: `${options.name}.load`,
+  const LoadCommand = domain.command$<T>({
+    name: `${options.name}.LoadCommand`,
     impl: ({ get, peek }, arg$) => {
       const ctx = { get, peek }
 
@@ -213,14 +220,14 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
 
   return {
     query: {
-      asyncState: AsyncState.query,
-      isDefault,
-      isLoading,
-      isSuccess,
-      isFailed,
+      AsyncDataQuery,
+      IsDefaultQuery,
+      IsLoadingQuery,
+      IsSuccessQuery,
+      IsFailedQuery,
     },
     command: {
-      load,
+      LoadCommand,
     },
     event: {
       LoadingEvent,

@@ -13,14 +13,14 @@ export type TodoItemProps = {
 export function TodoItem(props: TodoItemProps) {
   const todoListDomain = useRemeshDomain(TodoListDomain())
 
-  const todo = useRemeshQuery(todoListDomain.query.todoState(props.id))
+  const todo = useRemeshQuery(todoListDomain.query.TodoQuery(props.id))
 
   const [editing, setEditing] = useState(false)
 
   const [title, handleTitleChange] = useInputHandler(todo.title)
 
   const save = () => {
-    todoListDomain.command.updateTodo({ ...todo, title })
+    todoListDomain.command.UpdateTodoCommand({ ...todo, title })
     setEditing(false)
   }
 
@@ -33,11 +33,11 @@ export function TodoItem(props: TodoItemProps) {
   }
 
   const handleSave = () => {
-    todoListDomain.command.toggleTodo(todo.id)
+    todoListDomain.command.ToggleTodoCommand(todo.id)
   }
 
   const handleDelete = () => {
-    todoListDomain.command.deleteTodo(todo.id)
+    todoListDomain.command.DeleteTodoCommand(todo.id)
   }
 
   const handleBlur = () => {

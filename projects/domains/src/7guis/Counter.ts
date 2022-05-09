@@ -1,27 +1,34 @@
 import { Remesh } from 'remesh'
 
-export const Counter = Remesh.domain({
-  name: 'Counter',
+export const CounterDomain = Remesh.domain({
+  name: 'CounterDomain',
   impl: (domain) => {
-    const CounterState = domain.state({
+    const CountState = domain.state({
       name: 'CounterState',
       default: 0,
     })
 
-    const incre = domain.command({
-      name: 'increCommand',
+    const CountQuery = domain.query({
+      name: 'CounterQuery',
       impl: ({ get }) => {
-        const count = get(CounterState())
-        return CounterState().new(count + 1)
+        return get(CountState())
+      },
+    })
+
+    const IncreCommand = domain.command({
+      name: 'IncreCommand',
+      impl: ({ get }) => {
+        const count = get(CountState())
+        return CountState().new(count + 1)
       },
     })
 
     return {
       query: {
-        count: CounterState.query,
+        CountQuery,
       },
       command: {
-        incre,
+        IncreCommand,
       },
     }
   },

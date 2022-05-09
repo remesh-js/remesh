@@ -8,6 +8,7 @@ import {
   RemeshEventEmittedEventData,
   RemeshExtern,
   RemeshInspectorDomain,
+  RemeshQuery,
   RemeshQueryStorageEventData,
   RemeshStateStorageEventData,
   RemeshStore,
@@ -45,6 +46,13 @@ describe('store', () => {
           default: 1,
         })
 
+        const AQuery = domain.query({
+          name: 'AQuery',
+          impl: ({ get }) => {
+            return get(AState())
+          },
+        })
+
         const UpdateACommand = domain.command({
           name: 'UpdateACommand',
           impl(_, num: number) {
@@ -57,10 +65,17 @@ describe('store', () => {
           default: 2,
         })
 
+        const BQuery = domain.query({
+          name: 'BQuery',
+          impl: ({ get }) => {
+            return get(BState())
+          },
+        })
+
         const JoinQuery = domain.query({
           name: 'JoinQuery',
           impl({ get }, joinChar: string) {
-            return get(AState.query()) + joinChar + get(BState.query())
+            return get(AQuery()) + joinChar + get(BQuery())
           },
         })
 
@@ -82,7 +97,7 @@ describe('store', () => {
         domain.ignite(() => init$())
 
         return {
-          query: { AQuery: AState.query, BQuery: BState.query, JoinQuery },
+          query: { AQuery: AQuery, BQuery: BQuery, JoinQuery },
           event: { TestEvent },
           command: { UpdateA: UpdateACommand },
         }
@@ -101,7 +116,9 @@ describe('store', () => {
 
     const queryCalled = jest.fn()
     store.subscribeQuery(testDomain.query.JoinQuery('-'), queryCalled)
+
     testDomain.command.UpdateA(2)
+
     expect(store.query(testDomain.query.JoinQuery('-'))).toBe('2-2')
     expect(queryCalled).toHaveBeenCalledWith('2-2')
 
@@ -125,13 +142,27 @@ describe('store', () => {
       default: 1,
     })
 
+    const AQuery = RemeshQuery({
+      name: 'AQuery',
+      impl: ({ get }) => {
+        return get(AState())
+      },
+    })
+
     const BState = RemeshDefaultState({
       name: 'BState',
       default: 2,
     })
 
-    expect(store.getKey(AState.query())).toMatch(AState.stateName)
-    expect(store.getKey(BState.query())).toMatch(BState.stateName)
+    const BQuery = RemeshQuery({
+      name: 'BQuery',
+      impl: ({ get }) => {
+        return get(BState())
+      },
+    })
+
+    expect(store.getKey(AQuery())).toMatch(AQuery.queryName)
+    expect(store.getKey(BQuery())).toMatch(BQuery.queryName)
     expect(store.getKey(AState())).toMatch(AState.stateName)
     expect(store.getKey(BState())).toMatch(BState.stateName)
   })
@@ -397,6 +428,13 @@ describe('store', () => {
           default: 0,
         })
 
+        const CountQuery = domain.query({
+          name: 'CountQuery',
+          impl({ get }) {
+            return get(CountState())
+          },
+        })
+
         const UpdateCountCommand = domain.command({
           name: 'UpdateCountCommand',
           impl(_, count: number) {
@@ -417,7 +455,7 @@ describe('store', () => {
 
         return {
           query: {
-            count: CountState.query,
+            CountQuery,
           },
         }
       },
@@ -436,7 +474,7 @@ describe('store', () => {
 
     const counterDomain = store.getDomain(CounterDomain())
 
-    expect(store.query(counterDomain.query.count())).toBe(10)
+    expect(store.query(counterDomain.query.CountQuery())).toBe(10)
   })
 
   it('store expose api', () => {

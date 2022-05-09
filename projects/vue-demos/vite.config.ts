@@ -16,6 +16,9 @@ const entries = fg
 export default defineConfig({
   plugins: [vue()],
   base: '/remesh/dist/vue/',
+  server: {
+    port: 3004,
+  },
   resolve: {
     alias: {
       remesh: resolve(__dirname, '../../packages/remesh/src'),
