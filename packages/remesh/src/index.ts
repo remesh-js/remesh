@@ -12,6 +12,7 @@ import { RemeshStore } from './store'
 export * from './remesh'
 export * from './store'
 export * from './inspector'
+export * from './type'
 
 export const Remesh = {
   domain: RemeshDomain,

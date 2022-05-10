@@ -1,7 +1,7 @@
-import { RemeshDomainContext } from '../index'
+import { RemeshDomainContext, Capitalize } from '../index'
 
 export type SwitchModuleOptions<T> = {
-  name: string
+  name: Capitalize
   default: T
 }
 

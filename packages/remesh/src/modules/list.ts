@@ -1,7 +1,7 @@
-import { RemeshDomainContext } from '../index'
+import { RemeshDomainContext, Capitalize } from '../index'
 
 export type ListModuleOptions<T> = {
-  name: string
+  name: Capitalize
   key: (item: T) => string
   default?: T[]
 }

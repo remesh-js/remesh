@@ -1,7 +1,13 @@
 import { merge } from 'rxjs'
 import { switchMap, concatMap, mergeMap, exhaustMap } from 'rxjs/operators'
 
-import { RemeshDomainContext, RemeshCommandContext, RemeshCommandOutput, RemeshQueryContext } from '../remesh'
+import {
+  RemeshDomainContext,
+  RemeshCommandContext,
+  RemeshCommandOutput,
+  RemeshQueryContext,
+  Capitalize,
+} from '../index'
 
 export type DefaultAsyncData = {
   type: 'default'
@@ -87,7 +93,7 @@ export const AsyncData = {
 }
 
 export type AsyncModuleOptions<T, U> = {
-  name: string
+  name: Capitalize
   query: (context: RemeshQueryContext, arg: T) => Promise<U>
   command?: (context: RemeshCommandContext, arg: AsyncData<U>) => RemeshCommandOutput
   default?: AsyncData<U>

@@ -16,12 +16,12 @@ export type RemeshLoggerOptions = RemeshDebugOptions & {
 }
 
 const colors = {
-  domain: '#f8f0fc',
-  event: '#f3f0ff',
-  state: '#edf2ff',
-  query: '#e7f5ff',
-  command: '#fff0f6',
-  command$: '#fff4e6',
+  domain: '#bfb1cc',
+  event: '#aec6d4',
+  state: '#adc7af',
+  query: '#d6c9ad',
+  command: '#debdb6',
+  command$: '#d9bdc5',
 }
 
 
@@ -40,7 +40,7 @@ export const RemeshLogger = (options?: RemeshLoggerOptions): RemeshStoreInspecto
         const parts = type.split('::')
         console.groupCollapsed(
           `%c${type}%c @ ${formatNow()}`,
-          `background-color:${color}; color: #333; font-weight: bold`,
+          `background-color:${color}; color: #000; font-weight: bold`,
           `color:#9E9E9E; font-weight: lighter`,
         )
       }

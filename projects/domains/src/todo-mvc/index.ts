@@ -55,7 +55,7 @@ export const TodoDomain = Remesh.domain({
     })
 
     const TodoAddedEvent = domain.event<Todo>({
-      name: 'addTodoEvent',
+      name: 'TodoAddedEvent',
     })
 
     const SetTodoListCommand = domain.command({
