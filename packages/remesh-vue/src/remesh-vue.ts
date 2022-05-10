@@ -7,6 +7,7 @@ import {
   RemeshEvent,
   RemeshDomainDefinition,
   RemeshDomainPayload,
+  Args,
 } from 'remesh'
 
 export const RemeshVueInjectKey = Symbol('RemeshVueInjectKey') as InjectionKey<RemeshStore>
@@ -31,7 +32,9 @@ export const useRemeshStore = () => {
   return store
 }
 
-export const useRemeshQuery = function <T extends SerializableType, U>(queryPayload: RemeshQueryPayload<T, U>): Ref<U> {
+export const useRemeshQuery = function <T extends Args<SerializableType>, U>(
+  queryPayload: RemeshQueryPayload<T, U>,
+): Ref<U> {
   const store = useRemeshStore()
 
   const queryRef = ref(store.query(queryPayload)) as Ref<U>
@@ -51,7 +54,7 @@ export const useRemeshQuery = function <T extends SerializableType, U>(queryPayl
   return queryRef
 }
 
-export const useRemeshEvent = function <T, U = T>(Event: RemeshEvent<T, U>, callback: (data: U) => unknown) {
+export const useRemeshEvent = function <T extends Args, U>(Event: RemeshEvent<T, U>, callback: (data: U) => unknown) {
   const store = useRemeshStore()
 
   let subscription: ReturnType<typeof store.subscribeEvent> | null = null
@@ -71,8 +74,8 @@ export const useRemeshEmit = function () {
   return store.emitEvent
 }
 
-export const useRemeshDomain = function <T extends RemeshDomainDefinition, Arg extends SerializableType>(
-  domainPayload: RemeshDomainPayload<T, Arg>,
+export const useRemeshDomain = function <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
+  domainPayload: RemeshDomainPayload<T, U>,
 ) {
   const store = useRemeshStore()
 

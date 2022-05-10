@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useContext, createContext, ReactNode, useCallback, useMemo } from 'react'
+import { useEffect, useRef, useContext, createContext, ReactNode, useCallback, useMemo } from 'react'
 
 import { useSyncExternalStore } from 'use-sync-external-store/shim'
 
@@ -10,6 +10,7 @@ import {
   RemeshStore,
   SerializableType,
   RemeshStoreOptions,
+  Args,
 } from 'remesh'
 
 import { AsyncData } from 'remesh/modules/async'
@@ -64,7 +65,9 @@ export const RemeshRoot = (props: RemeshRootProps) => {
   return <RemeshReactContext.Provider value={contextValue}>{props.children}</RemeshReactContext.Provider>
 }
 
-export const useRemeshQuery = function <T extends SerializableType, U>(queryPayload: RemeshQueryPayload<T, U>): U {
+export const useRemeshQuery = function <T extends Args<SerializableType>, U>(
+  queryPayload: RemeshQueryPayload<T, U>,
+): U {
   /**
    * initial domain if needed
    */
@@ -111,7 +114,7 @@ export const useRemeshQuery = function <T extends SerializableType, U>(queryPayl
   return state
 }
 
-export const useRemeshSuspense = function <T extends SerializableType, U>(
+export const useRemeshSuspense = function <T extends Args<SerializableType>, U>(
   queryPayload: RemeshQueryPayload<T, AsyncData<U>>,
 ) {
   const state = useRemeshQuery(queryPayload)
@@ -129,7 +132,7 @@ export const useRemeshSuspense = function <T extends SerializableType, U>(
   }
 }
 
-export const useRemeshEvent = function <T, U = T>(Event: RemeshEvent<T, U>, callback: (data: U) => unknown) {
+export const useRemeshEvent = function <T extends Args, U>(Event: RemeshEvent<T, U>, callback: (data: U) => unknown) {
   const store = useRemeshStore()
   const callbackRef = useRef(callback)
 
@@ -153,8 +156,8 @@ export const useRemeshEmit = function () {
   return store.emitEvent
 }
 
-export const useRemeshDomain = function <T extends RemeshDomainDefinition, Arg extends SerializableType>(
-  domainPayload: RemeshDomainPayload<T, Arg>,
+export const useRemeshDomain = function <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
+  domainPayload: RemeshDomainPayload<T, U>,
 ) {
   const store = useRemeshStore()
   const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null)

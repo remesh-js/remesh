@@ -1,4 +1,5 @@
 import {
+  Args,
   Remesh,
   RemeshDomainDefinition,
   RemeshDomainPayload,
@@ -55,7 +56,7 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
 
     const inspectorDomain = store.getDomain(RemeshInspectorDomain())
 
-    const getOwnerInfo = <T extends RemeshDomainDefinition, U extends SerializableType>(
+    const getOwnerInfo = <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
       owner: RemeshDomainPayload<T, U>,
     ) => {
       const ownerInfo = {

@@ -1,4 +1,4 @@
-import { Observable } from 'rxjs'
+import { Observable, of } from 'rxjs'
 import shallowEqual from 'shallowequal'
 import { isPlainObject } from 'is-plain-object'
 
@@ -13,27 +13,17 @@ export type SerializableType =
   | { toJSON(): string }
   | { [key: string]: SerializableType }
 
-export type Undefined2Void<T> = undefined extends T ? Exclude<T, undefined> | void : T
-
-export const undefined2Void = <T>(value: T): Undefined2Void<T> => {
-  return value as Undefined2Void<T>
-}
-
-export type ExtractFirstArg<T extends (...args: any) => any> = Undefined2Void<Parameters<T>[0]>
-
-export type ExtractSecondArg<T extends (...args: any) => any> = Undefined2Void<Parameters<T>[1]>
-
-export type GetterInput<T extends SerializableType, U> = RemeshStateItem<T, U> | RemeshQueryPayload<T, U>
+export type GetterInput<T extends Args<SerializableType>, U> = RemeshStateItem<T, U> | RemeshQueryPayload<T, U>
 
 export const RemeshValuePlaceholder = Symbol('RemeshValuePlaceholder')
 
 export type RemeshValuePlaceholder = typeof RemeshValuePlaceholder
 
 export type RemeshInjectedContext = {
-  get: <T extends SerializableType, U>(input: GetterInput<T, U>) => U
-  peek: <T extends SerializableType, U>(input: GetterInput<T, U>) => U | RemeshValuePlaceholder
-  fromEvent: <T, U>(Event: RemeshEvent<T, U>) => Observable<U>
-  fromQuery: <T extends SerializableType, U>(Query: RemeshQueryPayload<T, U>) => Observable<U>
+  get: <T extends Args<SerializableType>, U>(input: GetterInput<T, U>) => U
+  peek: <T extends Args<SerializableType>, U>(input: GetterInput<T, U>) => U | RemeshValuePlaceholder
+  fromEvent: <T extends Args, U>(Event: RemeshEvent<T, U>) => Observable<U>
+  fromQuery: <T extends Args<SerializableType>, U>(Query: RemeshQueryPayload<T, U>) => Observable<U>
 }
 
 export type RemeshEventContext = {
@@ -41,35 +31,37 @@ export type RemeshEventContext = {
   peek: RemeshInjectedContext['peek']
 }
 
-export type RemeshEvent<T, U = T> = {
+export type Args<T = unknown> = [] | [arg: T] | [arg?: T]
+
+export type RemeshEvent<T extends Args, U> = {
   type: 'RemeshEvent'
   eventId: number
   eventName: string
-  impl?: (context: RemeshEventContext, arg: T) => U
-  (arg: T): RemeshEventPayload<T, U>
+  impl?: (context: RemeshEventContext, arg: T[0]) => U
+  (...args: T): RemeshEventPayload<T, U>
   owner: RemeshDomainPayload<any, any>
   inspectable: boolean
 }
 
-export type RemeshEventPayload<T, U = T> = {
+export type RemeshEventPayload<T extends Args, U> = {
   type: 'RemeshEventPayload'
-  arg: T
+  arg: T[0]
   Event: RemeshEvent<T, U>
 }
 
-export type RemeshEventOptions<T, U> = {
+export type RemeshEventOptions<T extends Args, U> = {
   name: string
   inspectable?: boolean
-  impl: (context: RemeshEventContext, arg: T) => U
+  impl: (context: RemeshEventContext, ...args: T) => U
 }
 
 let eventUid = 0
 
-export function RemeshEvent<T extends RemeshEventOptions<any, any>>(
-  options: T,
-): RemeshEvent<ExtractSecondArg<T['impl']>, ReturnType<T['impl']>>
-export function RemeshEvent<T = void>(options: { name: string }): RemeshEvent<T>
-export function RemeshEvent(options: RemeshEventOptions<unknown, unknown> | { name: string }): RemeshEvent<any, any> {
+export function RemeshEvent<T extends Args, U>(options: RemeshEventOptions<T, U>): RemeshEvent<T, U>
+export function RemeshEvent<T = void>(options: Omit<RemeshEventOptions<[T], T>, 'impl'>): RemeshEvent<[T], T>
+export function RemeshEvent<T extends Args, U>(
+  options: RemeshEventOptions<T, U> | Omit<RemeshEventOptions<[], void>, 'impl'>,
+): RemeshEvent<T, U> {
   const eventId = eventUid++
 
   const Event = ((arg) => {
@@ -87,7 +79,7 @@ export function RemeshEvent(options: RemeshEventOptions<unknown, unknown> | { na
   Event.inspectable = 'inspectable' in options ? options.inspectable ?? true : true
 
   if ('impl' in options) {
-    Event.impl = options.impl
+    Event.impl = options.impl as (context: RemeshEventContext, arg: T[0]) => U
   }
 
   return Event
@@ -95,38 +87,33 @@ export function RemeshEvent(options: RemeshEventOptions<unknown, unknown> | { na
 
 export type CompareFn<T> = (prev: T, curr: T) => boolean
 
-export type RemeshStateChangedEventData<T> = {
-  previous: T
-  current: T
-}
-
-export type RemeshState<T extends SerializableType, U> = {
+export type RemeshState<T extends Args<SerializableType>, U> = {
   type: 'RemeshState'
   stateId: number
   stateName: string
   defer: boolean
-  impl: (arg: T) => U
-  (arg: T): RemeshStateItem<T, U>
+  impl: (arg: T[0]) => U
+  (...args: T): RemeshStateItem<T, U>
   owner: RemeshDomainPayload<any, any>
   compare: CompareFn<U>
   inspectable: boolean
 }
 
-export type RemeshStateItem<T extends SerializableType, U> = {
+export type RemeshStateItem<T extends Args<SerializableType>, U> = {
   type: 'RemeshStateItem'
-  arg: T
+  arg: T[0]
   State: RemeshState<T, U>
   new: (newState: U) => RemeshStatePayload<T, U>
 }
 
 export type RemeshDefaultStateOptions<T> = {
-  name: RemeshState<void, T>['stateName']
+  name: RemeshState<[], T>['stateName']
   default: T
   inspectable?: boolean
-  compare?: RemeshState<void, T>['compare']
+  compare?: RemeshState<[], T>['compare']
 }
 
-export const RemeshDefaultState = <T>(options: RemeshDefaultStateOptions<T>): RemeshState<void, T> => {
+export const RemeshDefaultState = <T>(options: RemeshDefaultStateOptions<T>): RemeshState<[], T> => {
   return RemeshState({
     name: options.name,
     impl: () => options.default,
@@ -136,16 +123,16 @@ export const RemeshDefaultState = <T>(options: RemeshDefaultStateOptions<T>): Re
 }
 
 export type RemeshDeferStateOptions<T extends SerializableType, U> = {
-  name: RemeshState<T, U>['stateName']
+  name: RemeshState<[T], U>['stateName']
   inspectable?: boolean
-  compare?: RemeshState<T, U>['compare']
+  compare?: RemeshState<[T], U>['compare']
 }
 
-export const RemeshDeferState = <T extends SerializableType, U>(options: RemeshDeferStateOptions<T, U>) => {
+export const RemeshDeferState = <T extends SerializableType = void, U = T>(options: RemeshDeferStateOptions<T, U>) => {
   return RemeshState({
     name: options.name,
     defer: true,
-    impl: (_arg: T): U => {
+    impl: (..._args: [T]): U => {
       throw new Error(`RemeshDeferState: use ${options.name} before setting state`)
     },
     inspectable: options.inspectable,
@@ -153,16 +140,16 @@ export const RemeshDeferState = <T extends SerializableType, U>(options: RemeshD
   })
 }
 
-export type RemeshStatePayload<T extends SerializableType, U> = {
+export type RemeshStatePayload<T extends Args<SerializableType>, U> = {
   type: 'RemeshStateSetterPayload'
   stateItem: RemeshStateItem<T, U>
   newState: U
 }
 
-export type RemeshStateOptions<T extends SerializableType, U> = {
+export type RemeshStateOptions<T extends Args<SerializableType>, U> = {
   name: string
   defer?: boolean
-  impl: (arg?: T) => U
+  impl: (...args: T) => U
   inspectable?: boolean
   compare?: CompareFn<U>
 }
@@ -181,18 +168,16 @@ export const defaultCompare = <T>(prev: T, curr: T) => {
   return prev === curr
 }
 
-export const RemeshState = <T extends RemeshStateOptions<any, any>>(
-  options: T,
-): RemeshState<ExtractFirstArg<T['impl']>, ReturnType<T['impl']>> => {
+export const RemeshState = <T extends Args<SerializableType>, U>(
+  options: RemeshStateOptions<T, U>,
+): RemeshState<T, U> => {
   const stateId = stateUid++
 
-  type StateArg = ExtractFirstArg<T['impl']>
-  type StateReturn = ReturnType<T['impl']>
-  type StateItem = RemeshStateItem<StateArg, StateReturn>
+  type StateItem = RemeshStateItem<T, U>
 
   let cacheForNullary = null as StateItem | null
 
-  const State = ((arg) => {
+  const State = ((arg: T[0]) => {
     if (arg === undefined && cacheForNullary) {
       return cacheForNullary
     }
@@ -215,12 +200,12 @@ export const RemeshState = <T extends RemeshStateOptions<any, any>>(
     }
 
     return stateItem
-  }) as RemeshState<StateArg, StateReturn>
+  }) as unknown as RemeshState<T, U>
 
   State.type = 'RemeshState'
   State.stateId = stateId
   State.stateName = options.name
-  State.impl = options.impl
+  State.impl = options.impl as (arg: T[0]) => U
   State.compare = options.compare ?? defaultCompare
   State.owner = DefaultDomain()
   State.inspectable = options.inspectable ?? true
@@ -241,47 +226,47 @@ export type RemeshQueryContext = {
   peek: RemeshInjectedContext['peek']
 }
 
-export type RemeshQuery<T extends SerializableType, U> = {
+export type RemeshQuery<T extends Args<SerializableType>, U> = {
   type: 'RemeshQuery'
   queryId: number
   queryName: string
-  impl: (context: RemeshQueryContext, arg: T) => U
-  (arg: T): RemeshQueryPayload<T, U>
+  impl: (context: RemeshQueryContext, arg: T[0]) => U
+  (...args: T): RemeshQueryPayload<T, U>
   owner: RemeshDomainPayload<any, any>
   compare: CompareFn<U>
   inspectable: boolean
 }
 
-export type RemeshQueryPayload<T extends SerializableType, U> = {
+export type RemeshQueryPayload<T extends Args<SerializableType>, U> = {
   type: 'RemeshQueryPayload'
   Query: RemeshQuery<T, U>
-  arg: T
+  arg: T[0]
 }
 
-export type RemeshQueryOptions<T extends SerializableType, U> = {
+export type RemeshQueryOptions<T extends Args<SerializableType>, U> = {
   name: string
   inspectable?: boolean
-  impl: (context: RemeshQueryContext, arg?: T) => U
+  impl: (context: RemeshQueryContext, ...args: T) => U
   compare?: RemeshQuery<T, U>['compare']
 }
 
 let queryUid = 0
-export const RemeshQuery = <T extends RemeshQueryOptions<any, any>>(
-  options: T,
-): RemeshQuery<ExtractSecondArg<T['impl']>, ReturnType<T['impl']>> => {
+export const RemeshQuery = <T extends Args<SerializableType>, U>(
+  options: RemeshQueryOptions<T, U>,
+): RemeshQuery<T, U> => {
   const queryId = queryUid++
 
   /**
    * optimize for nullary query
    */
-  let cacheForNullary: RemeshQueryPayload<ExtractSecondArg<T['impl']>, ReturnType<T['impl']>> | null = null
+  let cacheForNullary: RemeshQueryPayload<T, U> | null = null
 
-  const Query = ((arg) => {
+  const Query = ((arg: T[0]) => {
     if (arg === undefined && cacheForNullary) {
       return cacheForNullary
     }
 
-    const payload: RemeshQueryPayload<ExtractSecondArg<T['impl']>, ReturnType<T['impl']>> = {
+    const payload: RemeshQueryPayload<T, U> = {
       type: 'RemeshQueryPayload',
       Query,
       arg,
@@ -292,12 +277,12 @@ export const RemeshQuery = <T extends RemeshQueryOptions<any, any>>(
     }
 
     return payload
-  }) as RemeshQuery<ExtractSecondArg<T['impl']>, ReturnType<T['impl']>>
+  }) as unknown as RemeshQuery<T, U>
 
   Query.type = 'RemeshQuery'
   Query.queryId = queryId
   Query.queryName = options.name
-  Query.impl = options.impl
+  Query.impl = options.impl as (context: RemeshQueryContext, arg: T[0]) => U
   Query.compare = options.compare ?? defaultCompare
   Query.owner = DefaultDomain()
   Query.inspectable = options.inspectable ?? true
@@ -321,47 +306,45 @@ export type RemeshCommandOutput =
   | void
   | false
 
-export type RemeshCommandPayload<T> = {
+export type RemeshCommandPayload<T extends Args> = {
   type: 'RemeshCommandPayload'
-  arg: T
+  arg: T[0]
   Command: RemeshCommand<T>
 }
 
-export type RemeshCommand<T = unknown> = {
+export type RemeshCommand<T extends Args> = {
   type: 'RemeshCommand'
   commandId: number
   commandName: string
-  impl: (context: RemeshCommandContext, arg: T) => RemeshCommandOutput
-  (arg: T): RemeshCommandPayload<T>
+  impl: (context: RemeshCommandContext, arg: T[0]) => RemeshCommandOutput
+  (...args: T): RemeshCommandPayload<T>
   owner: RemeshDomainPayload<any, any>
   inspectable: boolean
 }
 
-export type RemeshCommandOptions<T> = {
+export type RemeshCommandOptions<T extends Args> = {
   name: string
   inspectable?: boolean
-  impl: (context: RemeshCommandContext, arg?: T) => RemeshCommandOutput
+  impl: (context: RemeshCommandContext, ...args: T) => RemeshCommandOutput
 }
 
 let commandUid = 0
 
-export const RemeshCommand = <T extends RemeshCommandOptions<any>>(
-  options: T,
-): RemeshCommand<ExtractSecondArg<T['impl']>> => {
+export const RemeshCommand = <T extends Args>(options: RemeshCommandOptions<T>): RemeshCommand<T> => {
   const commandId = commandUid++
 
-  const Command = ((arg) => {
+  const Command = ((arg: T[0]) => {
     return {
       type: 'RemeshCommandPayload',
       arg,
       Command,
     }
-  }) as RemeshCommand<ExtractSecondArg<T['impl']>>
+  }) as unknown as RemeshCommand<T>
 
   Command.type = 'RemeshCommand'
   Command.commandId = commandId
   Command.commandName = options.name
-  Command.impl = options.impl
+  Command.impl = options.impl as (context: RemeshCommandContext, arg: T[0]) => RemeshCommandOutput
   Command.owner = DefaultDomain()
   Command.inspectable = options.inspectable ?? true
 
@@ -481,11 +464,7 @@ export type RemeshDomainPreloadOptions<T extends SerializableType> = {
 
 export type RemeshDomainContext = {
   // definitions
-  state<T>(options: RemeshDefaultStateOptions<T>): RemeshState<void, T>
-  state<T extends RemeshStateOptions<any, any>>(
-    options: T,
-  ): RemeshState<ExtractFirstArg<T['impl']>, ReturnType<T['impl']>>
-  state<T extends SerializableType, U>(options: RemeshDeferStateOptions<T, U>): RemeshState<Undefined2Void<T>, U>
+  state: typeof RemeshState & typeof RemeshDefaultState & typeof RemeshDeferState
   event: typeof RemeshEvent
   query: typeof RemeshQuery
   command: typeof RemeshCommand
@@ -493,8 +472,8 @@ export type RemeshDomainContext = {
   ignite: (fn: RemeshDomainIgniteFn) => void
   preload: <T extends SerializableType>(options: RemeshDomainPreloadOptions<T>) => void
   // methods
-  getDomain: <T extends RemeshDomainDefinition, Arg extends SerializableType>(
-    domainPayload: RemeshDomainPayload<T, Arg>,
+  getDomain: <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
+    domainPayload: RemeshDomainPayload<T, U>,
   ) => T
   getExtern: <T>(Extern: RemeshExtern<T>) => T
 }
@@ -513,43 +492,43 @@ export type RemeshDomainOutput = {
 
 export type RemeshDomainDefinition = Partial<RemeshDomainOutput>
 
-export type RemeshDomain<T extends RemeshDomainDefinition, Arg extends SerializableType> = {
+export type RemeshDomain<T extends RemeshDomainDefinition, U extends Args<SerializableType>> = {
   type: 'RemeshDomain'
   domainName: string
   domainId: number
-  impl: (context: RemeshDomainContext, arg: Arg) => T
-  (arg: Arg): RemeshDomainPayload<T, Arg>
+  impl: (context: RemeshDomainContext, arg: U[0]) => T
+  (...args: U): RemeshDomainPayload<T, U>
   inspectable: boolean
 }
 
-export type RemeshDomainPayload<T extends RemeshDomainDefinition, Arg extends SerializableType> = {
+export type RemeshDomainPayload<T extends RemeshDomainDefinition, U extends Args<SerializableType>> = {
   type: 'RemeshDomainPayload'
-  Domain: RemeshDomain<T, Arg>
-  arg: Arg
+  Domain: RemeshDomain<T, U>
+  arg: U[0]
 }
 
-export type RemeshDomainOptions<T extends RemeshDomainDefinition, Arg extends SerializableType> = {
+export type RemeshDomainOptions<T extends RemeshDomainDefinition, U extends Args<SerializableType>> = {
   name: string
   inspectable?: boolean
-  impl: (context: RemeshDomainContext, arg?: Arg) => T
+  impl: (context: RemeshDomainContext, ...args: U) => T
 }
 
 let domainUid = 0
 
-export const RemeshDomain = <T extends RemeshDomainOptions<any, any>>(
-  options: T,
-): RemeshDomain<ReturnType<T['impl']>, ExtractSecondArg<T['impl']>> => {
+export const RemeshDomain = <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
+  options: RemeshDomainOptions<T, U>,
+): RemeshDomain<T, U> => {
   /**
    * optimize for nullary domain
    */
-  let cacheForNullary: RemeshDomainPayload<ReturnType<T['impl']>, ExtractSecondArg<T['impl']>> | null = null
+  let cacheForNullary: RemeshDomainPayload<T, U> | null = null
 
-  const Domain: RemeshDomain<ReturnType<T['impl']>, ExtractSecondArg<T['impl']>> = ((arg) => {
+  const Domain: RemeshDomain<T, U> = ((arg: U[0]) => {
     if (arg === undefined && cacheForNullary) {
       return cacheForNullary
     }
 
-    const result: RemeshDomainPayload<ReturnType<T['impl']>, ExtractSecondArg<T['impl']>> = {
+    const result: RemeshDomainPayload<T, U> = {
       type: 'RemeshDomainPayload',
       Domain,
       arg,
@@ -560,18 +539,18 @@ export const RemeshDomain = <T extends RemeshDomainOptions<any, any>>(
     }
 
     return result
-  }) as RemeshDomain<ReturnType<T['impl']>, ExtractSecondArg<T['impl']>>
+  }) as unknown as RemeshDomain<T, U>
 
   Domain.type = 'RemeshDomain'
   Domain.domainId = domainUid++
   Domain.domainName = options.name
-  Domain.impl = options.impl
+  Domain.impl = options.impl as (context: RemeshDomainContext, arg: U[0]) => T
   Domain.inspectable = options.inspectable ?? true
 
   return Domain
 }
 
-export const DefaultDomain: RemeshDomain<any, void> = RemeshDomain({
+export const DefaultDomain: RemeshDomain<any, []> = RemeshDomain({
   name: 'DefaultDomain',
   impl: () => {
     return {}

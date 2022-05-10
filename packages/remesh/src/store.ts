@@ -33,6 +33,7 @@ import {
   RemeshValuePlaceholder,
   SerializableType,
   RemeshDomainPreloadOptions,
+  Args,
 } from './remesh'
 
 import { createInspectorManager, InspectorType } from './inspector'
@@ -43,21 +44,21 @@ export type RemeshStore = ReturnType<typeof RemeshStore>
 
 let uid = 0
 
-export type RemeshStateStorage<T extends SerializableType, U> = {
+export type RemeshStateStorage<T extends Args<SerializableType>, U> = {
   id: number
   type: 'RemeshStateStorage'
   State: RemeshState<T, U>
-  arg: T
+  arg: T[0]
   key: string
   currentState: U | RemeshValuePlaceholder
   downstreamSet: Set<RemeshQueryStorage<any, any>>
 }
 
-export type RemeshQueryStorage<T extends SerializableType, U> = {
+export type RemeshQueryStorage<T extends Args<SerializableType>, U> = {
   id: number
   type: 'RemeshQueryStorage'
   Query: RemeshQuery<T, U>
-  arg: T
+  arg: T[0]
   key: string
   currentValue: U | RemeshValuePlaceholder
   upstreamSet: Set<RemeshQueryStorage<any, any> | RemeshStateStorage<any, any>>
@@ -69,7 +70,7 @@ export type RemeshQueryStorage<T extends SerializableType, U> = {
   wipUpstreamSet: Set<RemeshQueryStorage<any, any> | RemeshStateStorage<any, any>>
 }
 
-export type RemeshEventStorage<T = unknown, U = T> = {
+export type RemeshEventStorage<T extends Args, U> = {
   id: number
   type: 'RemeshEventStorage'
   Event: RemeshEvent<T, U>
@@ -87,16 +88,16 @@ export type RemeshCommand$Storage<T> = {
   subscription?: Subscription
 }
 
-export type RemeshDomainStorage<T extends RemeshDomainDefinition, Arg extends SerializableType> = {
+export type RemeshDomainStorage<T extends RemeshDomainDefinition, U extends Args<SerializableType>> = {
   id: number
   type: 'RemeshDomainStorage'
-  Domain: RemeshDomain<T, Arg>
-  arg: Arg
+  Domain: RemeshDomain<T, U>
+  arg: U[0]
   key: string
   domain: T
   domainContext: RemeshDomainContext
   domainOutput?: BindingDomainOutput<T>
-  domainPayload: RemeshDomainPayload<T, Arg>
+  domainPayload: RemeshDomainPayload<T, U>
   upstreamSet: Set<RemeshDomainStorage<any, any>>
   downstreamSet: Set<RemeshDomainStorage<any, any>>
   domainSubscriptionSet: Set<Subscription>
@@ -201,7 +202,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     string
   >()
 
-  const getStateStorageKey = <T extends SerializableType, U>(stateItem: RemeshStateItem<T, U>): string => {
+  const getStateStorageKey = <T extends Args<SerializableType>, U>(stateItem: RemeshStateItem<T, U>): string => {
     const key = storageKeyWeakMap.get(stateItem)
 
     if (key) {
@@ -217,7 +218,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     return keyString
   }
 
-  const getQueryStorageKey = <T extends SerializableType, U>(queryPayload: RemeshQueryPayload<T, U>): string => {
+  const getQueryStorageKey = <T extends Args<SerializableType>, U>(queryPayload: RemeshQueryPayload<T, U>): string => {
     const key = storageKeyWeakMap.get(queryPayload)
 
     if (key) {
@@ -233,8 +234,8 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     return keyString
   }
 
-  const getDomainStorageKey = <T extends RemeshDomainDefinition, Arg extends SerializableType>(
-    domainPayload: RemeshDomainPayload<T, Arg>,
+  const getDomainStorageKey = <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
+    domainPayload: RemeshDomainPayload<T, U>,
   ): string => {
     const key = storageKeyWeakMap.get(domainPayload)
 
@@ -251,8 +252,8 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     return keyString
   }
 
-  const getStorageKey = <T extends SerializableType, U>(
-    input: RemeshStateItem<T, U> | RemeshQueryPayload<T, U> | RemeshDomainPayload<U, T>,
+  const getStorageKey = <T extends Args<SerializableType>, U>(
+    input: RemeshStateItem<T, U> | RemeshQueryPayload<T, U> | RemeshDomainPayload<RemeshDomainDefinition, T>,
   ): string => {
     if (input.type === 'RemeshStateItem') {
       return getStateStorageKey(input)
@@ -262,7 +263,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     return getDomainStorageKey(input)
   }
 
-  const getStateFromStorage = <T extends SerializableType, U>(storage: RemeshStateStorage<T, U>): U => {
+  const getStateFromStorage = <T extends Args<SerializableType>, U>(storage: RemeshStateStorage<T, U>): U => {
     if (storage.currentState === RemeshValuePlaceholder) {
       throw new Error(`${storage.key} is not found`)
     }
@@ -271,11 +272,11 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
   const stateStorageWeakMap = new WeakMap<RemeshStateItem<any, any>, RemeshStateStorage<any, any>>()
 
-  const getStateValue = <T extends SerializableType, U>(State: RemeshState<T, U>, arg: T) => {
+  const getStateValue = <T extends Args<SerializableType>, U>(State: RemeshState<T, U>, arg: T[0]) => {
     return State.defer ? RemeshValuePlaceholder : State.impl(arg)
   }
 
-  const createStateStorage = <T extends SerializableType, U>(
+  const createStateStorage = <T extends Args<SerializableType>, U>(
     stateItem: RemeshStateItem<T, U>,
   ): RemeshStateStorage<T, U> => {
     const domainStorage = getDomainStorage(stateItem.State.owner)
@@ -301,7 +302,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     return newStateStorage
   }
 
-  const restoreStateStorage = <T extends SerializableType, U>(stateStorage: RemeshStateStorage<T, U>) => {
+  const restoreStateStorage = <T extends Args<SerializableType>, U>(stateStorage: RemeshStateStorage<T, U>) => {
     const domainStorage = getDomainStorage(stateStorage.State.owner)
 
     if (domainStorage.stateMap.has(stateStorage.key)) {
@@ -313,7 +314,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     inspectorManager.inspectStateStorage(InspectorType.StateReused, stateStorage)
   }
 
-  const getStateStorage = <T extends SerializableType, U>(
+  const getStateStorage = <T extends Args<SerializableType>, U>(
     stateItem: RemeshStateItem<T, U>,
   ): RemeshStateStorage<T, U> => {
     const domainStorage = getDomainStorage(stateItem.State.owner)
@@ -336,7 +337,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
   const eventStorageWeakMap = new WeakMap<RemeshEvent<any, any>, RemeshEventStorage<any, any>>()
 
-  const createEventStorage = <T, U = T>(Event: RemeshEvent<T, U>): RemeshEventStorage<T, U> => {
+  const createEventStorage = <T extends Args, U>(Event: RemeshEvent<T, U>): RemeshEventStorage<T, U> => {
     const domainStorage = getDomainStorage(Event.owner)
 
     const subject = new Subject<U>()
@@ -368,7 +369,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     return currentEventStorage
   }
 
-  const getMaybeEventStorage = <T, U = T>(Event: RemeshEvent<T, U>): RemeshEventStorage<T, U> | null => {
+  const getMaybeEventStorage = <T extends Args, U>(Event: RemeshEvent<T, U>): RemeshEventStorage<T, U> | null => {
     const domainStorage = getDomainStorage(Event.owner)
     const eventStorage = domainStorage.eventMap.get(Event)
 
@@ -379,7 +380,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     return null
   }
 
-  const getEventStorage = <T, U = T>(Event: RemeshEvent<T, U>): RemeshEventStorage<T, U> => {
+  const getEventStorage = <T extends Args, U>(Event: RemeshEvent<T, U>): RemeshEventStorage<T, U> => {
     const eventStorage = getMaybeEventStorage(Event)
 
     if (eventStorage) {
@@ -391,7 +392,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
   const queryStorageWeakMap = new WeakMap<RemeshQueryPayload<any, any>, RemeshQueryStorage<any, any>>()
 
-  const createQuery$ = <T extends SerializableType, U>(get: () => RemeshQueryStorage<T, U>) => {
+  const createQuery$ = <T extends Args<SerializableType>, U>(get: () => RemeshQueryStorage<T, U>) => {
     const subject = new Subject<U>()
 
     const observable = new Observable<U>((subscriber) => {
@@ -413,7 +414,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     }
   }
 
-  const createQueryStorage = <T extends SerializableType, U>(
+  const createQueryStorage = <T extends Args<SerializableType>, U>(
     queryPayload: RemeshQueryPayload<T, U>,
   ): RemeshQueryStorage<T, U> => {
     const domainStorage = getDomainStorage(queryPayload.Query.owner)
@@ -481,7 +482,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     return currentQueryStorage
   }
 
-  const restoreQueryStorage = <T extends SerializableType, U>(queryStorage: RemeshQueryStorage<T, U>) => {
+  const restoreQueryStorage = <T extends Args<SerializableType>, U>(queryStorage: RemeshQueryStorage<T, U>) => {
     const domainStorage = getDomainStorage(queryStorage.Query.owner)
 
     if (domainStorage.queryMap.has(queryStorage.key)) {
@@ -510,7 +511,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     inspectorManager.inspectQueryStorage(InspectorType.QueryReused, queryStorage)
   }
 
-  const getQueryStorage = <T extends SerializableType, U>(
+  const getQueryStorage = <T extends Args<SerializableType>, U>(
     queryPayload: RemeshQueryPayload<T, U>,
   ): RemeshQueryStorage<T, U> => {
     const domainStorage = getDomainStorage(queryPayload.Query.owner)
@@ -579,20 +580,17 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
   const domainStorageWeakMap = new WeakMap<RemeshDomainPayload<any, any>, RemeshDomainStorage<any, any>>()
 
-  const createDomainStorage = <T extends RemeshDomainDefinition, Arg extends SerializableType>(
-    domainPayload: RemeshDomainPayload<T, Arg>,
-  ): RemeshDomainStorage<T, Arg> => {
+  const createDomainStorage = <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
+    domainPayload: RemeshDomainPayload<T, U>,
+  ): RemeshDomainStorage<T, U> => {
     const key = getDomainStorageKey(domainPayload)
 
-    const upstreamSet: RemeshDomainStorage<T, Arg>['upstreamSet'] = new Set()
-    const igniteFnSet: RemeshDomainStorage<T, Arg>['igniteFnSet'] = new Set()
+    const upstreamSet: RemeshDomainStorage<T, U>['upstreamSet'] = new Set()
+    const igniteFnSet: RemeshDomainStorage<T, U>['igniteFnSet'] = new Set()
 
     const domainContext: RemeshDomainContext = {
       state: (
-        options:
-          | RemeshStateOptions<any, unknown>
-          | RemeshDefaultStateOptions<unknown>
-          | RemeshDeferStateOptions<any, unknown>,
+        options: RemeshStateOptions<any, any> | RemeshDefaultStateOptions<any> | RemeshDeferStateOptions<any, any>,
       ): any => {
         if ('default' in options) {
           const DefaultState = RemeshDefaultState(options)
@@ -655,7 +653,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       },
     }
 
-    const currentDomainStorage: RemeshDomainStorage<T, Arg> = {
+    const currentDomainStorage: RemeshDomainStorage<T, U> = {
       id: uid++,
       type: 'RemeshDomainStorage',
       Domain: domainPayload.Domain,
@@ -693,8 +691,8 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     return currentDomainStorage
   }
 
-  const injectPreloadState = <T extends RemeshDomainDefinition, Arg extends SerializableType>(
-    domainStorage: RemeshDomainStorage<T, Arg>,
+  const injectPreloadState = <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
+    domainStorage: RemeshDomainStorage<T, U>,
   ) => {
     if (!options?.preloadedState) {
       return
@@ -714,9 +712,9 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     }
   }
 
-  const getDomainStorage = <T extends RemeshDomainDefinition, Arg extends SerializableType>(
-    domainPayload: RemeshDomainPayload<T, Arg>,
-  ): RemeshDomainStorage<T, Arg> => {
+  const getDomainStorage = <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
+    domainPayload: RemeshDomainPayload<T, U>,
+  ): RemeshDomainStorage<T, U> => {
     const key = getDomainStorageKey(domainPayload)
     const domainStorage = domainStorageMap.get(key)
 
@@ -741,7 +739,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     return createDomainStorage(domainPayload)
   }
 
-  const clearQueryStorage = <T extends SerializableType, U>(queryStorage: RemeshQueryStorage<T, U>) => {
+  const clearQueryStorage = <T extends Args<SerializableType>, U>(queryStorage: RemeshQueryStorage<T, U>) => {
     const domainStorage = getDomainStorage(queryStorage.Query.owner)
 
     if (!domainStorage.queryMap.has(queryStorage.key)) {
@@ -767,7 +765,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     queryStorage.subject.complete()
   }
 
-  const clearQueryStorageIfNeeded = <T extends SerializableType, U>(queryStorage: RemeshQueryStorage<T, U>) => {
+  const clearQueryStorageIfNeeded = <T extends Args<SerializableType>, U>(queryStorage: RemeshQueryStorage<T, U>) => {
     if (queryStorage.refCount !== 0) {
       return
     }
@@ -779,7 +777,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     clearQueryStorage(queryStorage)
   }
 
-  const clearStateStorage = <T extends SerializableType, U>(stateStorage: RemeshStateStorage<T, U>) => {
+  const clearStateStorage = <T extends Args<SerializableType>, U>(stateStorage: RemeshStateStorage<T, U>) => {
     const domainStorage = getDomainStorage(stateStorage.State.owner)
 
     if (!domainStorage.stateMap.has(stateStorage.key)) {
@@ -791,7 +789,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     stateStorage.downstreamSet.clear()
   }
 
-  const clearStateStorageIfNeeded = <T extends SerializableType, U>(stateStorage: RemeshStateStorage<T, U>) => {
+  const clearStateStorageIfNeeded = <T extends Args<SerializableType>, U>(stateStorage: RemeshStateStorage<T, U>) => {
     if (stateStorage.downstreamSet.size !== 0) {
       return
     }
@@ -799,14 +797,14 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     clearStateStorage(stateStorage)
   }
 
-  const clearEventStorage = <T, U>(eventStorage: RemeshEventStorage<T, U>) => {
+  const clearEventStorage = <T extends Args, U>(eventStorage: RemeshEventStorage<T, U>) => {
     const domainStorage = getDomainStorage(eventStorage.Event.owner)
 
     eventStorage.subject.complete()
     domainStorage.eventMap.delete(eventStorage.Event)
   }
 
-  const clearEventStorageIfNeeded = <T, U>(eventStorage: RemeshEventStorage<T, U>) => {
+  const clearEventStorageIfNeeded = <T extends Args, U>(eventStorage: RemeshEventStorage<T, U>) => {
     if (eventStorage.refCount !== 0) {
       return
     }
@@ -824,8 +822,8 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     domainStorage.command$Map.delete(command$Storage.Command$)
   }
 
-  const clearDomainStorage = <T extends RemeshDomainDefinition, Arg extends SerializableType>(
-    domainStorage: RemeshDomainStorage<T, Arg>,
+  const clearDomainStorage = <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
+    domainStorage: RemeshDomainStorage<T, U>,
   ) => {
     if (!domainStorage.running) {
       return
@@ -869,8 +867,8 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     }
   }
 
-  const clearDomainStorageIfNeeded = <T extends RemeshDomainDefinition, Arg extends SerializableType>(
-    domainStorage: RemeshDomainStorage<T, Arg>,
+  const clearDomainStorageIfNeeded = <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
+    domainStorage: RemeshDomainStorage<T, U>,
   ) => {
     if (domainStorage.downstreamSet.size !== 0) {
       return
@@ -883,13 +881,13 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     clearDomainStorage(domainStorage)
   }
 
-  const getCurrentState = <T extends SerializableType, U>(stateItem: RemeshStateItem<T, U>): U => {
+  const getCurrentState = <T extends Args<SerializableType>, U>(stateItem: RemeshStateItem<T, U>): U => {
     const stateStorage = getStateStorage(stateItem)
 
     return getStateFromStorage(stateStorage)
   }
 
-  const getCurrentQueryValue = <T extends SerializableType, U>(queryPayload: RemeshQueryPayload<T, U>): U => {
+  const getCurrentQueryValue = <T extends Args<SerializableType>, U>(queryPayload: RemeshQueryPayload<T, U>): U => {
     const queryStorage = getQueryStorage(queryPayload)
     const currentValue = queryStorage.currentValue
 
@@ -935,7 +933,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     },
   }
 
-  const updateWipQueryStorage = <T extends SerializableType, U>(queryStorage: RemeshQueryStorage<T, U>) => {
+  const updateWipQueryStorage = <T extends Args<SerializableType>, U>(queryStorage: RemeshQueryStorage<T, U>) => {
     if (queryStorage.wipUpstreamSet.size !== 0) {
       let shouldUpdate = false
 
@@ -969,7 +967,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     }
   }
 
-  const updateQueryStorage = <T extends SerializableType, U>(queryStorage: RemeshQueryStorage<T, U>) => {
+  const updateQueryStorage = <T extends Args<SerializableType>, U>(queryStorage: RemeshQueryStorage<T, U>) => {
     const { Query } = queryStorage
 
     for (const upstream of queryStorage.upstreamSet) {
@@ -1079,7 +1077,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     clearPendingEmitSetIfNeeded()
   }
 
-  const mark = <T extends SerializableType, U>(queryStorage: RemeshQueryStorage<T, U>) => {
+  const mark = <T extends Args<SerializableType>, U>(queryStorage: RemeshQueryStorage<T, U>) => {
     queryStorage.status = 'wip'
 
     if (queryStorage.downstreamSet.size > 0) {
@@ -1118,7 +1116,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     clearPendingEmitSetIfNeeded()
   }
 
-  const handleStatePayload = <T extends SerializableType, U>(statePayload: RemeshStatePayload<T, U>) => {
+  const handleStatePayload = <T extends Args<SerializableType>, U>(statePayload: RemeshStatePayload<T, U>) => {
     const stateStorage = getStateStorage(statePayload.stateItem)
 
     if (stateStorage.currentState !== RemeshValuePlaceholder) {
@@ -1139,11 +1137,11 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     }
   }
 
-  const handleEventPayload = <T, U = T>(eventPayload: RemeshEventPayload<T, U>) => {
+  const handleEventPayload = <T extends Args, U>(eventPayload: RemeshEventPayload<T, U>) => {
     pendingEmitSet.add(eventPayload)
   }
 
-  const emitEvent = <T, U = T>(eventPayload: RemeshEventPayload<T, U>) => {
+  const emitEvent = <T extends Args, U>(eventPayload: RemeshEventPayload<T, U>) => {
     const { Event, arg } = eventPayload
     const eventStorage = getMaybeEventStorage(Event)
 
@@ -1165,7 +1163,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     }
   }
 
-  const handleCommandPayload = <T>(commandPayload: RemeshCommandPayload<T>) => {
+  const handleCommandPayload = <T extends Args>(commandPayload: RemeshCommandPayload<T>) => {
     inspectorManager.inspectCommandReceived(InspectorType.CommandReceived, commandPayload)
 
     const { Command, arg } = commandPayload
@@ -1271,7 +1269,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     })
   }
 
-  const subscribeQuery = <T extends SerializableType, U>(
+  const subscribeQuery = <T extends Args<SerializableType>, U>(
     queryPayload: RemeshQueryPayload<T, U>,
     subscriber: ((data: U) => unknown) | Partial<Observer<U>>,
   ): Subscription => {
@@ -1284,7 +1282,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     return subscription
   }
 
-  const subscribeEvent = <T, U = T>(Event: RemeshEvent<T, U>, subscriber: (event: U) => unknown) => {
+  const subscribeEvent = <T extends Args, U>(Event: RemeshEvent<T, U>, subscriber: (event: U) => unknown) => {
     const eventStorage = getEventStorage(Event)
     const subscription = eventStorage.observable.subscribe(subscriber)
 
@@ -1296,14 +1294,22 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
     for (const key in domain.command) {
       const Command = domain.command[key]
-      command[key] = (arg: any) => sendCommand(Command(arg))
+      if (Command.type === 'RemeshCommand') {
+        const commandFactory = Command
+        command[key] = (arg: any) => sendCommand(commandFactory(arg))
+      } else if (Command.type === 'RemeshCommand$') {
+        const commandFactory = Command
+        command[key] = (arg: any) => sendCommand(commandFactory(arg))
+      } else {
+        throw new Error(`Unknown command: ${Command}`)
+      }
     }
 
     return command as BindingCommand<T['command']>
   }
 
-  const getDomain = <T extends RemeshDomainDefinition, Arg extends SerializableType>(
-    domainPayload: RemeshDomainPayload<T, Arg>,
+  const getDomain = <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
+    domainPayload: RemeshDomainPayload<T, U>,
   ): BindingDomainOutput<T> => {
     const domainStorage = getDomainStorage(domainPayload)
 
@@ -1324,16 +1330,16 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     return domainOutput
   }
 
-  const igniteDomain = <T extends RemeshDomainDefinition, Arg extends SerializableType>(
-    domainStorage: RemeshDomainStorage<T, Arg>,
+  const igniteDomain = <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
+    domainStorage: RemeshDomainStorage<T, U>,
   ) => {
     for (const igniteFn of domainStorage.igniteFnSet) {
       ignite(igniteFn)
     }
   }
 
-  const runDomainStorageIfNeeded = <T extends RemeshDomainDefinition, Arg extends SerializableType>(
-    domainStorage: RemeshDomainStorage<T, Arg>,
+  const runDomainStorageIfNeeded = <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
+    domainStorage: RemeshDomainStorage<T, U>,
   ) => {
     if (domainStorage.running) {
       return
@@ -1349,8 +1355,8 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     igniteDomain(domainStorage)
   }
 
-  const subscribeDomain = <T extends RemeshDomainDefinition, Arg extends SerializableType>(
-    domainPayload: RemeshDomainPayload<T, Arg>,
+  const subscribeDomain = <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
+    domainPayload: RemeshDomainPayload<T, U>,
   ): Subscription => {
     const domainStorage = getDomainStorage(domainPayload)
     const domainSubscription = new Subscription()
@@ -1371,7 +1377,9 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     pendingEmitSet.clear()
   }
 
-  const sendCommand = <T>(input: RemeshCommandPayload<T> | RemeshCommand$Payload<T>) => {
+  function sendCommand<T>(input: RemeshCommand$Payload<T>): void
+  function sendCommand<T extends Args>(input: RemeshCommandPayload<T>): void
+  function sendCommand(input: RemeshCommandPayload<Args> | RemeshCommand$Payload<unknown>) {
     if (input.type === 'RemeshCommandPayload') {
       handleCommandPayload(input)
       commit()
@@ -1380,8 +1388,8 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     }
   }
 
-  const preload = <T extends RemeshDomainDefinition, Arg extends SerializableType>(
-    domainPayload: RemeshDomainPayload<T, Arg>,
+  const preload = <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
+    domainPayload: RemeshDomainPayload<T, U>,
   ) => {
     const domainStorage = getDomainStorage(domainPayload)
 
@@ -1400,8 +1408,8 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     return preloadedPromise
   }
 
-  const preloadDomain = async <T extends RemeshDomainDefinition, Arg extends SerializableType>(
-    domainPayload: RemeshDomainPayload<T, Arg>,
+  const preloadDomain = async <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
+    domainPayload: RemeshDomainPayload<T, U>,
   ) => {
     const domainStorage = getDomainStorage(domainPayload)
 
@@ -1447,8 +1455,8 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     return preloadedState
   }
 
-  const getDomainPreloadedState = <T extends RemeshDomainDefinition, Arg extends SerializableType>(
-    domainPayload: RemeshDomainPayload<T, Arg>,
+  const getDomainPreloadedState = <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
+    domainPayload: RemeshDomainPayload<T, U>,
   ): PreloadedState => {
     const domainStorage = getDomainStorage(domainPayload)
 
