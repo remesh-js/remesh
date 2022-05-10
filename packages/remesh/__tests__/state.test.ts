@@ -161,7 +161,7 @@ describe('state', () => {
 
   it('state with RemeshDomain', () => {
     const TestDomain = RemeshDomain({
-      name: 'domain',
+      name: 'TestDomain',
       impl(domain) {
         const AgeState = domain.state({
           name: 'AgeState',

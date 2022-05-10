@@ -15,7 +15,7 @@ export const TodoDomain = Remesh.domain({
     const repo = domain.getExtern(TodoRepoExtern)
 
     const TodoListState = domain.state<Todo[]>({
-      name: 'TodoList',
+      name: 'TodoListState',
       default: [],
     })
 
@@ -91,8 +91,8 @@ export const TodoDomain = Remesh.domain({
       name: 'RemoveTodoEvent',
     })
 
-    const RemoveTodo = domain.command({
-      name: 'RemoveTodo',
+    const RemoveTodoCommand = domain.command({
+      name: 'RemoveTodoCommand',
       impl({ get }, id: Todo['id']) {
         const todoList = get(TodoListState())
         const newTodoList = todoList.filter((todo) => todo.id !== id)
@@ -111,7 +111,7 @@ export const TodoDomain = Remesh.domain({
         const todoList = get(TodoListState())
 
         if (payload.name && payload.name.trim() === '') {
-          return RemoveTodo(payload.id)
+          return RemoveTodoCommand(payload.id)
         }
 
         const newTodoList = todoList.map((todo) => {
@@ -240,7 +240,7 @@ export const TodoDomain = Remesh.domain({
       },
       command: {
         AddTodoCommand: AddTodoCommand,
-        RemoveTodo: RemoveTodo,
+        RemoveTodo: RemoveTodoCommand,
         ToggleTodoCompletedCommand: ToggleTodoCompletedCommand,
         ToggleAllTodoCompletedCommand: ToggleAllTodoCompletedCommand,
         UpdateTodoCommand: UpdateTodoCommand,

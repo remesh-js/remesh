@@ -76,7 +76,7 @@ export const PaginationDomain = Remesh.domain({
     domain.ignite(() => userFetcher.command.LoadCommand(defaultPagination))
 
     const LoadMoreCommand = domain.command({
-      name: 'loadMore',
+      name: 'LoadMoreCommand',
       impl: ({ get }) => {
         const nextPagination = get(NextPaginationQuery())
         return userFetcher.command.LoadCommand(nextPagination)

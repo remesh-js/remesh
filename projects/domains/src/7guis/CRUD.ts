@@ -40,7 +40,7 @@ export const CRUDDomain = Remesh.domain({
     })
 
     const CreatedState = domain.state<Name>({
-      name: 'Created',
+      name: 'CreatedState',
       default: {
         name: '',
         surname: '',
@@ -55,7 +55,7 @@ export const CRUDDomain = Remesh.domain({
     })
 
     const UpdateCreatedCommand = domain.command({
-      name: 'UpdateCreated',
+      name: 'UpdateCreatedCommand',
       impl: ({ get }, name: Partial<Name>) => {
         const currentName = get(CreatedState())
         return CreatedState().new({
@@ -101,7 +101,7 @@ export const CRUDDomain = Remesh.domain({
     })
 
     const UpdateSelectedNameCommand = domain.command({
-      name: 'UpdateSelectedName',
+      name: 'UpdateSelectedNameCommand',
       impl: ({ get }, name: Partial<Name>) => {
         const selected = get(SelectedState())
 
@@ -131,7 +131,7 @@ export const CRUDDomain = Remesh.domain({
     })
 
     const SyncSelectedCommand = domain.command({
-      name: 'SyncSelected',
+      name: 'SyncSelectedCommand',
       impl: ({ get }) => {
         const selected = get(SelectedState())
 

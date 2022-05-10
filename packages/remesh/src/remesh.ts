@@ -1,6 +1,8 @@
-import { Observable, of } from 'rxjs'
+import { Observable } from 'rxjs'
 import shallowEqual from 'shallowequal'
 import { isPlainObject } from 'is-plain-object'
+
+export type Suffix<T extends string> = `${string}${T}`
 
 export type SerializableType =
   | void
@@ -36,7 +38,7 @@ export type Args<T = unknown> = [] | [arg: T] | [arg?: T]
 export type RemeshEvent<T extends Args, U> = {
   type: 'RemeshEvent'
   eventId: number
-  eventName: string
+  eventName: Suffix<'Event'>
   impl?: (context: RemeshEventContext, arg: T[0]) => U
   (...args: T): RemeshEventPayload<T, U>
   owner: RemeshDomainPayload<any, any>
@@ -50,7 +52,7 @@ export type RemeshEventPayload<T extends Args, U> = {
 }
 
 export type RemeshEventOptions<T extends Args, U> = {
-  name: string
+  name: Suffix<'Event'>
   inspectable?: boolean
   impl: (context: RemeshEventContext, ...args: T) => U
 }
@@ -90,7 +92,7 @@ export type CompareFn<T> = (prev: T, curr: T) => boolean
 export type RemeshState<T extends Args<SerializableType>, U> = {
   type: 'RemeshState'
   stateId: number
-  stateName: string
+  stateName: Suffix<'State'>
   defer: boolean
   impl: (arg: T[0]) => U
   (...args: T): RemeshStateItem<T, U>
@@ -147,7 +149,7 @@ export type RemeshStatePayload<T extends Args<SerializableType>, U> = {
 }
 
 export type RemeshStateOptions<T extends Args<SerializableType>, U> = {
-  name: string
+  name: Suffix<'State'>
   defer?: boolean
   impl: (...args: T) => U
   inspectable?: boolean
@@ -229,7 +231,7 @@ export type RemeshQueryContext = {
 export type RemeshQuery<T extends Args<SerializableType>, U> = {
   type: 'RemeshQuery'
   queryId: number
-  queryName: string
+  queryName: Suffix<'Query'>
   impl: (context: RemeshQueryContext, arg: T[0]) => U
   (...args: T): RemeshQueryPayload<T, U>
   owner: RemeshDomainPayload<any, any>
@@ -244,7 +246,7 @@ export type RemeshQueryPayload<T extends Args<SerializableType>, U> = {
 }
 
 export type RemeshQueryOptions<T extends Args<SerializableType>, U> = {
-  name: string
+  name: Suffix<'Query'>
   inspectable?: boolean
   impl: (context: RemeshQueryContext, ...args: T) => U
   compare?: RemeshQuery<T, U>['compare']
@@ -315,7 +317,7 @@ export type RemeshCommandPayload<T extends Args> = {
 export type RemeshCommand<T extends Args> = {
   type: 'RemeshCommand'
   commandId: number
-  commandName: string
+  commandName: Suffix<'Command'>
   impl: (context: RemeshCommandContext, arg: T[0]) => RemeshCommandOutput
   (...args: T): RemeshCommandPayload<T>
   owner: RemeshDomainPayload<any, any>
@@ -323,7 +325,7 @@ export type RemeshCommand<T extends Args> = {
 }
 
 export type RemeshCommandOptions<T extends Args> = {
-  name: string
+  name: Suffix<'Command'>
   inspectable?: boolean
   impl: (context: RemeshCommandContext, ...args: T) => RemeshCommandOutput
 }
@@ -367,7 +369,7 @@ export type RemeshCommand$Payload<T> = {
 export type RemeshCommand$<T> = {
   type: 'RemeshCommand$'
   command$Id: number
-  command$Name: string
+  command$Name: Suffix<'Command$'>
   impl: (context: RemeshCommand$Context, arg$: Observable<T>) => Observable<RemeshCommandOutput>
   (arg: T): RemeshCommand$Payload<T>
   owner: RemeshDomainPayload<any, any>
@@ -375,7 +377,7 @@ export type RemeshCommand$<T> = {
 }
 
 export type RemeshCommand$Options<T> = {
-  name: string
+  name: Suffix<'Command$'>
   inspectable?: boolean
   impl: RemeshCommand$<T>['impl']
 }
@@ -410,7 +412,7 @@ export type RemeshExternPayload<T> = {
 
 export type RemeshExtern<T> = {
   type: 'RemeshExtern'
-  externName: string
+  externName: Suffix<'Extern'>
   externId: number
   default: T
   impl(value: T): RemeshExternPayload<T>
@@ -494,7 +496,7 @@ export type RemeshDomainDefinition = Partial<RemeshDomainOutput>
 
 export type RemeshDomain<T extends RemeshDomainDefinition, U extends Args<SerializableType>> = {
   type: 'RemeshDomain'
-  domainName: string
+  domainName: Suffix<'Domain'>
   domainId: number
   impl: (context: RemeshDomainContext, arg: U[0]) => T
   (...args: U): RemeshDomainPayload<T, U>
@@ -508,7 +510,7 @@ export type RemeshDomainPayload<T extends RemeshDomainDefinition, U extends Args
 }
 
 export type RemeshDomainOptions<T extends RemeshDomainDefinition, U extends Args<SerializableType>> = {
-  name: string
+  name: Suffix<'Domain'>
   inspectable?: boolean
   impl: (context: RemeshDomainContext, ...args: U) => T
 }

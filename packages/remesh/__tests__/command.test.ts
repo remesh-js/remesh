@@ -223,8 +223,8 @@ describe('command$', () => {
       name: 'CountIncreaseEvent',
     })
 
-    const fromEventToUpdate$ = RemeshCommand$({
-      name: 'fromEventToUpdate',
+    const fromEventToUpdateCommand$ = RemeshCommand$({
+      name: 'fromEventToUpdateCommand$',
       impl({ fromEvent, get }) {
         return fromEvent(CountIncreaseEvent)
           .pipe(map(() => get(CountState()) + 1))
@@ -232,16 +232,16 @@ describe('command$', () => {
       },
     })
 
-    const fromQueryToEvent$ = RemeshCommand$({
-      name: 'fromQueryToEvent',
+    const fromQueryToEventCommand$ = RemeshCommand$({
+      name: 'fromQueryToEventCommand$',
       impl({ fromQuery }) {
         return fromQuery(CountQuery()).pipe(map((count) => CountChangedEvent(count)))
       },
     })
 
     const changed = jest.fn()
-    store.sendCommand(fromEventToUpdate$())
-    store.sendCommand(fromQueryToEvent$())
+    store.sendCommand(fromEventToUpdateCommand$())
+    store.sendCommand(fromQueryToEventCommand$())
 
     store.subscribeEvent(CountChangedEvent, changed)
     store.emitEvent(CountIncreaseEvent())

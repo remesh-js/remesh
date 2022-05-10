@@ -40,7 +40,7 @@ describe('domain', () => {
       name: 'BarDomain',
       impl(domain) {
         const ContentState = domain.state({
-          name: 'content',
+          name: 'ContentState',
           default: 'bar'
         })
 
@@ -59,7 +59,7 @@ describe('domain', () => {
       name: 'BarDomain',
       impl(domain) {
         const ContentState = domain.state({
-          name: 'content',
+          name: 'ContentState',
           default: 'foo'
         })
 

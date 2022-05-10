@@ -7,7 +7,7 @@ export type Storage = {
 }
 
 export const Storage = Remesh.extern<Storage>({
-  name: 'Storage',
+  name: 'StorageExtern',
   default: {
     get: () => {
       throw new Error('Not implemented')

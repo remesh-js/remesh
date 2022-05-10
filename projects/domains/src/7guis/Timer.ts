@@ -68,7 +68,7 @@ export const TimerDomain = Remesh.domain({
     })
 
     const ResetElapsedCommand = domain.command({
-      name: 'resetElapsed',
+      name: 'ResetElapsedCommand',
       impl: ({}) => {
         return [ElapsedState().new(0), StartEvent()]
       },

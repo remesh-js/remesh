@@ -86,15 +86,15 @@ describe('store', () => {
           },
         })
 
-        const init$ = domain.command$({
-          name: 'init',
+        const initCommand$ = domain.command$({
+          name: 'initCommand$',
           impl(_, payload$) {
             command$Called()
             return payload$.pipe()
           },
         })
 
-        domain.ignite(() => init$())
+        domain.ignite(() => initCommand$())
 
         return {
           query: { AQuery: AQuery, BQuery: BQuery, JoinQuery },

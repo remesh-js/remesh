@@ -65,7 +65,7 @@ export const InspectorType = {
 } as const
 
 export const RemeshInspectorDomain = RemeshDomain({
-  name: 'RemeshInspector',
+  name: 'RemeshInspectorDomain',
   impl: (domain) => {
     const RemeshDomainStorageEvent = domain.event<RemeshDomainStorageEventData<any, any>>({
       name: 'RemeshDomainStorageEvent',
@@ -80,15 +80,15 @@ export const RemeshInspectorDomain = RemeshDomain({
     })
 
     const RemeshEventEmittedEvent = domain.event<RemeshEventEmittedEventData<any, any>>({
-      name: 'RemeshEventEmitted',
+      name: 'RemeshEventEmittedEvent',
     })
 
     const RemeshCommandReceivedEvent = domain.event<RemeshCommandReceivedEventData<any>>({
-      name: 'RemeshCommandReceived',
+      name: 'RemeshCommandReceivedEvent',
     })
 
     const RemeshCommand$ReceivedEvent = domain.event<RemeshCommand$ReceivedEventData<any>>({
-      name: 'RemeshCommand$Received',
+      name: 'RemeshCommand$ReceivedEvent',
     })
 
     return {

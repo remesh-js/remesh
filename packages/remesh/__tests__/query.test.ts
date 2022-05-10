@@ -105,15 +105,15 @@ describe('query', () => {
       },
     })
 
-    const UpdateNestedState = RemeshCommand({
-      name: 'UpdateNestedState',
+    const UpdateNestedStateCommand = RemeshCommand({
+      name: 'UpdateNestedStateCommand',
       impl() {
         return NestedState().new({ bar: { foo: 1 } })
       },
     })
 
     const a = store.query(NestedQuery())
-    store.sendCommand(UpdateNestedState())
+    store.sendCommand(UpdateNestedStateCommand())
     const b = store.query(NestedQuery())
 
     expect(a).toBe(b)
@@ -155,8 +155,8 @@ describe('query', () => {
       },
     })
 
-    const FrameworkFeatures = RemeshQuery({
-      name: 'FrameworkFeatures',
+    const FrameworkFeaturesQuery = RemeshQuery({
+      name: 'FrameworkFeaturesQuery',
       impl: async ({ get }) => {
         const data = await getFeatures(get(FrameworkNameState()))
         return data
@@ -165,17 +165,17 @@ describe('query', () => {
 
     jest.useFakeTimers()
 
-    let promise = store.query(FrameworkFeatures())
+    let promise = store.query(FrameworkFeaturesQuery())
     jest.runOnlyPendingTimers()
     await expect(promise).rejects.toThrow('framework does not exist')
 
     store.sendCommand(UpdateFrameworkNameCommand('react'))
-    promise = store.query(FrameworkFeatures())
+    promise = store.query(FrameworkFeaturesQuery())
     jest.runOnlyPendingTimers()
     await expect(promise).resolves.toStrictEqual(['declarative', 'component-based', 'state-driven'])
 
     store.sendCommand(UpdateFrameworkNameCommand('remesh'))
-    promise = store.query(FrameworkFeatures())
+    promise = store.query(FrameworkFeaturesQuery())
     jest.runOnlyPendingTimers()
     await expect(promise).resolves.toStrictEqual(['ddd', 'cqrs', 'event-driven'])
   })

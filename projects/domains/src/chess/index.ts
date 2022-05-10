@@ -617,8 +617,8 @@ export const GameDomain = Remesh.domain({
       },
     })
 
-    const CheckGameStatusCommand = domain.command$({
-      name: 'CheckGameStatusCommand',
+    const CheckGameStatusCommand$ = domain.command$({
+      name: 'CheckGameStatusCommand$',
       impl: ({ fromQuery }) => {
         return fromQuery(GameStatusQuery()).pipe(
           filter((gameStatus) => gameStatus !== 'playing'),
@@ -628,7 +628,7 @@ export const GameDomain = Remesh.domain({
       },
     })
 
-    domain.ignite(() => CheckGameStatusCommand())
+    domain.ignite(() => CheckGameStatusCommand$())
 
     return {
       query: {

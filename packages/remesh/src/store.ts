@@ -613,7 +613,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
         Query.owner = domainPayload
         return Query
       },
-      event: (options: { name: string } | RemeshEventOptions<any, any>) => {
+      event: (options: Omit<RemeshEventOptions<any, any>, 'impl'> | RemeshEventOptions<any, any>) => {
         const Event = RemeshEvent(options)
         Event.owner = domainPayload
         return Event as RemeshEvent<any, any>

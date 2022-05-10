@@ -1,30 +1,46 @@
-import { Args, Remesh, RemeshDomainDefinition, RemeshDomainPayload, RemeshInspectorDomain, RemeshStoreInspector, SerializableType } from 'remesh'
+import {
+  Args,
+  Remesh,
+  RemeshDomainDefinition,
+  RemeshDomainPayload,
+  RemeshInspectorDomain,
+  RemeshStoreInspector,
+  SerializableType,
+} from 'remesh'
 
 import { RemeshDebugOptions, RemeshDebuggerHelper, formatNow } from 'remesh-debugger-helper'
 
 export type RemeshLoggerOptions = RemeshDebugOptions & {
   collapsed?: boolean
+  colors?: typeof colors
 }
+
+const colors = {
+  domain: '#f8f0fc',
+  event: '#f3f0ff',
+  state: '#edf2ff',
+  query: '#e7f5ff',
+  command: '#fff0f6',
+  command$: '#fff4e6',
+}
+
 
 export const RemeshLogger = (options?: RemeshLoggerOptions): RemeshStoreInspector => {
   return (storeOptions) => {
     const config = {
       collapsed: true,
+      colors,
       ...options,
     }
 
     const helper = RemeshDebuggerHelper(config)
 
-    const log = (type: string, info: object) => {
+    const log = (type: string, info: object, color: string) => {
       if (config.collapsed) {
         const parts = type.split('::')
         console.groupCollapsed(
-          `%c${parts[0]}%c::%c${parts[1]}%c::%c${parts[2]}%c @ ${formatNow()}`,
-          'color:#03A9F4; font-weight: bold',
-          'color:#9E9E9E; font-weight: bold',
-          'color:#4CAF50; font-weight: bold',
-          'color:#9E9E9E; font-weight: bold',
-          'color:#AA07DE; font-weight: bold',
+          `%c${type}%c @ ${formatNow()}`,
+          `background-color:${color}; color: #333; font-weight: bold`,
           `color:#9E9E9E; font-weight: lighter`,
         )
       }
@@ -43,7 +59,9 @@ export const RemeshLogger = (options?: RemeshLoggerOptions): RemeshStoreInspecto
 
     const inspectorDomain = store.getDomain(RemeshInspectorDomain())
 
-    const getOwnerInfo = <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(owner: RemeshDomainPayload<T, U>) => {
+    const getOwnerInfo = <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
+      owner: RemeshDomainPayload<T, U>,
+    ) => {
       const ownerInfo = {
         domainId: owner.Domain.domainId,
         domainName: owner.Domain.domainName,
@@ -69,12 +87,16 @@ export const RemeshLogger = (options?: RemeshLoggerOptions): RemeshStoreInspecto
         }
 
         if (event.storage.arg !== undefined) {
-          log(info.type, {
-            ...info,
-            domainArg: event.storage.arg,
-          })
+          log(
+            info.type,
+            {
+              ...info,
+              domainArg: event.storage.arg,
+            },
+            config.colors.domain,
+          )
         } else {
-          log(info.type, info)
+          log(info.type, info, config.colors.domain)
         }
       })
     })
@@ -91,12 +113,16 @@ export const RemeshLogger = (options?: RemeshLoggerOptions): RemeshStoreInspecto
         }
 
         if (event.storage.arg !== undefined) {
-          log(info.type, {
-            ...info,
-            stateArg: event.storage.arg,
-          })
+          log(
+            info.type,
+            {
+              ...info,
+              stateArg: event.storage.arg,
+            },
+            config.colors.state,
+          )
         } else {
-          log(info.type, info)
+          log(info.type, info, config.colors.state)
         }
       })
     })
@@ -113,12 +139,16 @@ export const RemeshLogger = (options?: RemeshLoggerOptions): RemeshStoreInspecto
         }
 
         if (event.storage.arg !== undefined) {
-          log(info.type, {
-            ...info,
-            queryArg: event.storage.arg,
-          })
+          log(
+            info.type,
+            {
+              ...info,
+              queryArg: event.storage.arg,
+            },
+            config.colors.query,
+          )
         } else {
-          log(info.type, info)
+          log(info.type, info, config.colors.query)
         }
       })
     })
@@ -134,12 +164,16 @@ export const RemeshLogger = (options?: RemeshLoggerOptions): RemeshStoreInspecto
         }
 
         if (event.payload.arg !== undefined) {
-          log(info.type, {
-            ...info,
-            commandArg: event.payload.arg,
-          })
+          log(
+            info.type,
+            {
+              ...info,
+              commandArg: event.payload.arg,
+            },
+            config.colors.command,
+          )
         } else {
-          log(info.type, info)
+          log(info.type, info, config.colors.command)
         }
       })
     })
@@ -155,12 +189,16 @@ export const RemeshLogger = (options?: RemeshLoggerOptions): RemeshStoreInspecto
         }
 
         if (event.payload.arg !== undefined) {
-          log(info.type, {
-            ...info,
-            command$Arg: event.payload.arg,
-          })
+          log(
+            info.type,
+            {
+              ...info,
+              command$Arg: event.payload.arg,
+            },
+            config.colors.command$,
+          )
         } else {
-          log(info.type, info)
+          log(info.type, info, config.colors.command$)
         }
       })
     })
@@ -177,12 +215,16 @@ export const RemeshLogger = (options?: RemeshLoggerOptions): RemeshStoreInspecto
         }
 
         if (event.payload.arg !== undefined) {
-          log(info.type, {
-            ...info,
-            eventArg: event.payload.arg,
-          })
+          log(
+            info.type,
+            {
+              ...info,
+              eventArg: event.payload.arg,
+            },
+            config.colors.event,
+          )
         } else {
-          log(info.type, info)
+          log(info.type, info, config.colors.event)
         }
       })
     })

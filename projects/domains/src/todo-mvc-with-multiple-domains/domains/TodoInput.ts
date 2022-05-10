@@ -19,7 +19,7 @@ export const TodoInputDomain = Remesh.domain({
     const TodoInputQuery = todoInputModule.query.TextQuery
 
     const SetTodoInputCommand = domain.command({
-      name: 'setTodoInput',
+      name: 'SetTodoInputCommand',
       impl: ({}, newTodoInput: string) => {
         return [todoInputModule.command.SetTextCommand(newTodoInput), TodoInputChangedEvent(newTodoInput)]
       },
