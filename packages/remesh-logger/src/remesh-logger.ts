@@ -36,7 +36,6 @@ export const RemeshLogger = (options?: RemeshLoggerOptions): RemeshStoreInspecto
 
     const log = (type: string, info: object, color: string) => {
       if (config.collapsed) {
-        const parts = type.split('::')
         console.groupCollapsed(
           `%c${type}%c @ ${formatNow()}`,
           `background-color:${color}; color: #000; font-weight: bold`,
