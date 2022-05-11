@@ -2,6 +2,7 @@ import { merge } from 'rxjs'
 import { switchMap, concatMap, mergeMap, exhaustMap } from 'rxjs/operators'
 
 import {
+  Remesh,
   RemeshDomainContext,
   RemeshCommandContext,
   RemeshCommandOutput,
@@ -224,7 +225,7 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
     },
   })
 
-  return {
+  return Remesh.module({
     query: {
       AsyncDataQuery,
       IsDefaultQuery,
@@ -233,12 +234,12 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
       IsFailedQuery,
     },
     command: {
-      LoadCommand: LoadCommand$,
+      LoadCommand$: LoadCommand$,
     },
     event: {
       LoadingEvent,
       SuccessEvent,
       FailedEvent,
     },
-  }
+  })
 }

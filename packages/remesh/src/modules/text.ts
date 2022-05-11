@@ -1,4 +1,4 @@
-import { RemeshDomainContext, Capitalize } from '../index'
+import { Remesh, RemeshDomainContext, Capitalize } from '../index'
 
 export type TextModuleOptions = {
   name: Capitalize
@@ -37,7 +37,7 @@ export const TextModule = (domain: RemeshDomainContext, options: TextModuleOptio
     },
   })
 
-  return {
+  return Remesh.module({
     query: {
       TextQuery,
     },
@@ -46,5 +46,5 @@ export const TextModule = (domain: RemeshDomainContext, options: TextModuleOptio
       ClearTextCommand,
       ResetCommand,
     },
-  }
+  })
 }

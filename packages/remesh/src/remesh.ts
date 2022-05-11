@@ -1,7 +1,7 @@
 import { Observable } from 'rxjs'
 import shallowEqual from 'shallowequal'
 import { isPlainObject } from 'is-plain-object'
-import { DomainConceptName, Capitalize } from './type'
+import { DomainConceptName } from './type'
 
 export type SerializableType =
   | void
@@ -475,7 +475,9 @@ export type RemeshDomainContext = {
   // methods
   getDomain: <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
     domainPayload: RemeshDomainPayload<T, U>,
-  ) => T
+  ) => {
+    [key in keyof ValidRemeshDomainDefinition<T>]: ValidRemeshDomainDefinition<T>[key]
+  }
   getExtern: <T>(Extern: RemeshExtern<T>) => T
 }
 
@@ -492,6 +494,41 @@ export type RemeshDomainOutput = {
 }
 
 export type RemeshDomainDefinition = Partial<RemeshDomainOutput>
+
+type ShowKey<T> = T extends string ? T : 'key'
+
+export type ValidRemeshDomainDefinition<T extends RemeshDomainDefinition> = Pick<
+  {
+    event: {
+      [key in keyof T['event']]: key extends DomainConceptName<'Event'>
+        ? T['event'][key]
+        : `${ShowKey<key>} is not a valid event name`
+    }
+    query: {
+      [key in keyof T['query']]: key extends DomainConceptName<'Query'>
+        ? T['query'][key]
+        : `${ShowKey<key>} is not a valid query name`
+    }
+    command: {
+      [key in keyof T['command']]: T['command'][key] extends RemeshCommand$<any>
+        ? key extends DomainConceptName<'Command$'>
+          ? T['command'][key]
+          : `${ShowKey<key>} is not a valid command$ name`
+        : key extends DomainConceptName<'Command'>
+        ? T['command'][key]
+        : `${ShowKey<key>} is not a valid command name`
+    }
+  },
+  ('event' | 'query' | 'command') & keyof T
+>
+
+export const RemeshModule = <T extends RemeshDomainDefinition>(
+  module: T,
+): {
+  [key in keyof ValidRemeshDomainDefinition<T>]: ValidRemeshDomainDefinition<T>[key]
+} => {
+  return module as unknown as ValidRemeshDomainDefinition<T>
+}
 
 export type RemeshDomain<T extends RemeshDomainDefinition, U extends Args<SerializableType>> = {
   type: 'RemeshDomain'

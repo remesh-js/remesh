@@ -5,6 +5,7 @@ import {
   RemeshQuery,
   RemeshCommand,
   RemeshCommand$,
+  RemeshModule
 } from './remesh'
 
 import { RemeshStore } from './store'
@@ -22,4 +23,5 @@ export const Remesh = {
   query: RemeshQuery,
   command: RemeshCommand,
   command$: RemeshCommand$,
+  module: RemeshModule
 }

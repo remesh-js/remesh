@@ -23,7 +23,7 @@ describe('domain', () => {
           name: 'CountQuery',
           impl: ({ get }) => {
             return get(CountState())
-          }
+          },
         })
 
         return { query: { CountQuery } }
@@ -41,14 +41,14 @@ describe('domain', () => {
       impl(domain) {
         const ContentState = domain.state({
           name: 'ContentState',
-          default: 'bar'
+          default: 'bar',
         })
 
         const ContentQuery = domain.query({
           name: 'ContentQuery',
           impl: ({ get }) => {
             return get(ContentState())
-          }
+          },
         })
 
         return { query: { ContentQuery } }
@@ -60,18 +60,17 @@ describe('domain', () => {
       impl(domain) {
         const ContentState = domain.state({
           name: 'ContentState',
-          default: 'foo'
+          default: 'foo',
         })
 
         const ContentQuery = domain.query({
           name: 'ContentQuery',
           impl: ({ get }) => {
             return get(ContentState())
-          }
+          },
         })
 
-
-        return { query: { ContentQuery } }
+        return { query: { ContentQuery: ContentQuery } }
       },
     })
 
@@ -95,11 +94,11 @@ describe('domain', () => {
           name: 'ContentQuery',
           impl: ({ get }) => {
             return get(ContentState())
-          }
+          },
         })
 
-        const ContentChangeEvent = domain.event({ 
-          name: 'ContentChangeEvent' 
+        const ContentChangeEvent = domain.event({
+          name: 'ContentChangeEvent',
         })
 
         const UpdateContentCommand = domain.command({
@@ -120,13 +119,13 @@ describe('domain', () => {
 
         return {
           query: {
-            ContentQuery
+            ContentQuery: ContentQuery,
           },
           command: {
-            UpdateContentCommand,
+            UpdateContentCommand: UpdateContentCommand,
           },
           event: {
-            ContentChangeEvent,
+            ContentChangeEvent: ContentChangeEvent,
           },
         }
       },
@@ -166,9 +165,9 @@ describe('domain', () => {
     expect(store.query(contentDomain.query.DisplayContentQuery())).toBe('content: ddd')
 
     const changed = jest.fn()
-    
+
     store.subscribeEvent(contentDomain.event.ContentChangeEvent, changed)
-    
+
     contentDomain.command.UpdateContentCommand('remesh')
 
     expect(store.query(contentDomain.query.DisplayContentQuery())).toBe('content: remesh')

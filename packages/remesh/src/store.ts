@@ -34,6 +34,7 @@ import {
   SerializableType,
   RemeshDomainPreloadOptions,
   Args,
+  ValidRemeshDomainDefinition,
 } from './remesh'
 
 import { createInspectorManager, InspectorType } from './inspector'
@@ -96,7 +97,7 @@ export type RemeshDomainStorage<T extends RemeshDomainDefinition, U extends Args
   key: string
   domain: T
   domainContext: RemeshDomainContext
-  domainOutput?: BindingDomainOutput<T>
+  bindingDomainOutput?: BindingDomainOutput<T>
   domainPayload: RemeshDomainPayload<T, U>
   upstreamSet: Set<RemeshDomainStorage<any, any>>
   downstreamSet: Set<RemeshDomainStorage<any, any>>
@@ -129,14 +130,17 @@ export type RemeshStoreOptions = {
   preloadedState?: PreloadedState
 }
 
-export type BindingCommand<T extends RemeshDomainDefinition['command']> = T extends {}
+export type BindingCommand<
+  T extends RemeshDomainDefinition,
+  C = ValidRemeshDomainDefinition<T>['command'],
+> = C extends {}
   ? {
-      [key in keyof T]: (...args: Parameters<T[key]>) => void
+      [key in keyof C]: C[key] extends (...args: infer Args) => any ? (...args: Args) => void : C[key]
     }
   : never
 
-export type BindingDomainOutput<T extends RemeshDomainDefinition> = Omit<T, 'command'> & {
-  command: BindingCommand<T['command']>
+export type BindingDomainOutput<T extends RemeshDomainDefinition> = Omit<ValidRemeshDomainDefinition<T>, 'command'> & {
+  command: BindingCommand<T>
 }
 
 type PendingClearItem =
@@ -640,13 +644,15 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
           currentDomainStorage.preloadOptionsList.push(preloadOptions)
         }
       },
-      getDomain: (UpstreamDomain) => {
-        const upstreamDomainStorage = getDomainStorage(UpstreamDomain)
+      getDomain: <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
+        upstreamDomainPayload: RemeshDomainPayload<T, U>,
+      ) => {
+        const upstreamDomainStorage = getDomainStorage(upstreamDomainPayload)
 
         upstreamSet.add(upstreamDomainStorage)
         upstreamDomainStorage.downstreamSet.add(currentDomainStorage)
 
-        return upstreamDomainStorage.domain
+        return upstreamDomainStorage.domain as unknown as ValidRemeshDomainDefinition<T>
       },
       getExtern: (Extern) => {
         return getExternCurrentValue(Extern)
@@ -1290,42 +1296,47 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
   }
 
   const getBindingCommand = <T extends RemeshDomainDefinition>(domain: T) => {
-    const command = {}
+    const command = {} as BindingDomainOutput<T>['command']
 
     for (const key in domain.command) {
       const Command = domain.command[key]
       if (Command.type === 'RemeshCommand') {
         const commandFactory = Command
+        // @ts-ignore - This is a hack to get the type of the command
         command[key] = (arg: any) => sendCommand(commandFactory(arg))
       } else if (Command.type === 'RemeshCommand$') {
         const commandFactory = Command
+        // @ts-ignore - This is a hack to get the type of the command
         command[key] = (arg: any) => sendCommand(commandFactory(arg))
       } else {
         throw new Error(`Unknown command: ${Command}`)
       }
     }
 
-    return command as BindingCommand<T['command']>
+    return command
   }
 
   const getDomain = <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
     domainPayload: RemeshDomainPayload<T, U>,
-  ): BindingDomainOutput<T> => {
+  ): {
+    [key in keyof BindingDomainOutput<T>]: BindingDomainOutput<T>[key]
+  } => {
     const domainStorage = getDomainStorage(domainPayload)
 
-    if (domainStorage.domainOutput) {
-      return domainStorage.domainOutput
+    if (domainStorage.bindingDomainOutput) {
+      return domainStorage.bindingDomainOutput
     }
 
     const domain = domainStorage.domain
+
     const command = getBindingCommand(domain)
 
     const domainOutput = {
       ...domain,
       command,
-    }
+    } as unknown as BindingDomainOutput<T>
 
-    domainStorage.domainOutput = domainOutput
+    domainStorage.bindingDomainOutput = domainOutput
 
     return domainOutput
   }

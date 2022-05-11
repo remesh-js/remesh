@@ -1,4 +1,4 @@
-import { RemeshDomainContext, Capitalize } from '../index'
+import { Remesh, RemeshDomainContext, Capitalize } from '../index'
 
 export type ListModuleOptions<T> = {
   name: Capitalize
@@ -247,7 +247,7 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
     return SetListCommand(options.default ?? [])
   })
 
-  return {
+  return Remesh.module({
     command: {
       SetListCommand,
       AddItemCommand,
@@ -267,5 +267,5 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
       ItemQuery,
       ItemListQuery,
     },
-  }
+  })
 }

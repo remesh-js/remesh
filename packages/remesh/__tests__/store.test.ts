@@ -99,7 +99,7 @@ describe('store', () => {
         return {
           query: { AQuery: AQuery, BQuery: BQuery, JoinQuery },
           event: { TestEvent },
-          command: { UpdateA: UpdateACommand },
+          command: { UpdateACommand: UpdateACommand },
         }
       },
     })
@@ -117,7 +117,7 @@ describe('store', () => {
     const queryCalled = jest.fn()
     store.subscribeQuery(testDomain.query.JoinQuery('-'), queryCalled)
 
-    testDomain.command.UpdateA(2)
+    testDomain.command.UpdateACommand(2)
 
     expect(store.query(testDomain.query.JoinQuery('-'))).toBe('2-2')
     expect(queryCalled).toHaveBeenCalledWith('2-2')
@@ -301,9 +301,9 @@ describe('store', () => {
         })
 
         return {
-          query: { Name: NameQuery },
-          command: { UpdateName: UpdateNameCommand },
-          event: { NameChanged: NameChangedEvent },
+          query: { NameQuery: NameQuery },
+          command: { UpdateNameCommand: UpdateNameCommand },
+          event: { NameChangedEvent: NameChangedEvent },
         }
       },
     })
@@ -316,7 +316,7 @@ describe('store', () => {
         const HelloQuery = domain.query({
           name: 'HelloQuery',
           impl({ get }) {
-            return `hello~${get(nameDomain.query.Name())}`
+            return `hello~${get(nameDomain.query.NameQuery())}`
           },
         })
 
@@ -325,7 +325,7 @@ describe('store', () => {
           impl(_, payload$: Observable<string>) {
             return payload$.pipe(
               delay(1),
-              map((name) => nameDomain.command.UpdateName(name)),
+              map((name) => nameDomain.command.UpdateNameCommand(name)),
             )
           },
         })
@@ -335,7 +335,7 @@ describe('store', () => {
         return {
           query: {
             ...nameDomain.query,
-            Hello: HelloQuery,
+            HelloQuery: HelloQuery,
           },
           command: nameDomain.command,
           event: nameDomain.event,
@@ -349,19 +349,19 @@ describe('store', () => {
       const testDomain = store.getDomain(TestDomain())
       store.subscribeDomain(TestDomain())
       const changed = jest.fn()
-      store.subscribeEvent(testDomain.event.NameChanged, changed)
+      store.subscribeEvent(testDomain.event.NameChangedEvent, changed)
 
       jest.runOnlyPendingTimers()
 
       expect(changed).toHaveBeenCalledWith('bar')
 
-      expect(store.query(testDomain.query.Name())).toBe('bar')
-      expect(store.query(testDomain.query.Hello())).toBe('hello~bar')
-      testDomain.command.UpdateName('foo')
+      expect(store.query(testDomain.query.NameQuery())).toBe('bar')
+      expect(store.query(testDomain.query.HelloQuery())).toBe('hello~bar')
+      testDomain.command.UpdateNameCommand('foo')
 
       expect(changed).toHaveBeenCalledWith('foo')
-      expect(store.query(testDomain.query.Name())).toBe('foo')
-      expect(store.query(testDomain.query.Hello())).toBe('hello~foo')
+      expect(store.query(testDomain.query.NameQuery())).toBe('foo')
+      expect(store.query(testDomain.query.HelloQuery())).toBe('hello~foo')
 
       store.discard()
     }

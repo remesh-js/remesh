@@ -1,4 +1,4 @@
-import { RemeshDomainContext, Capitalize } from '../index'
+import { Remesh, RemeshDomainContext, Capitalize } from '../index'
 
 export type SwitchModuleOptions<T> = {
   name: Capitalize
@@ -30,7 +30,7 @@ export const SwitchModule = <T>(domain: RemeshDomainContext, options: SwitchModu
     },
   })
 
-  return {
+  return Remesh.module({
     query: {
       SwitchQuery,
     },
@@ -38,5 +38,5 @@ export const SwitchModule = <T>(domain: RemeshDomainContext, options: SwitchModu
       SwitchCommand,
       ResetCommand
     },
-  }
+  })
 }
