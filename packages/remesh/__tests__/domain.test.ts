@@ -70,7 +70,7 @@ describe('domain', () => {
           },
         })
 
-        return { query: { ContentQuery: ContentQuery } }
+        return { query: { ContentQuery } }
       },
     })
 
@@ -119,13 +119,13 @@ describe('domain', () => {
 
         return {
           query: {
-            ContentQuery: ContentQuery,
+            ContentQuery
           },
           command: {
-            UpdateContentCommand: UpdateContentCommand,
+            UpdateContentCommand
           },
           event: {
-            ContentChangeEvent: ContentChangeEvent,
+            ContentChangeEvent
           },
         }
       },
@@ -146,7 +146,7 @@ describe('domain', () => {
         return {
           query: {
             ContentQuery: inputDomain.query.ContentQuery,
-            DisplayContentQuery: DisplayContentQuery,
+            DisplayContentQuery
           },
           command: inputDomain.command,
           event: inputDomain.event,

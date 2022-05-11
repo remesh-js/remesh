@@ -205,9 +205,9 @@ describe('state', () => {
 
         return {
           query: {
-            AgeQuery: AgeQuery,
-            NameQuery: NameQuery,
-            SalaryQuery: SalaryQuery,
+            AgeQuery,
+            NameQuery,
+            SalaryQuery,
           },
           command: {
             UpdateAgeCommand,

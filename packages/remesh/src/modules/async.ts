@@ -234,7 +234,7 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
       IsFailedQuery,
     },
     command: {
-      LoadCommand$: LoadCommand$,
+      LoadCommand$
     },
     event: {
       LoadingEvent,
