@@ -24,7 +24,6 @@ const colors = {
   command$: '#d9bdc5',
 }
 
-
 export const RemeshLogger = (options?: RemeshLoggerOptions): RemeshStoreInspector => {
   return (storeOptions) => {
     const config = {
