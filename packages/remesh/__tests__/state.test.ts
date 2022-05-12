@@ -63,7 +63,6 @@ describe('state', () => {
       impl: ({ get }) => get(NameState()),
     })
 
-
     expect(store.query(NameQuery())).toBe('remesh')
   })
 
@@ -226,7 +225,6 @@ describe('state', () => {
     domain.command.UpdateAgeCommand(20)
 
     expect(store.query(domain.query.AgeQuery())).toBe(20)
-
 
     expect(() => store.query(domain.query.SalaryQuery())).toThrow()
 

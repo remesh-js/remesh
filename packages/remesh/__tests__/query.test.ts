@@ -1,4 +1,4 @@
-import { RemeshState, RemeshDefaultState, RemeshStore, RemeshCommand, DefaultDomain } from '../src'
+import { RemeshDefaultState, RemeshStore, RemeshCommand, DefaultDomain } from '../src'
 import { RemeshQuery } from '../src'
 import * as utils from './utils'
 

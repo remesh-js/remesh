@@ -68,7 +68,7 @@ describe('extern', () => {
           query: { CountQuery },
           command: {
             UpdateCounterCommand,
-            FromStateToStorageCommand$
+            FromStateToStorageCommand$,
           },
           event: { UpdateCounterEvent },
         }
