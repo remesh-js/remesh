@@ -97,9 +97,9 @@ describe('store', () => {
         domain.ignite(() => InitCommand$())
 
         return {
-          query: { AQuery: AQuery, BQuery: BQuery, JoinQuery },
+          query: { AQuery, BQuery, JoinQuery },
           event: { TestEvent },
-          command: { UpdateACommand: UpdateACommand },
+          command: { UpdateACommand },
         }
       },
     })
@@ -301,9 +301,9 @@ describe('store', () => {
         })
 
         return {
-          query: { NameQuery: NameQuery },
-          command: { UpdateNameCommand: UpdateNameCommand },
-          event: { NameChangedEvent: NameChangedEvent },
+          query: { NameQuery },
+          command: { UpdateNameCommand },
+          event: { NameChangedEvent },
         }
       },
     })
@@ -335,7 +335,7 @@ describe('store', () => {
         return {
           query: {
             ...nameDomain.query,
-            HelloQuery: HelloQuery,
+            HelloQuery,
           },
           command: nameDomain.command,
           event: nameDomain.event,

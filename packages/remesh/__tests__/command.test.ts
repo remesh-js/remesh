@@ -145,7 +145,7 @@ describe('command', () => {
 
         domain.ignite(() => RankingUpdateCommand(99))
 
-        return { query: { RankingQuery: RankingQuery }, command: { RankingUpdateCommand: RankingUpdateCommand } }
+        return { query: { RankingQuery }, command: { RankingUpdateCommand } }
       },
     })
 
