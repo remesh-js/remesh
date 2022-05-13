@@ -3,10 +3,10 @@ import { InjectionKey, Plugin, inject, Ref, ref, onMounted, onBeforeUnmount } fr
 import {
   RemeshStore,
   SerializableType,
-  RemeshQueryPayload,
+  RemeshQueryAction,
   RemeshEvent,
   RemeshDomainDefinition,
-  RemeshDomainPayload,
+  RemeshDomainAction,
   Args,
 } from 'remesh'
 
@@ -33,17 +33,17 @@ export const useRemeshStore = () => {
 }
 
 export const useRemeshQuery = function <T extends Args<SerializableType>, U>(
-  queryPayload: RemeshQueryPayload<T, U>,
+  queryAction: RemeshQueryAction<T, U>,
 ): Ref<U> {
   const store = useRemeshStore()
 
-  const queryRef = ref(store.query(queryPayload)) as Ref<U>
+  const queryRef = ref(store.query(queryAction)) as Ref<U>
 
   let subscription: ReturnType<typeof store.subscribeQuery> | null = null
 
   onMounted(() => {
-    subscription = store.subscribeQuery(queryPayload, () => {
-      queryRef.value = store.query(queryPayload)
+    subscription = store.subscribeQuery(queryAction, () => {
+      queryRef.value = store.query(queryAction)
     })
   })
 
@@ -75,16 +75,16 @@ export const useRemeshEmit = function () {
 }
 
 export const useRemeshDomain = function <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
-  domainPayload: RemeshDomainPayload<T, U>,
+  domainAction: RemeshDomainAction<T, U>,
 ) {
   const store = useRemeshStore()
 
-  const domain = store.getDomain(domainPayload)
+  const domain = store.getDomain(domainAction)
 
   let subscription: ReturnType<typeof store.subscribeDomain> | null = null
 
   onMounted(() => {
-    subscription = store.subscribeDomain(domainPayload)
+    subscription = store.subscribeDomain(domainAction)
   })
 
   onBeforeUnmount(() => {

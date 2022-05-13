@@ -2,7 +2,7 @@ import {
   Args,
   Remesh,
   RemeshDomainDefinition,
-  RemeshDomainPayload,
+  RemeshDomainAction,
   RemeshInspectorDomain,
   RemeshStoreOptions,
   SerializableType,
@@ -57,7 +57,7 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
     const inspectorDomain = store.getDomain(RemeshInspectorDomain())
 
     const getOwnerInfo = <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
-      owner: RemeshDomainPayload<T, U>,
+      owner: RemeshDomainAction<T, U>,
     ) => {
       const ownerInfo = {
         domainId: owner.Domain.domainId,
@@ -139,7 +139,7 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
 
     helper.onActive('command', () => {
       store.subscribeEvent(inspectorDomain.event.RemeshCommandReceivedEvent, (event) => {
-        const Command = event.payload.Command
+        const Command = event.action.Command
         const info = {
           type: `${event.type}::${Command.commandName}`,
           owner: getOwnerInfo(Command.owner),
@@ -147,10 +147,10 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
           commandName: Command.commandName,
         }
 
-        if (event.payload.arg !== undefined) {
+        if (event.action.arg !== undefined) {
           send(info.type, {
             ...info,
-            commandArg: event.payload.arg,
+            commandArg: event.action.arg,
           })
         } else {
           send(info.type, info)
@@ -160,7 +160,7 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
 
     helper.onActive('command$', () => {
       store.subscribeEvent(inspectorDomain.event.RemeshCommand$ReceivedEvent, (event) => {
-        const Command$ = event.payload.Command$
+        const Command$ = event.action.Command$
         const info = {
           type: `${event.type}::${Command$.command$Name}`,
           owner: getOwnerInfo(Command$.owner),
@@ -168,10 +168,10 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
           command$Name: Command$.command$Name,
         }
 
-        if (event.payload.arg !== undefined) {
+        if (event.action.arg !== undefined) {
           send(info.type, {
             ...info,
-            command$Arg: event.payload.arg,
+            command$Arg: event.action.arg,
           })
         } else {
           send(info.type, info)
@@ -181,7 +181,7 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
 
     helper.onActive('event', () => {
       store.subscribeEvent(inspectorDomain.event.RemeshEventEmittedEvent, (event) => {
-        const Event = event.payload.Event
+        const Event = event.action.Event
 
         const info = {
           type: `${event.type}::${Event.eventName}`,
@@ -190,10 +190,10 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
           eventName: Event.eventName,
         }
 
-        if (event.payload.arg !== undefined) {
+        if (event.action.arg !== undefined) {
           send(info.type, {
             ...info,
-            eventArg: event.payload.arg,
+            eventArg: event.action.arg,
           })
         } else {
           send(info.type, info)

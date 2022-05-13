@@ -1,8 +1,8 @@
 import {
   RemeshDomain,
-  RemeshCommand$Payload,
-  RemeshCommandPayload,
-  RemeshEventPayload,
+  RemeshCommand$Action,
+  RemeshCommandAction,
+  RemeshEventAction,
   SerializableType,
   RemeshDomainDefinition,
   Args,
@@ -34,17 +34,17 @@ export type RemeshQueryStorageEventData<T extends Args<SerializableType>, U> = {
 
 export type RemeshEventEmittedEventData<T extends Args, U> = {
   type: 'Event::Emitted'
-  payload: RemeshEventPayload<T, U>
+  action: RemeshEventAction<T, U>
 }
 
 export type RemeshCommandReceivedEventData<T extends Args> = {
   type: 'Command::Received'
-  payload: RemeshCommandPayload<T>
+  action: RemeshCommandAction<T>
 }
 
 export type RemeshCommand$ReceivedEventData<T> = {
   type: 'Command$::Received'
-  payload: RemeshCommand$Payload<T>
+  action: RemeshCommand$Action<T>
 }
 
 export const InspectorType = {
@@ -200,14 +200,14 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
 
   const inspectEventEmitted = <T extends Args, U>(
     type: RemeshEventEmittedEventData<T, U>['type'],
-    eventPayload: RemeshEventPayload<T, U>,
+    eventAction: RemeshEventAction<T, U>,
   ) => {
-    if (isInspectable(eventPayload.Event)) {
+    if (isInspectable(eventAction.Event)) {
       for (const inspector of getInspectors()) {
         const inspectorDomain = inspector.getDomain(RemeshInspectorDomain())
         const event = inspectorDomain.event.RemeshEventEmittedEvent({
           type,
-          payload: eventPayload,
+          action: eventAction,
         })
         inspector.emitEvent(event)
       }
@@ -216,14 +216,14 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
 
   const inspectCommandReceived = <T extends Args>(
     type: RemeshCommandReceivedEventData<T>['type'],
-    commandPayload: RemeshCommandPayload<T>,
+    commandAction: RemeshCommandAction<T>,
   ) => {
-    if (isInspectable(commandPayload.Command)) {
+    if (isInspectable(commandAction.Command)) {
       for (const inspector of getInspectors()) {
         const inspectorDomain = inspector.getDomain(RemeshInspectorDomain())
         const event = inspectorDomain.event.RemeshCommandReceivedEvent({
           type,
-          payload: commandPayload,
+          action: commandAction,
         })
         inspector.emitEvent(event)
       }
@@ -232,14 +232,14 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
 
   const inspectCommand$Received = <T>(
     type: RemeshCommand$ReceivedEventData<T>['type'],
-    command$Payload: RemeshCommand$Payload<T>,
+    command$Action: RemeshCommand$Action<T>,
   ) => {
-    if (isInspectable(command$Payload.Command$)) {
+    if (isInspectable(command$Action.Command$)) {
       for (const inspector of getInspectors()) {
         const inspectorDomain = inspector.getDomain(RemeshInspectorDomain())
         const event = inspectorDomain.event.RemeshCommand$ReceivedEvent({
           type,
-          payload: command$Payload,
+          action: command$Action,
         })
         inspector.emitEvent(event)
       }

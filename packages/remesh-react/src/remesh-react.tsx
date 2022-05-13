@@ -4,9 +4,9 @@ import { useSyncExternalStore } from 'use-sync-external-store/shim'
 
 import {
   RemeshDomainDefinition,
-  RemeshQueryPayload,
+  RemeshQueryAction,
   RemeshEvent,
-  RemeshDomainPayload,
+  RemeshDomainAction,
   RemeshStore,
   SerializableType,
   RemeshStoreOptions,
@@ -66,12 +66,12 @@ export const RemeshRoot = (props: RemeshRootProps) => {
 }
 
 export const useRemeshQuery = function <T extends Args<SerializableType>, U>(
-  queryPayload: RemeshQueryPayload<T, U>,
+  queryAction: RemeshQueryAction<T, U>,
 ): U {
   /**
    * initial domain if needed
    */
-  useRemeshDomain(queryPayload.Query.owner)
+  useRemeshDomain(queryAction.Query.owner)
 
   const store = useRemeshStore()
 
@@ -85,15 +85,15 @@ export const useRemeshQuery = function <T extends Args<SerializableType>, U>(
   }, [])
 
   const getSnapshot = useCallback(() => {
-    const snapshot = store.query(queryPayload)
+    const snapshot = store.query(queryAction)
     return snapshot
-  }, [store, queryPayload])
+  }, [store, queryAction])
 
   const state = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
 
   const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null)
 
-  const queryKey = store.getKey(queryPayload)
+  const queryKey = store.getKey(queryAction)
 
   useEffect(() => {
     return () => {
@@ -106,18 +106,18 @@ export const useRemeshQuery = function <T extends Args<SerializableType>, U>(
     if (subscriptionRef.current !== null) {
       return
     }
-    subscriptionRef.current = store.subscribeQuery(queryPayload, () => {
+    subscriptionRef.current = store.subscribeQuery(queryAction, () => {
       triggerRef.current?.()
     })
-  }, [store, queryPayload])
+  }, [store, queryAction])
 
   return state
 }
 
 export const useRemeshSuspense = function <T extends Args<SerializableType>, U>(
-  queryPayload: RemeshQueryPayload<T, AsyncData<U>>,
+  queryAction: RemeshQueryAction<T, AsyncData<U>>,
 ) {
-  const state = useRemeshQuery(queryPayload)
+  const state = useRemeshQuery(queryAction)
 
   if (state.type === 'loading') {
     throw state.promise
@@ -157,12 +157,12 @@ export const useRemeshEmit = function () {
 }
 
 export const useRemeshDomain = function <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
-  domainPayload: RemeshDomainPayload<T, U>,
+  domainAction: RemeshDomainAction<T, U>,
 ) {
   const store = useRemeshStore()
   const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null)
-  const domain = store.getDomain(domainPayload)
-  const domainKey = store.getKey(domainPayload)
+  const domain = store.getDomain(domainAction)
+  const domainKey = store.getKey(domainAction)
 
   useEffect(() => {
     return () => {
@@ -175,8 +175,8 @@ export const useRemeshDomain = function <T extends RemeshDomainDefinition, U ext
     if (subscriptionRef.current !== null) {
       return
     }
-    subscriptionRef.current = store.subscribeDomain(domainPayload)
-  }, [store, domainPayload])
+    subscriptionRef.current = store.subscribeDomain(domainAction)
+  }, [store, domainAction])
 
   return domain
 }
