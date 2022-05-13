@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRemeshDomain } from 'remesh-react'
 
-import { Todo, TodoDomain } from './todo'
+import { Todo, TodoDomain } from 'remesh-domains-for-demos/dist/todo-mvc'
 import { useInputHandler, useKeyPressHandler } from './hooks'
 
 export function TodoItem({ todo }: { todo: Todo }) {

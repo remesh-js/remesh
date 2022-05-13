@@ -204,15 +204,15 @@ export const TodoDomain = Remesh.domain({
       },
     })
 
-    const FromRepoToStateCommand$ = domain.command$({
-      name: 'FromRepoToStateCommand$',
+    const FromRepoToStateCommand = domain.command$({
+      name: 'FromRepoToStateCommand',
       impl() {
         return from(repo.getTodoList()).pipe(map((todos) => SetTodoListCommand(todos)))
       },
     })
 
-    const FromStateToRepoCommand$ = domain.command$({
-      name: 'FromStateToRepoCommand$',
+    const FromStateToRepoCommand = domain.command$({
+      name: 'FromStateToRepoCommand',
       impl: ({ fromEvent }) => {
         const addTodo$ = fromEvent(TodoAddedEvent).pipe(tap((todo) => repo.addTodo(todo)))
 
@@ -228,8 +228,8 @@ export const TodoDomain = Remesh.domain({
       },
     })
 
-    domain.ignite(() => FromRepoToStateCommand$())
-    domain.ignite(() => FromStateToRepoCommand$())
+    domain.ignite(() => FromRepoToStateCommand())
+    domain.ignite(() => FromStateToRepoCommand())
 
     return {
       query: {
@@ -239,12 +239,12 @@ export const TodoDomain = Remesh.domain({
         AllCompletedQuery,
       },
       command: {
-        AddTodoCommand: AddTodoCommand,
-        RemoveTodo: RemoveTodoCommand,
-        ToggleTodoCompletedCommand: ToggleTodoCompletedCommand,
-        ToggleAllTodoCompletedCommand: ToggleAllTodoCompletedCommand,
-        UpdateTodoCommand: UpdateTodoCommand,
-        ClearCompletedCommand: ClearCompletedCommand,
+        AddTodoCommand,
+        RemoveTodoCommand,
+        ToggleTodoCompletedCommand,
+        ToggleAllTodoCompletedCommand,
+        UpdateTodoCommand,
+        ClearCompletedCommand,
       },
       event: { AddTodoFailedEvent },
     }

@@ -1,8 +1,7 @@
-import React from 'react'
 import { useRemeshDomain, useRemeshEvent, useRemeshQuery } from 'remesh-react'
 import { NavLink, useParams } from 'react-router-dom'
 
-import { TodoDomain } from './todo'
+import { TodoDomain } from 'remesh-domains-for-demos/dist/todo-mvc'
 import { useInputHandler, useKeyPressHandler } from './hooks'
 import { TodoItem } from './TodoItem'
 

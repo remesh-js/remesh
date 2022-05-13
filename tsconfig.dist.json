@@ -22,10 +22,7 @@
     },
     {
       "path": "./packages/remesh-debugger-helper/tsconfig.json"
-    },
-    {
-      "path": "./projects/domains/tsconfig.json"
     }
   ],
-  "include": ["./packages", "./projects/domains"]
+  "include": ["./packages"]
 }

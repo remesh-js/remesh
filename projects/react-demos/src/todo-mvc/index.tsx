@@ -9,12 +9,14 @@ import { RemeshReduxDevtools } from 'remesh-redux-devtools'
 import { RemeshLogger } from 'remesh-logger'
 
 import { TodoList } from './TodoList'
+import { TodoRepoExternImpl } from './todoRepo'
 
 const container = document.getElementById('root')
 
 if (container) {
   const root = ReactDOMClient.createRoot(container)
   const store = Remesh.store({
+    externs: [TodoRepoExternImpl],
     inspectors: [
       RemeshReduxDevtools(),
       RemeshLogger({
