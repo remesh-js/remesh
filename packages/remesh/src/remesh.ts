@@ -368,7 +368,7 @@ export type RemeshCommand$Payload<T> = {
 export type RemeshCommand$<T> = {
   type: 'RemeshCommand$'
   command$Id: number
-  command$Name: DomainConceptName<'Command$'>
+  command$Name: DomainConceptName<'Command'>
   impl: (context: RemeshCommand$Context, arg$: Observable<T>) => Observable<RemeshCommandOutput>
   (arg: T): RemeshCommand$Payload<T>
   owner: RemeshDomainPayload<any, any>
@@ -376,7 +376,7 @@ export type RemeshCommand$<T> = {
 }
 
 export type RemeshCommand$Options<T> = {
-  name: DomainConceptName<'Command$'>
+  name: DomainConceptName<'Command'>
   inspectable?: boolean
   impl: RemeshCommand$<T>['impl']
 }
@@ -510,11 +510,7 @@ export type ValidRemeshDomainDefinition<T extends RemeshDomainDefinition> = Pick
         : `${ShowKey<key>} is not a valid query name`
     }
     command: {
-      [key in keyof T['command']]: T['command'][key] extends RemeshCommand$<any>
-        ? key extends DomainConceptName<'Command$'>
-          ? T['command'][key]
-          : `${ShowKey<key>} is not a valid command$ name`
-        : key extends DomainConceptName<'Command'>
+      [key in keyof T['command']]: key extends DomainConceptName<'Command'>
         ? T['command'][key]
         : `${ShowKey<key>} is not a valid command name`
     }

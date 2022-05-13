@@ -181,8 +181,8 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
     throw new Error(`Unknown async data: ${data}`)
   }
 
-  const LoadCommand$ = domain.command$<T>({
-    name: `${options.name}.LoadCommand$`,
+  const LoadCommand = domain.command$<T>({
+    name: `${options.name}.LoadCommand`,
     impl: ({ get, peek }, arg$) => {
       const ctx = { get, peek }
 
@@ -234,7 +234,7 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
       IsFailedQuery,
     },
     command: {
-      LoadCommand$,
+      LoadCommand,
     },
     event: {
       LoadingEvent,

@@ -88,8 +88,8 @@ describe('command', () => {
       },
     })
 
-    const TimerUpdateAgeCommand$ = RemeshCommand$({
-      name: 'TimerUpdateAgeCommand$',
+    const TimerUpdateAgeCommand = RemeshCommand$({
+      name: 'TimerUpdateAgeCommand',
       impl({ get }, payload$) {
         return payload$.pipe(
           delay(2000),
@@ -101,7 +101,7 @@ describe('command', () => {
     const NameChangeCommand = RemeshCommand({
       name: 'NameChangeCommand',
       impl() {
-        return [NameState().new('ddd'), NameChangeEvent(), UpdateAgeCommand(1), TimerUpdateAgeCommand$()]
+        return [NameState().new('ddd'), NameChangeEvent(), UpdateAgeCommand(1), TimerUpdateAgeCommand()]
       },
     })
 
@@ -172,8 +172,8 @@ describe('command$', () => {
       },
     })
 
-    const FetchFeaturesCommand$ = RemeshCommand$({
-      name: 'FetchFeaturesCommand$',
+    const FetchFeaturesCommand = RemeshCommand$({
+      name: 'FetchFeaturesCommand',
       impl(_, payload$: Observable<void>) {
         return payload$.pipe(
           switchMap(() => getFeatures()),
@@ -182,12 +182,12 @@ describe('command$', () => {
       },
     })
 
-    expect(FetchFeaturesCommand$.owner).toBe(DefaultDomain())
+    expect(FetchFeaturesCommand.owner).toBe(DefaultDomain())
 
     jest.useFakeTimers()
     const changed = jest.fn()
     store.subscribeQuery(FeaturesQuery(), changed)
-    store.sendCommand(FetchFeaturesCommand$())
+    store.sendCommand(FetchFeaturesCommand())
     jest.runOnlyPendingTimers()
 
     jest.useRealTimers()
@@ -223,8 +223,8 @@ describe('command$', () => {
       name: 'CountIncreaseEvent',
     })
 
-    const FromEventToUpdateCommand$ = RemeshCommand$({
-      name: 'FromEventToUpdateCommand$',
+    const FromEventToUpdateCommand = RemeshCommand$({
+      name: 'FromEventToUpdateCommand',
       impl({ fromEvent, get }) {
         return fromEvent(CountIncreaseEvent)
           .pipe(map(() => get(CountState()) + 1))
@@ -232,16 +232,16 @@ describe('command$', () => {
       },
     })
 
-    const FromQueryToEventCommand$ = RemeshCommand$({
-      name: 'FromQueryToEventCommand$',
+    const FromQueryToEventCommand = RemeshCommand$({
+      name: 'FromQueryToEventCommand',
       impl({ fromQuery }) {
         return fromQuery(CountQuery()).pipe(map((count) => CountChangedEvent(count)))
       },
     })
 
     const changed = jest.fn()
-    store.sendCommand(FromEventToUpdateCommand$())
-    store.sendCommand(FromQueryToEventCommand$())
+    store.sendCommand(FromEventToUpdateCommand())
+    store.sendCommand(FromQueryToEventCommand())
 
     store.subscribeEvent(CountChangedEvent, changed)
     store.emitEvent(CountIncreaseEvent())

@@ -108,14 +108,14 @@ describe('domain', () => {
           },
         })
 
-        const RemoteContentCommand$ = domain.command$({
-          name: 'RemoteContentCommand$',
+        const RemoteContentCommand = domain.command$({
+          name: 'RemoteContentCommand',
           impl(_, payload$) {
             return payload$.pipe(switchMap(() => utils.delay(1).then(() => ContentState().new('ddd'))))
           },
         })
 
-        domain.ignite(() => RemoteContentCommand$())
+        domain.ignite(() => RemoteContentCommand())
 
         return {
           query: {

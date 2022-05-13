@@ -28,4 +28,4 @@ export type UpperChar =
 
 export type Capitalize<T extends string = string> = `${UpperChar}${T}`
 
-export type DomainConceptName<T extends string> = Capitalize<`${string}${T}`>
+export type DomainConceptName<T extends string> = `${UpperChar}${string}${T}`

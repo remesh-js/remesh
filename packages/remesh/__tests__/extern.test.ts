@@ -51,8 +51,8 @@ describe('extern', () => {
           },
         })
 
-        const FromStateToStorageCommand$ = domain.command$({
-          name: 'FromStateToStorageCommand$',
+        const FromStateToStorageCommand = domain.command$({
+          name: 'FromStateToStorageCommand',
           impl({ fromEvent }) {
             return fromEvent(UpdateCounterEvent).pipe(
               tap((value) => {
@@ -68,7 +68,7 @@ describe('extern', () => {
           query: { CountQuery },
           command: {
             UpdateCounterCommand,
-            FromStateToStorageCommand$,
+            FromStateToStorageCommand,
           },
           event: { UpdateCounterEvent },
         }
@@ -81,7 +81,7 @@ describe('extern', () => {
 
     const counter = store1.getDomain(CounterDomain())
 
-    counter.command.FromStateToStorageCommand$()
+    counter.command.FromStateToStorageCommand()
     counter.command.UpdateCounterCommand(1)
 
     expect(store1.query(counter.query.CountQuery())).toBe(memoryCache.get('counter'))

@@ -86,15 +86,15 @@ describe('store', () => {
           },
         })
 
-        const InitCommand$ = domain.command$({
-          name: 'InitCommand$',
+        const InitCommand = domain.command$({
+          name: 'InitCommand',
           impl(_, payload$) {
             command$Called()
             return payload$.pipe()
           },
         })
 
-        domain.ignite(() => InitCommand$())
+        domain.ignite(() => InitCommand())
 
         return {
           query: { AQuery, BQuery, JoinQuery },
@@ -320,8 +320,8 @@ describe('store', () => {
           },
         })
 
-        const RemoteUpdateNameCommand$ = domain.command$({
-          name: 'RemoteUpdateNameCommand$',
+        const RemoteUpdateNameCommand = domain.command$({
+          name: 'RemoteUpdateNameCommand',
           impl(_, payload$: Observable<string>) {
             return payload$.pipe(
               delay(1),
@@ -330,7 +330,7 @@ describe('store', () => {
           },
         })
 
-        domain.ignite(() => RemoteUpdateNameCommand$('bar'))
+        domain.ignite(() => RemoteUpdateNameCommand('bar'))
 
         return {
           query: {
