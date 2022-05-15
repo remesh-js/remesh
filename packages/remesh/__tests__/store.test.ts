@@ -86,6 +86,13 @@ describe('store', () => {
           },
         })
 
+        const EmitTestEventCommand = domain.command({
+          name: 'EmitTestEventCommand',
+          impl(_, arg?: string) {
+            return TestEvent(arg)
+          },
+        })
+
         const InitCommand = domain.command$({
           name: 'InitCommand',
           impl(_, payload$) {
@@ -99,7 +106,7 @@ describe('store', () => {
         return {
           query: { AQuery, BQuery, JoinQuery },
           event: { TestEvent },
-          command: { UpdateACommand },
+          command: { UpdateACommand, EmitTestEventCommand },
         }
       },
     })
@@ -124,9 +131,9 @@ describe('store', () => {
 
     const eventCalled = jest.fn()
     store.subscribeEvent(testDomain.event.TestEvent, eventCalled)
-    store.emitEvent(testDomain.event.TestEvent())
+    testDomain.command.EmitTestEventCommand()
     expect(eventCalled).toHaveBeenCalled()
-    store.emitEvent(testDomain.event.TestEvent('test'))
+    testDomain.command.EmitTestEventCommand('test')
     expect(eventCalled).toHaveBeenCalledWith('test')
   })
 

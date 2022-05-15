@@ -165,7 +165,7 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
     name: `${options.name}.FailedEvent`,
   })
 
-  const handleAsyncData = (ctx: RemeshCommandContext, data: AsyncData<U>) => {
+  const handleAsyncData = (ctx: RemeshCommandContext, data: AsyncData<U>): RemeshCommandOutput[] => {
     if (data.type === 'loading') {
       return [AsyncDataState().new(data), LoadingEvent(), options.command?.(ctx, data)]
     }

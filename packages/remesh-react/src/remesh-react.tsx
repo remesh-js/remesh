@@ -11,6 +11,7 @@ import {
   SerializableType,
   RemeshStoreOptions,
   Args,
+  RemeshSubscribeOnlyEvent,
 } from 'remesh'
 
 import { AsyncData } from 'remesh/modules/async'
@@ -65,9 +66,7 @@ export const RemeshRoot = (props: RemeshRootProps) => {
   return <RemeshReactContext.Provider value={contextValue}>{props.children}</RemeshReactContext.Provider>
 }
 
-export const useRemeshQuery = function <T extends Args<SerializableType>, U>(
-  queryAction: RemeshQueryAction<T, U>,
-): U {
+export const useRemeshQuery = function <T extends Args<SerializableType>, U>(queryAction: RemeshQueryAction<T, U>): U {
   /**
    * initial domain if needed
    */
@@ -132,7 +131,10 @@ export const useRemeshSuspense = function <T extends Args<SerializableType>, U>(
   }
 }
 
-export const useRemeshEvent = function <T extends Args, U>(Event: RemeshEvent<T, U>, callback: (data: U) => unknown) {
+export const useRemeshEvent = function <T extends Args, U>(
+  Event: RemeshEvent<T, U> | RemeshSubscribeOnlyEvent<T, U>,
+  callback: (data: U) => unknown,
+) {
   const store = useRemeshStore()
   const callbackRef = useRef(callback)
 

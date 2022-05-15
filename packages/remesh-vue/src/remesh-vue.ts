@@ -8,6 +8,7 @@ import {
   RemeshDomainDefinition,
   RemeshDomainAction,
   Args,
+  RemeshSubscribeOnlyEvent,
 } from 'remesh'
 
 export const RemeshVueInjectKey = Symbol('RemeshVueInjectKey') as InjectionKey<RemeshStore>
@@ -54,7 +55,10 @@ export const useRemeshQuery = function <T extends Args<SerializableType>, U>(
   return queryRef
 }
 
-export const useRemeshEvent = function <T extends Args, U>(Event: RemeshEvent<T, U>, callback: (data: U) => unknown) {
+export const useRemeshEvent = function <T extends Args, U>(
+  Event: RemeshEvent<T, U> | RemeshSubscribeOnlyEvent<T, U>,
+  callback: (data: U) => unknown,
+) {
   const store = useRemeshStore()
 
   let subscription: ReturnType<typeof store.subscribeEvent> | null = null

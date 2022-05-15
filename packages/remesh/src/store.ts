@@ -34,7 +34,10 @@ import {
   SerializableType,
   RemeshDomainPreloadOptions,
   Args,
-  ValidRemeshDomainDefinition,
+  VerifiedRemeshDomainDefinition,
+  internalToOriginalEvent,
+  toValidRemeshDomainDefinition,
+  RemeshSubscribeOnlyEvent,
 } from './remesh'
 
 import { createInspectorManager, InspectorType } from './inspector'
@@ -132,14 +135,17 @@ export type RemeshStoreOptions = {
 
 export type BindingCommand<
   T extends RemeshDomainDefinition,
-  C = ValidRemeshDomainDefinition<T>['command'],
+  C = VerifiedRemeshDomainDefinition<T>['command'],
 > = C extends {}
   ? {
       [key in keyof C]: C[key] extends (...args: infer Args) => any ? (...args: Args) => void : C[key]
     }
   : never
 
-export type BindingDomainOutput<T extends RemeshDomainDefinition> = Omit<ValidRemeshDomainDefinition<T>, 'command'> & {
+export type BindingDomainOutput<T extends RemeshDomainDefinition> = Omit<
+  VerifiedRemeshDomainDefinition<T>,
+  'command'
+> & {
   command: BindingCommand<T>
 }
 
@@ -652,7 +658,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
         upstreamSet.add(upstreamDomainStorage)
         upstreamDomainStorage.downstreamSet.add(currentDomainStorage)
 
-        return upstreamDomainStorage.domain as unknown as ValidRemeshDomainDefinition<T>
+        return upstreamDomainStorage.domain as unknown as VerifiedRemeshDomainDefinition<T>
       },
       getExtern: (Extern) => {
         return getExternCurrentValue(Extern)
@@ -930,8 +936,16 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       throw new Error(`Unexpected input in peek(..): ${input}`)
     },
     fromEvent: (Event) => {
-      const eventStorage = getEventStorage(Event)
-      return eventStorage.observable
+      if (Event.type === 'RemeshEvent') {
+        const eventStorage = getEventStorage(Event)
+        return eventStorage.observable
+      } else if (Event.type === 'RemeshSubscribeOnlyEvent') {
+        const OriginalEvent = internalToOriginalEvent(Event)
+        const eventStorage = getEventStorage(OriginalEvent)
+        return eventStorage.observable
+      }
+
+      throw new Error(`Unexpected input in fromEvent(..): ${Event}`)
     },
     fromQuery: (queryAction) => {
       const queryStorage = getQueryStorage(queryAction)
@@ -1288,11 +1302,21 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     return subscription
   }
 
-  const subscribeEvent = <T extends Args, U>(Event: RemeshEvent<T, U>, subscriber: (event: U) => unknown) => {
-    const eventStorage = getEventStorage(Event)
-    const subscription = eventStorage.observable.subscribe(subscriber)
+  const subscribeEvent = <T extends Args, U>(
+    Event: RemeshEvent<T, U> | RemeshSubscribeOnlyEvent<T, U>,
+    subscriber: (event: U) => unknown,
+  ): Subscription => {
+    if (Event.type === 'RemeshEvent') {
+      const eventStorage = getEventStorage(Event)
+      const subscription = eventStorage.observable.subscribe(subscriber)
 
-    return subscription
+      return subscription
+    } else if (Event.type === 'RemeshSubscribeOnlyEvent') {
+      const OriginalEvent = internalToOriginalEvent(Event)
+      return subscribeEvent(OriginalEvent, subscriber)
+    }
+
+    throw new Error(`Unknown event type of ${Event}`)
   }
 
   const getBindingCommand = <T extends RemeshDomainDefinition>(domain: T) => {
@@ -1332,7 +1356,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     const command = getBindingCommand(domain)
 
     const domainOutput = {
-      ...domain,
+      ...toValidRemeshDomainDefinition(domain),
       command,
     } as unknown as BindingDomainOutput<T>
 

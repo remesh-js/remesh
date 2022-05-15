@@ -23,7 +23,7 @@ export type RemeshValuePlaceholder = typeof RemeshValuePlaceholder
 export type RemeshInjectedContext = {
   get: <T extends Args<SerializableType>, U>(input: GetterInput<T, U>) => U
   peek: <T extends Args<SerializableType>, U>(input: GetterInput<T, U>) => U | RemeshValuePlaceholder
-  fromEvent: <T extends Args, U>(Event: RemeshEvent<T, U>) => Observable<U>
+  fromEvent: <T extends Args, U>(Event: RemeshEvent<T, U> | RemeshSubscribeOnlyEvent<T, U>) => Observable<U>
   fromQuery: <T extends Args<SerializableType>, U>(Query: RemeshQueryAction<T, U>) => Observable<U>
 }
 
@@ -48,6 +48,78 @@ export type RemeshEventAction<T extends Args, U> = {
   type: 'RemeshEventAction'
   arg: T[0]
   Event: RemeshEvent<T, U>
+}
+
+export type RemeshSubscribeOnlyEvent<_T extends Args, _U> = {
+  type: 'RemeshSubscribeOnlyEvent'
+  eventId: number
+  eventName: DomainConceptName<'Event'>
+}
+
+export type ToRemeshSubscribeOnlyEvent<T> = T extends RemeshSubscribeOnlyEvent<any, any>
+  ? T
+  : T extends RemeshEvent<infer Args, infer U>
+  ? RemeshSubscribeOnlyEvent<Args, U>
+  : never
+
+export type ToRemeshSubscribeOnlyEventMap<T extends RemeshDomainOutput['event']> = {
+  [K in keyof T]: ToRemeshSubscribeOnlyEvent<T[K]>
+}
+
+export const toRemeshSubscribeOnlyEventMap = <T extends RemeshDomainOutput['event']>(
+  eventMap: T,
+): ToRemeshSubscribeOnlyEventMap<T> => {
+  const result = {} as ToRemeshSubscribeOnlyEventMap<T>
+
+  for (const key in eventMap) {
+    const Event = eventMap[key]
+    if (Event.type === 'RemeshEvent') {
+      result[key] = toRemeshSubscribeOnlyEvent(Event) as ToRemeshSubscribeOnlyEvent<T[Extract<keyof T, string>]>
+    } else if (Event.type === 'RemeshSubscribeOnlyEvent') {
+      result[key] = Event as ToRemeshSubscribeOnlyEvent<T[Extract<keyof T, string>]>
+    } else {
+      throw new Error(`Invalid event: ${Event}`)
+    }
+  }
+
+  return result
+}
+
+const eventToSubscribeOnlyEventWeakMap = new WeakMap<RemeshEvent<any, any>, RemeshSubscribeOnlyEvent<any, any>>()
+const subscribeOnlyEventToEventWeakMap = new WeakMap<RemeshSubscribeOnlyEvent<any, any>, RemeshEvent<any, any>>()
+
+export const toRemeshSubscribeOnlyEvent = <T extends Args, U>(
+  event: RemeshEvent<any, U>,
+): RemeshSubscribeOnlyEvent<T, U> => {
+  const subscribeOnlyEvent = eventToSubscribeOnlyEventWeakMap.get(event)
+
+  if (subscribeOnlyEvent) {
+    return subscribeOnlyEvent
+  }
+
+  const newSubscribeOnlyEvent = {
+    type: 'RemeshSubscribeOnlyEvent',
+    eventId: event.eventId,
+    eventName: event.eventName,
+  } as RemeshSubscribeOnlyEvent<T, U>
+
+  eventToSubscribeOnlyEventWeakMap.set(event, newSubscribeOnlyEvent)
+
+  subscribeOnlyEventToEventWeakMap.set(newSubscribeOnlyEvent, event)
+
+  return newSubscribeOnlyEvent
+}
+
+export const internalToOriginalEvent = <T extends Args, U>(
+  subscribeOnlyEvent: RemeshSubscribeOnlyEvent<T, U>,
+): RemeshEvent<T, U> => {
+  const event = subscribeOnlyEventToEventWeakMap.get(subscribeOnlyEvent)
+
+  if (event) {
+    return event
+  }
+
+  throw new Error(`SubscribeOnlyEvent ${subscribeOnlyEvent.eventName} does not have an associated Event`)
 }
 
 export type RemeshEventOptions<T extends Args, U> = {
@@ -476,14 +548,14 @@ export type RemeshDomainContext = {
   getDomain: <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
     domainAction: RemeshDomainAction<T, U>,
   ) => {
-    [key in keyof ValidRemeshDomainDefinition<T>]: ValidRemeshDomainDefinition<T>[key]
+    [key in keyof VerifiedRemeshDomainDefinition<T>]: VerifiedRemeshDomainDefinition<T>[key]
   }
   getExtern: <T>(Extern: RemeshExtern<T>) => T
 }
 
 export type RemeshDomainOutput = {
   event: {
-    [key: string]: RemeshEvent<any, any>
+    [key: string]: RemeshEvent<any, any> | RemeshSubscribeOnlyEvent<any, any>
   }
   query: {
     [key: string]: RemeshQuery<any, any>
@@ -497,11 +569,11 @@ export type RemeshDomainDefinition = Partial<RemeshDomainOutput>
 
 type ShowKey<T> = T extends string ? T : 'key'
 
-export type ValidRemeshDomainDefinition<T extends RemeshDomainDefinition> = Pick<
+export type VerifiedRemeshDomainDefinition<T extends RemeshDomainDefinition> = Pick<
   {
     event: {
       [key in keyof T['event']]: key extends DomainConceptName<'Event'>
-        ? T['event'][key]
+        ? ToRemeshSubscribeOnlyEvent<T['event'][key]>
         : `${ShowKey<key>} is not a valid event name`
     }
     query: {
@@ -518,12 +590,32 @@ export type ValidRemeshDomainDefinition<T extends RemeshDomainDefinition> = Pick
   ('event' | 'query' | 'command') & keyof T
 >
 
+export const toValidRemeshDomainDefinition = <T extends RemeshDomainDefinition>(
+  domainDefinition: T,
+): VerifiedRemeshDomainDefinition<T> => {
+  const result = {} as VerifiedRemeshDomainDefinition<T>
+
+  if (domainDefinition.event) {
+    result.event = toRemeshSubscribeOnlyEventMap(domainDefinition.event) as unknown as typeof result.event
+  }
+
+  if (domainDefinition.query) {
+    result.query = domainDefinition.query as unknown as typeof result.query
+  }
+
+  if (domainDefinition.command) {
+    result.command = domainDefinition.command as unknown as typeof result.command
+  }
+
+  return result
+}
+
 export const RemeshModule = <T extends RemeshDomainDefinition>(
   module: T,
 ): {
-  [key in keyof ValidRemeshDomainDefinition<T>]: ValidRemeshDomainDefinition<T>[key]
+  [key in keyof VerifiedRemeshDomainDefinition<T>]: VerifiedRemeshDomainDefinition<T>[key]
 } => {
-  return module as unknown as ValidRemeshDomainDefinition<T>
+  return toValidRemeshDomainDefinition(module)
 }
 
 export type RemeshDomain<T extends RemeshDomainDefinition, U extends Args<SerializableType>> = {
