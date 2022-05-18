@@ -22,6 +22,10 @@ export type RemeshReactContext = {
 
 export const RemeshReactContext = createContext<RemeshReactContext | null>(null)
 
+if (process.env.NODE_ENV !== 'production') {
+  RemeshReactContext.displayName = 'Remesh'
+}
+
 export const useRemeshReactContext = () => {
   const context = useContext(RemeshReactContext)
 
