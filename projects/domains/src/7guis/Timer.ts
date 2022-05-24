@@ -1,6 +1,6 @@
 import { merge, animationFrames, of, NEVER } from 'rxjs'
 
-import { distinctUntilChanged, map, mapTo, pairwise, switchMap, takeUntil } from 'rxjs/operators'
+import { distinctUntilChanged, map, tap, pairwise, switchMap, takeUntil, startWith } from 'rxjs/operators'
 
 import { Remesh } from 'remesh'
 
@@ -42,45 +42,52 @@ export const TimerDomain = Remesh.domain({
 
     const UpdateElapsedCommand = domain.command({
       name: 'UpdateElapsedCommand',
-      impl: ({ get }, increment: number) => {
+      impl: ({ get, set, emit }, increment: number) => {
         const duration = get(DurationState())
         const elapsed = get(ElapsedState())
 
         if (elapsed > duration) {
-          return StopEvent()
+          emit(StopEvent())
+          return
         }
 
-        return ElapsedState().new(elapsed + increment)
+        set(ElapsedState(), elapsed + increment)
       },
     })
 
     const UpdateDurationCommand = domain.command({
       name: 'UpdateDurationCommand',
-      impl: ({ get }, newDuration: number) => {
+      impl: ({ get, set, emit }, newDuration: number) => {
         const elapsed = get(ElapsedState())
 
         if (newDuration > elapsed) {
-          return [DurationState().new(newDuration), StartEvent()]
+          set(DurationState(), newDuration)
+          emit(StartEvent())
+          return
         }
 
-        return DurationState().new(newDuration)
+        set(DurationState(), newDuration)
       },
     })
 
     const ResetElapsedCommand = domain.command({
       name: 'ResetElapsedCommand',
-      impl: ({}) => {
-        return [ElapsedState().new(0), StartEvent()]
+      impl: ({ set, emit }) => {
+        set(ElapsedState(), 0)
+        emit(StartEvent())
       },
     })
 
     const UpdateElapsedByAnimationFramesCommand = domain.command$({
       name: 'UpdateElapsedByAnimationFramesCommand',
-      impl: ({ fromEvent }) => {
-        const startEvent$ = fromEvent(StartEvent).pipe(map(() => 1))
+      impl: ({ fromEvent, send }) => {
+        const startEvent$ = fromEvent(StartEvent).pipe(
+          startWith(StartEvent()),
+          map(() => 1),
+        )
         const stopEvent$ = fromEvent(StopEvent).pipe(map(() => 0))
 
-        const main$ = merge(startEvent$, stopEvent$).pipe(
+        return merge(startEvent$, stopEvent$).pipe(
           distinctUntilChanged(),
           switchMap((signal) => {
             if (signal === 0) {
@@ -89,17 +96,19 @@ export const TimerDomain = Remesh.domain({
             return animationFrames().pipe(
               pairwise(),
               map(([a, b]) => b.elapsed - a.elapsed),
-              map((increment) => UpdateElapsedCommand(increment)),
+              tap((increment) => {
+                send(UpdateElapsedCommand(increment))
+              }),
               takeUntil(fromEvent(StopEvent)),
             )
           }),
         )
-
-        return merge(main$, of(StartEvent()))
       },
     })
 
-    domain.ignite(() => UpdateElapsedByAnimationFramesCommand())
+    domain.ignite(({ send }) => {
+      send(UpdateElapsedByAnimationFramesCommand())
+    })
 
     return {
       query: {

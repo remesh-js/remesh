@@ -1,6 +1,5 @@
 import {
   InspectorType,
-  RemeshCommand$ReceivedEventData,
   RemeshCommandReceivedEventData,
   RemeshDefaultState,
   RemeshDomain,
@@ -14,7 +13,7 @@ import {
   RemeshStore,
   RemeshStoreOptions,
 } from '../src'
-import { delay, map, Observable } from 'rxjs'
+import { delay, tap, Observable } from 'rxjs'
 
 import * as utils from './utils'
 
@@ -55,8 +54,8 @@ describe('store', () => {
 
         const UpdateACommand = domain.command({
           name: 'UpdateACommand',
-          impl(_, num: number) {
-            return AState().new(num)
+          impl({ set }, num: number) {
+            set(AState(), num)
           },
         })
 
@@ -81,15 +80,15 @@ describe('store', () => {
 
         const TestEvent = domain.event({
           name: 'TestEvent',
-          impl(_, arg?: string) {
-            return arg
+          impl(_, arg$: Observable<void | string>) {
+            return arg$
           },
         })
 
         const EmitTestEventCommand = domain.command({
           name: 'EmitTestEventCommand',
-          impl(_, arg?: string) {
-            return TestEvent(arg)
+          impl({ emit }, arg?: string) {
+            emit(TestEvent(arg))
           },
         })
 
@@ -97,11 +96,13 @@ describe('store', () => {
           name: 'InitCommand',
           impl(_, payload$) {
             command$Called()
-            return payload$.pipe()
+            return payload$
           },
         })
 
-        domain.ignite(() => InitCommand())
+        domain.ignite(({ send }) => {
+          send(InitCommand())
+        })
 
         return {
           query: { AQuery, BQuery, JoinQuery },
@@ -246,8 +247,7 @@ describe('store', () => {
           | RemeshStateStorageEventData<any, any>
           | RemeshQueryStorageEventData<any, any>
           | RemeshEventEmittedEventData<any, any>
-          | RemeshCommandReceivedEventData<any>
-          | RemeshCommand$ReceivedEventData<any>,
+          | RemeshCommandReceivedEventData<any, any>,
       ) => void
     }) => {
       return (storeOptions?: RemeshStoreOptions) => {
@@ -263,7 +263,6 @@ describe('store', () => {
         inspectorStore.subscribeEvent(inspectorDomain.event.RemeshQueryStorageEvent, options.storageEventHandler)
         inspectorStore.subscribeEvent(inspectorDomain.event.RemeshEventEmittedEvent, options.storageEventHandler)
         inspectorStore.subscribeEvent(inspectorDomain.event.RemeshCommandReceivedEvent, options.storageEventHandler)
-        inspectorStore.subscribeEvent(inspectorDomain.event.RemeshCommand$ReceivedEvent, options.storageEventHandler)
 
         return inspectorStore
       }
@@ -302,8 +301,9 @@ describe('store', () => {
 
         const UpdateNameCommand = domain.command({
           name: 'UpdateNameCommand',
-          impl(_, name: string) {
-            return [NameState().new(name), NameChangedEvent(name)]
+          impl({ set, emit }, name: string) {
+            set(NameState(), name)
+            emit(NameChangedEvent(name))
           },
         })
 
@@ -329,15 +329,19 @@ describe('store', () => {
 
         const RemoteUpdateNameCommand = domain.command$({
           name: 'RemoteUpdateNameCommand',
-          impl(_, payload$: Observable<string>) {
+          impl({ send  }, payload$: Observable<string>) {
             return payload$.pipe(
               delay(1),
-              map((name) => nameDomain.command.UpdateNameCommand(name)),
+              tap((name) => {
+                send(nameDomain.command.UpdateNameCommand(name))
+              }),
             )
           },
         })
 
-        domain.ignite(() => RemoteUpdateNameCommand('bar'))
+        domain.ignite(({ send }) => {
+          send(RemoteUpdateNameCommand('bar'))
+        })
 
         return {
           query: {
@@ -355,8 +359,10 @@ describe('store', () => {
 
       const testDomain = store.getDomain(TestDomain())
       store.subscribeDomain(TestDomain())
+
       const changed = jest.fn()
       store.subscribeEvent(testDomain.event.NameChangedEvent, changed)
+
 
       jest.runOnlyPendingTimers()
 
@@ -378,7 +384,7 @@ describe('store', () => {
     const expectedHistory: string[] = [
       InspectorType.DomainCreated,
       InspectorType.DomainCreated,
-      InspectorType.Command$Received,
+      InspectorType.CommandReceived,
       InspectorType.CommandReceived,
       InspectorType.StateCreated,
       InspectorType.EventEmitted,
@@ -386,9 +392,9 @@ describe('store', () => {
       InspectorType.QueryCreated,
       InspectorType.CommandReceived,
       InspectorType.StateUpdated,
-      InspectorType.QueryUpdated,
-      InspectorType.QueryUpdated,
       InspectorType.EventEmitted,
+      InspectorType.QueryUpdated,
+      InspectorType.QueryUpdated,
       InspectorType.DomainDiscarded,
       InspectorType.QueryDiscarded,
       InspectorType.StateDiscarded,
@@ -404,7 +410,7 @@ describe('store', () => {
     const restoreExpectedHistory = expectedHistory.concat([
       InspectorType.DomainReused,
       InspectorType.DomainReused,
-      InspectorType.Command$Received,
+      InspectorType.CommandReceived,
       InspectorType.CommandReceived,
       InspectorType.StateReused,
       InspectorType.EventEmitted,
@@ -414,9 +420,9 @@ describe('store', () => {
       InspectorType.QueryReused,
       InspectorType.CommandReceived,
       InspectorType.StateUpdated,
-      InspectorType.QueryUpdated,
-      InspectorType.QueryUpdated,
       InspectorType.EventEmitted,
+      InspectorType.QueryUpdated,
+      InspectorType.QueryUpdated,
       InspectorType.DomainDiscarded,
       InspectorType.QueryDiscarded,
       InspectorType.QueryDiscarded,
@@ -444,8 +450,8 @@ describe('store', () => {
 
         const UpdateCountCommand = domain.command({
           name: 'UpdateCountCommand',
-          impl(_, count: number) {
-            return CountState().new(count)
+          impl({ set }, count: number) {
+            set(CountState(), count)
           },
         })
 
@@ -455,8 +461,8 @@ describe('store', () => {
             await utils.delay(100)
             return 10
           },
-          command: (_, count) => {
-            return UpdateCountCommand(count)
+          command: ({ send }, count) => {
+            send(UpdateCountCommand(count))
           },
         })
 

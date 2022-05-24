@@ -38,8 +38,8 @@ describe('state', () => {
 
     const NameChangeCommand = RemeshCommand({
       name: 'NameChangeCommand',
-      impl() {
-        return NameState().new('ddd')
+      impl({ set }) {
+        set(NameState(), 'ddd')
       },
     })
 
@@ -82,8 +82,12 @@ describe('state', () => {
 
     const NameChangeCommand = RemeshCommand({
       name: 'NameChangeCommand',
-      impl({ peek }, name: string) {
-        return peek(NameState()) === RemeshValuePlaceholder ? NameState().new(name) : HasValueEvent()
+      impl({ peek, set, emit  }, name: string) {
+        if (peek(NameState()) === RemeshValuePlaceholder) {
+          set(NameState(), name)
+        } else {
+          emit(HasValueEvent())
+        }
       },
     })
 
@@ -133,8 +137,8 @@ describe('state', () => {
     }
     const NewStateCommand = RemeshCommand({
       name: 'NewStateCommand',
-      impl() {
-        return NestedState().new(newState)
+      impl({ set }) {
+        set(NestedState(), newState)
       },
     })
 
@@ -178,8 +182,8 @@ describe('state', () => {
 
         const UpdateAgeCommand = domain.command({
           name: 'UpdateAgeCommand',
-          impl(_, age: number) {
-            return AgeState().new(age)
+          impl({ set }, age: number) {
+            set(AgeState(), age)
           },
         })
 
@@ -197,8 +201,8 @@ describe('state', () => {
 
         const SaveSalaryCommand = domain.command({
           name: 'SaveSalaryCommand',
-          impl(_, salary: number) {
-            return SalaryState().new(salary)
+          impl({ set }, salary: number) {
+            set(SalaryState(), salary)
           },
         })
 

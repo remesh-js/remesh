@@ -27,7 +27,7 @@ describe('extern', () => {
 
         const CountState = domain.state({
           name: 'CountState',
-          default: storage.get('counter') ?? 0,
+          default: (storage.get('counter') as number) ?? 0,
         })
 
         const CountQuery = domain.query({
@@ -39,15 +39,16 @@ describe('extern', () => {
 
         const UpdateCounterEvent = domain.event({
           name: 'UpdateCounterEvent',
-          impl({ get }) {
-            return get(CountState())
+          impl({ get }, arg$) {
+            return arg$.pipe(map(() => get(CountState())))
           },
         })
 
         const UpdateCounterCommand = domain.command({
           name: 'UpdateCounterCommand',
-          impl({ get }, value: number) {
-            return [CountState().new(get(CountState()) + value), UpdateCounterEvent()]
+          impl({ set, emit }, value: number) {
+            set(CountState(), value)
+            emit(UpdateCounterEvent())
           },
         })
 
@@ -59,7 +60,6 @@ describe('extern', () => {
                 const storage = domain.getExtern(StorageExtern)
                 storage.set('counter', value)
               }),
-              map(() => null),
             )
           },
         })
@@ -81,9 +81,14 @@ describe('extern', () => {
 
     const counter = store1.getDomain(CounterDomain())
 
+    const changed = jest.fn()
+
+    store1.subscribeEvent(counter.event.UpdateCounterEvent, changed)
+
     counter.command.FromStateToStorageCommand()
     counter.command.UpdateCounterCommand(1)
 
+    expect(changed).toBeCalled()
     expect(store1.query(counter.query.CountQuery())).toBe(memoryCache.get('counter'))
   })
 })

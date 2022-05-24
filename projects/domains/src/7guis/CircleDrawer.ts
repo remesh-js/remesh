@@ -76,7 +76,7 @@ export const CircleDrawerDomain = Remesh.domain({
 
     const RecordHistoryStateCommand = domain.command({
       name: 'RecordHistoryStateCommand',
-      impl: ({ get }, state: HistoryStateItem) => {
+      impl: ({ get, set }, state: HistoryStateItem) => {
         const history = get(HistoryState())
 
         const previousItems = history.items.slice(0, history.currentIndex + 1)
@@ -101,7 +101,7 @@ export const CircleDrawerDomain = Remesh.domain({
         const newItems = [...previousItems, state]
         const newIndex = newItems.length - 1
 
-        return HistoryState().new({
+        set(HistoryState(), {
           items: newItems,
           currentIndex: newIndex,
         })
@@ -124,36 +124,35 @@ export const CircleDrawerDomain = Remesh.domain({
 
     const UndoCommand = domain.command({
       name: 'UndoCommand',
-      impl: ({ get }) => {
+      impl: ({ get, set }) => {
         const history = get(HistoryState())
         const canUndo = get(CanUndoQuery())
         const newIndex = history.currentIndex - 1
 
         if (!canUndo || newIndex < 0) {
-          return [
-            DrawState().new({
-              circles: [],
-            }),
-            HistoryState().new({
-              items: history.items,
-              currentIndex: -1,
-            }),
-          ]
+          set(DrawState(), {
+            circles: [],
+          })
+
+          set(HistoryState(), {
+            items: history.items,
+            currentIndex: -1,
+          })
+          return
         }
 
-        return [
-          DrawState().new(history.items[newIndex].state),
-          HistoryState().new({
-            items: history.items,
-            currentIndex: newIndex,
-          }),
-        ]
+        set(DrawState(), history.items[newIndex].state)
+
+        set(HistoryState(), {
+          items: history.items,
+          currentIndex: newIndex,
+        })
       },
     })
 
     const RedoCommand = domain.command({
       name: 'RedoCommand',
-      impl: ({ get }) => {
+      impl: ({ get, set }) => {
         const history = get(HistoryState())
         const canRedo = get(CanRedoQuery())
 
@@ -163,13 +162,12 @@ export const CircleDrawerDomain = Remesh.domain({
 
         const newIndex = history.currentIndex + 1
 
-        return [
-          DrawState().new(history.items[newIndex].state),
-          HistoryState().new({
-            items: history.items,
-            currentIndex: newIndex,
-          }),
-        ]
+        set(DrawState(), history.items[newIndex].state)
+
+        set(HistoryState(), {
+          items: history.items,
+          currentIndex: newIndex,
+        })
       },
     })
 
@@ -203,8 +201,8 @@ export const CircleDrawerDomain = Remesh.domain({
 
     const SetSelectedIndexCommand = domain.command({
       name: 'SetSelectedIndexCommand',
-      impl: ({}, index: number) => {
-        return SelectedIndexState().new(index)
+      impl: ({ set }, index: number) => {
+        set(SelectedIndexState(), index)
       },
     })
 
@@ -227,24 +225,26 @@ export const CircleDrawerDomain = Remesh.domain({
 
     const DrawCommand = domain.command({
       name: 'DrawCommand',
-      impl: ({ get }, action: DrawAction) => {
+      impl: ({ get, set, send }, action: DrawAction) => {
         const state = get(DrawState())
         const newState = {
           circles: [...state.circles, { position: action.position, diameter: action.diameter }],
         }
-        return [
-          DrawState().new(newState),
+
+        set(DrawState(), newState)
+
+        send(
           RecordHistoryStateCommand({
             action: 'add-circle',
             state: newState,
           }),
-        ]
+        )
       },
     })
 
     const AdjustCommand = domain.command({
       name: 'AdjustCommand',
-      impl: ({ get }, action: AdjustAction) => {
+      impl: ({ get, set, send }, action: AdjustAction) => {
         const state = get(DrawState())
         const circles = state.circles.map((circle, index) => {
           if (index === action.index) {
@@ -260,14 +260,15 @@ export const CircleDrawerDomain = Remesh.domain({
           circles,
         }
 
-        return [
-          DrawState().new(newState),
+        set(DrawState(), newState)
+
+        send(
           RecordHistoryStateCommand({
             action: 'adjust-circle',
             index: action.index,
             state: newState,
           }),
-        ]
+        )
       },
     })
 
@@ -287,8 +288,8 @@ export const CircleDrawerDomain = Remesh.domain({
 
     const UpdateTooltipsCommand = domain.command({
       name: 'UpdateTooltipsCommand',
-      impl: ({}, newState: TooltipsState) => {
-        return TooltipsState().new(newState)
+      impl: ({ set }, newState: TooltipsState) => {
+        set(TooltipsState(), newState)
       },
     })
 

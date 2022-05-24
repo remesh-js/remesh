@@ -20,8 +20,9 @@ export const TodoInputDomain = Remesh.domain({
 
     const SetTodoInputCommand = domain.command({
       name: 'SetTodoInputCommand',
-      impl: ({}, newTodoInput: string) => {
-        return [todoInputModule.command.SetTextCommand(newTodoInput), TodoInputChangedEvent(newTodoInput)]
+      impl: ({ send, emit }, newTodoInput: string) => {
+        send(todoInputModule.command.SetTextCommand(newTodoInput))
+        emit(TodoInputChangedEvent(newTodoInput))
       },
     })
 
@@ -29,7 +30,9 @@ export const TodoInputDomain = Remesh.domain({
 
     syncStorage(domain, TODO_INPUT_STORAGE_KEY)
       .listenTo(TodoInputChangedEvent)
-      .readData((value) => SetTodoInputCommand(value))
+      .set(({ send }, value) => {
+        send(SetTodoInputCommand(value))
+      })
 
     return {
       query: {

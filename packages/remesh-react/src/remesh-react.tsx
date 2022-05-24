@@ -8,7 +8,7 @@ import {
   RemeshEvent,
   RemeshDomainAction,
   RemeshStore,
-  SerializableType,
+  Serializable,
   RemeshStoreOptions,
   Args,
   RemeshSubscribeOnlyEvent,
@@ -70,7 +70,7 @@ export const RemeshRoot = (props: RemeshRootProps) => {
   return <RemeshReactContext.Provider value={contextValue}>{props.children}</RemeshReactContext.Provider>
 }
 
-export const useRemeshQuery = function <T extends Args<SerializableType>, U>(queryAction: RemeshQueryAction<T, U>): U {
+export const useRemeshQuery = function <T extends Args<Serializable>, U>(queryAction: RemeshQueryAction<T, U>): U {
   /**
    * initial domain if needed
    */
@@ -117,7 +117,7 @@ export const useRemeshQuery = function <T extends Args<SerializableType>, U>(que
   return state
 }
 
-export const useRemeshSuspense = function <T extends Args<SerializableType>, U>(
+export const useRemeshSuspense = function <T extends Args<Serializable>, U>(
   queryAction: RemeshQueryAction<T, AsyncData<U>>,
 ) {
   const state = useRemeshQuery(queryAction)
@@ -162,7 +162,7 @@ export const useRemeshEmit = function () {
   return store.emitEvent
 }
 
-export const useRemeshDomain = function <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
+export const useRemeshDomain = function <T extends RemeshDomainDefinition, U extends Args<Serializable>>(
   domainAction: RemeshDomainAction<T, U>,
 ) {
   const store = useRemeshStore()

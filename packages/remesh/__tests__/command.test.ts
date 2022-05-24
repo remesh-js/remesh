@@ -9,8 +9,9 @@ import {
   RemeshStore,
 } from '../src'
 import { delay, Observable, switchMap } from 'rxjs'
-import { map } from 'rxjs/operators'
+import { map, tap } from 'rxjs/operators'
 import * as utils from './utils'
+import { send } from 'process'
 
 let store: ReturnType<typeof RemeshStore>
 beforeEach(() => {
@@ -57,8 +58,8 @@ describe('command', () => {
 
     const NameChangeCommand = RemeshCommand({
       name: 'NameChangeCommand',
-      impl() {
-        return NameState().new('ddd')
+      impl({ set }) {
+        set(NameState(), 'ddd')
       },
     })
 
@@ -70,8 +71,8 @@ describe('command', () => {
   it('get state with RemeshCommandContext.get, and can receive data with the second arg', () => {
     const NameChangeCommand = RemeshCommand({
       name: 'NameChangeCommand',
-      impl({ get }, hi: string) {
-        return NameState().new(`${hi},${get(NameState())}`)
+      impl({ get, set }, hi: string) {
+        set(NameState(), `${hi},${get(NameState())}`)
       },
     })
 
@@ -80,28 +81,33 @@ describe('command', () => {
     expect(store.query(NameQuery())).toBe('hello,remesh')
   })
 
-  it('can return an array to output multiple values, can contain any RemeshCommandPayload，RemeshEventPayload，RemeshStateSetterPayload，RemeshCommand$Payload', () => {
+  it('can set state, send command and emit event in any times', () => {
     const UpdateAgeCommand = RemeshCommand({
       name: 'UpdateAgeCommand',
-      impl(_, age: number) {
-        return AgeState().new(age)
+      impl({ set }, age: number) {
+        set(AgeState(), age)
       },
     })
 
     const TimerUpdateAgeCommand = RemeshCommand$({
       name: 'TimerUpdateAgeCommand',
-      impl({ get }, payload$) {
+      impl({ get, send }, payload$) {
         return payload$.pipe(
           delay(2000),
-          map(() => UpdateAgeCommand(get(AgeState()) + 1)),
+          tap(() => {
+            send(UpdateAgeCommand(get(AgeState()) + 1))
+          }),
         )
       },
     })
 
     const NameChangeCommand = RemeshCommand({
       name: 'NameChangeCommand',
-      impl() {
-        return [NameState().new('ddd'), NameChangeEvent(), UpdateAgeCommand(1), TimerUpdateAgeCommand()]
+      impl({ set, send, emit }) {
+        set(NameState(), 'ddd')
+        emit(NameChangeEvent())
+        send(UpdateAgeCommand(1))
+        send(TimerUpdateAgeCommand())
       },
     })
 
@@ -138,12 +144,14 @@ describe('command', () => {
 
         const RankingUpdateCommand = domain.command({
           name: 'RankingUpdateCommand',
-          impl(_, ranking: number) {
-            return RankingState().new(ranking)
+          impl({ set }, ranking: number) {
+            set(RankingState(), ranking)
           },
         })
 
-        domain.ignite(() => RankingUpdateCommand(99))
+        domain.ignite(({ send }) => {
+          send(RankingUpdateCommand(99))
+        })
 
         return { query: { RankingQuery }, command: { RankingUpdateCommand } }
       },
@@ -174,10 +182,12 @@ describe('command$', () => {
 
     const FetchFeaturesCommand = RemeshCommand$({
       name: 'FetchFeaturesCommand',
-      impl(_, payload$: Observable<void>) {
+      impl({ set }, payload$: Observable<void>) {
         return payload$.pipe(
           switchMap(() => getFeatures()),
-          map((features) => FeaturesState().new(features)),
+          tap((features) => {
+            set(FeaturesState(), features)
+          }),
         )
       },
     })
@@ -210,8 +220,8 @@ describe('command$', () => {
 
     const UpdateCountCommand = RemeshCommand({
       name: 'UpdateCountCommand',
-      impl(_, count: number) {
-        return CountState().new(count)
+      impl({ set }, count: number) {
+        set(CountState(), count)
       },
     })
 
@@ -225,17 +235,24 @@ describe('command$', () => {
 
     const FromEventToUpdateCommand = RemeshCommand$({
       name: 'FromEventToUpdateCommand',
-      impl({ fromEvent, get }) {
-        return fromEvent(CountIncreaseEvent)
-          .pipe(map(() => get(CountState()) + 1))
-          .pipe(map((count) => UpdateCountCommand(count)))
+      impl({ fromEvent, get, send }) {
+        return fromEvent(CountIncreaseEvent).pipe(
+          map(() => get(CountState()) + 1),
+          tap((count) => {
+            send(UpdateCountCommand(count))
+          }),
+        )
       },
     })
 
     const FromQueryToEventCommand = RemeshCommand$({
       name: 'FromQueryToEventCommand',
-      impl({ fromQuery }) {
-        return fromQuery(CountQuery()).pipe(map((count) => CountChangedEvent(count)))
+      impl({ fromQuery, emit }) {
+        return fromQuery(CountQuery()).pipe(
+          tap((count) => {
+            emit(CountChangedEvent(count))
+          }),
+        )
       },
     })
 

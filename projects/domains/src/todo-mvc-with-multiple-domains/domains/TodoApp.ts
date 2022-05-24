@@ -1,6 +1,6 @@
 import { Remesh } from 'remesh'
 
-import { filter, map } from 'rxjs/operators'
+import { filter, tap } from 'rxjs/operators'
 
 import { TodoInputDomain } from './TodoInput'
 import { TodoListDomain, getTodoId } from './TodoList'
@@ -36,23 +36,27 @@ export const TodoAppDomain = Remesh.domain({
 
     const ClearTodoInputCommand = domain.command$({
       name: 'ClearTodoInputCommand',
-      impl: ({ fromEvent, get }) => {
+      impl: ({ fromEvent, get, send }) => {
         return fromEvent(todoList.event.TodoItemAddedEvent).pipe(
           filter((todo) => {
             const todoInput = get(todoHeader.query.TodoInputQuery())
             return todoInput === todo.title
           }),
-          map(() => todoHeader.command.ClearTodoInputCommand()),
+          tap(() => {
+            send(todoHeader.command.ClearTodoInputCommand())
+          }),
         )
       },
     })
 
-    domain.ignite(() => ClearTodoInputCommand())
+    domain.ignite(({ send }) => {
+      send(ClearTodoInputCommand())
+    })
 
     return {
       query: {
         FilteredTodoKeyListQuery,
-      }
+      },
     }
   },
 })

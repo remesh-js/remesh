@@ -2,7 +2,7 @@ import { InjectionKey, Plugin, inject, Ref, ref, onMounted, onBeforeUnmount } fr
 
 import {
   RemeshStore,
-  SerializableType,
+  Serializable,
   RemeshQueryAction,
   RemeshEvent,
   RemeshDomainDefinition,
@@ -33,7 +33,7 @@ export const useRemeshStore = () => {
   return store
 }
 
-export const useRemeshQuery = function <T extends Args<SerializableType>, U>(
+export const useRemeshQuery = function <T extends Args<Serializable>, U>(
   queryAction: RemeshQueryAction<T, U>,
 ): Ref<U> {
   const store = useRemeshStore()
@@ -78,7 +78,7 @@ export const useRemeshEmit = function () {
   return store.emitEvent
 }
 
-export const useRemeshDomain = function <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
+export const useRemeshDomain = function <T extends RemeshDomainDefinition, U extends Args<Serializable>>(
   domainAction: RemeshDomainAction<T, U>,
 ) {
   const store = useRemeshStore()

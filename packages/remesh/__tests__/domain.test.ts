@@ -103,19 +103,22 @@ describe('domain', () => {
 
         const UpdateContentCommand = domain.command({
           name: 'UpdateContentCommand',
-          impl(_, newContent: string) {
-            return [ContentState().new(newContent), ContentChangeEvent()]
+          impl({ set, emit }, newContent: string) {
+            set(ContentState(), newContent)
+            emit(ContentChangeEvent())
           },
         })
 
         const RemoteContentCommand = domain.command$({
           name: 'RemoteContentCommand',
-          impl(_, payload$) {
-            return payload$.pipe(switchMap(() => utils.delay(1).then(() => ContentState().new('ddd'))))
+          impl({ set }, payload$) {
+            return payload$.pipe(switchMap(() => utils.delay(1).then(() => set(ContentState(), 'ddd'))))
           },
         })
 
-        domain.ignite(() => RemoteContentCommand())
+        domain.ignite(({ send }) => {
+          send(RemoteContentCommand())
+        })
 
         return {
           query: {

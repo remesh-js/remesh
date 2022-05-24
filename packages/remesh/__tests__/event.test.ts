@@ -1,3 +1,4 @@
+import { map, Observable } from 'rxjs'
 import { RemeshCommand, RemeshDefaultState, RemeshEvent, RemeshStore } from '../src'
 
 let store: ReturnType<typeof RemeshStore>
@@ -19,8 +20,9 @@ describe('event', () => {
 
     const IncreaseCounterCommand = RemeshCommand({
       name: 'IncreaseCounterCommand',
-      impl({ get }) {
-        return [CountState().new(get(CountState()) + 1), CounterChangedEvent()]
+      impl({ get, set, emit }) {
+        set(CountState(), get(CountState()) + 1)
+        emit(CounterChangedEvent())
       },
     })
 
@@ -43,20 +45,26 @@ describe('event', () => {
       name: 'CountState',
       default: 0,
     })
+
     const CounterChangedEvent = RemeshEvent({
       name: 'CounterChangedEvent',
-      impl({ get }, from: string) {
-        return {
-          from,
-          count: get(CountState()),
-        }
+      impl({ get }, from$: Observable<string>) {
+        return from$.pipe(
+          map((from) => {
+            return {
+              from,
+              count: get(CountState()),
+            }
+          }),
+        )
       },
     })
 
     const IncreaseCounterCommand = RemeshCommand({
       name: 'IncreaseCounterCommand',
-      impl({ get }) {
-        return [CountState().new(get(CountState()) + 1), CounterChangedEvent('IncreaseCounterCommand')]
+      impl({ get, set, emit }) {
+        set(CountState(), get(CountState()) + 1)
+        emit(CounterChangedEvent('IncreaseCounterCommand'))
       },
     })
 

@@ -90,9 +90,10 @@ export const CellsDomain = Remesh.domain({
 
     const SelectCellCommand = domain.command({
       name: 'SelectCellCommand',
-      impl: ({ get }, key: string) => {
+      impl: ({ get, set }, key: string) => {
         const state = get(CellState(key))
-        return CellState(key).new({
+
+        set(CellState(key), {
           content: state.content,
           isEditing: true,
         })
@@ -101,9 +102,10 @@ export const CellsDomain = Remesh.domain({
 
     const UnselectCellCommand = domain.command({
       name: 'UnselectCellCommand',
-      impl: ({ get }, key: string) => {
+      impl: ({ get, set }, key: string) => {
         const state = get(CellState(key))
-        return CellState(key).new({
+
+        set(CellState(key), {
           content: state.content,
           isEditing: false,
         })
@@ -112,26 +114,26 @@ export const CellsDomain = Remesh.domain({
 
     const SetCellContentCommand = domain.command({
       name: 'SetCellContentCommand',
-      impl: ({ get }, { key, input }: { key: string; input: string }) => {
+      impl: ({ get, set }, { key, input }: { key: string; input: string }) => {
         const state = get(CellState(key))
 
         if (input.startsWith('=')) {
-          return CellState(key).new({
+          set(CellState(key), {
             content: {
               type: 'formula',
               formula: input,
             },
             isEditing: state.isEditing,
           })
+        } else {
+          set(CellState(key), {
+            content: {
+              type: 'text',
+              text: input,
+            },
+            isEditing: state.isEditing,
+          })
         }
-
-        return CellState(key).new({
-          content: {
-            type: 'text',
-            text: input,
-          },
-          isEditing: state.isEditing,
-        })
       },
     })
 

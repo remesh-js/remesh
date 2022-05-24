@@ -1,4 +1,4 @@
-import { RemeshDomainContext, RemeshCommandOutput, RemeshEvent } from 'remesh'
+import { RemeshDomainContext, RemeshCommandContext, RemeshEvent } from 'remesh'
 
 import { from } from 'rxjs'
 import { filter, map, tap } from 'rxjs/operators'
@@ -8,32 +8,32 @@ import { Storage } from '../domain-externs/storage'
 export type SyncStorageOptions<T, U = T> = {
   storageKey: string
   TriggerEvent: RemeshEvent<any, T>
-  saveData: (event: T) => U
-  readData: (value: U) => RemeshCommandOutput
+  get: (event: T) => U
+  set: (ctx: RemeshCommandContext, value: U) => unknown
 }
 
 const createOptions = <R>(storageKey: string, callback: <T, U>(options: SyncStorageOptions<T, U>) => R) => {
   return {
     listenTo: <T>(TriggerEvent: RemeshEvent<any, T>) => {
       return {
-        saveData: <U>(saveData: (event: T) => U) => {
+        get: <U>(get: (event: T) => U) => {
           return {
-            readData: (readData: (value: U) => RemeshCommandOutput) => {
+            set: (set: SyncStorageOptions<T, U>['set']) => {
               return callback({
                 storageKey,
                 TriggerEvent,
-                saveData: saveData,
-                readData: readData,
+                get: get,
+                set: set,
               })
             },
           }
         },
-        readData: (readData: (value: T) => RemeshCommandOutput) => {
+        set: (set: SyncStorageOptions<T, T>['set']) => {
           return callback({
             storageKey,
             TriggerEvent,
-            saveData: (event: T) => event,
-            readData: readData,
+            get: (event: T) => event,
+            set: set,
           })
         },
       }
@@ -44,28 +44,28 @@ const createOptions = <R>(storageKey: string, callback: <T, U>(options: SyncStor
 const createSyncStorage = <T, U = T>(domain: RemeshDomainContext, options: SyncStorageOptions<T, U>) => {
   const storage = domain.getExtern(Storage)
 
-  const ReadStorageCommand = domain.command$({
+  const ReadStorageCommand = domain.command({
     name: 'ReadStorageCommand',
-    impl: () => {
-      return from(storage.get<U>(options.storageKey)).pipe(
-        filter((value): value is U => !!value),
-        map((value) => options.readData(value)),
-      )
+    impl: async (ctx) => {
+      const value = await storage.get<U>(options.storageKey)
+
+      if (value) {
+        options.set(ctx, value)
+      }
     },
   })
 
   const WriteStorageCommand = domain.command$({
     name: 'WriteStorageCommand',
     impl: ({ fromEvent }) => {
-      return fromEvent(options.TriggerEvent).pipe(
-        tap((value) => storage.set(options.storageKey, options.saveData(value))),
-        map(() => null),
-      )
+      return fromEvent(options.TriggerEvent).pipe(tap((value) => storage.set(options.storageKey, options.get(value))))
     },
   })
 
-  domain.ignite(() => ReadStorageCommand())
-  domain.ignite(() => WriteStorageCommand())
+  domain.ignite(({ send }) => {
+    send(ReadStorageCommand())
+    send(WriteStorageCommand())
+  })
 }
 
 export const syncStorage = (domain: RemeshDomainContext, storageKey: string) => {

@@ -5,7 +5,7 @@ import {
   RemeshDomainAction,
   RemeshInspectorDomain,
   RemeshStoreOptions,
-  SerializableType,
+  Serializable,
 } from 'remesh'
 import { RemeshDebuggerHelper, RemeshDebugOptions } from 'remesh-debugger-helper'
 
@@ -56,7 +56,7 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
 
     const inspectorDomain = store.getDomain(RemeshInspectorDomain())
 
-    const getOwnerInfo = <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
+    const getOwnerInfo = <T extends RemeshDomainDefinition, U extends Args<Serializable>>(
       owner: RemeshDomainAction<T, U>,
     ) => {
       const ownerInfo = {
@@ -151,27 +151,6 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
           send(info.type, {
             ...info,
             commandArg: event.action.arg,
-          })
-        } else {
-          send(info.type, info)
-        }
-      })
-    })
-
-    helper.onActive('command$', () => {
-      store.subscribeEvent(inspectorDomain.event.RemeshCommand$ReceivedEvent, (event) => {
-        const Command$ = event.action.Command$
-        const info = {
-          type: `${event.type}::${Command$.command$Name}`,
-          owner: getOwnerInfo(Command$.owner),
-          command$Id: Command$.command$Id,
-          command$Name: Command$.command$Name,
-        }
-
-        if (event.action.arg !== undefined) {
-          send(info.type, {
-            ...info,
-            command$Arg: event.action.arg,
           })
         } else {
           send(info.type, info)

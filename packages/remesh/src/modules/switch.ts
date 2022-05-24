@@ -18,15 +18,15 @@ export const SwitchModule = <T>(domain: RemeshDomainContext, options: SwitchModu
 
   const SwitchCommand = domain.command({
     name: `${options.name}.SwitchCommand`,
-    impl: (_, current: T) => {
-      return SwitchState().new(current)
+    impl: ({ set }, current: T) => {
+      set(SwitchState(), current)
     },
   })
 
   const ResetCommand = domain.command({
     name: `${options.name}.ResetCommand`,
-    impl: (_, defaultValue: T) => {
-      return SwitchState().new(defaultValue)
+    impl: ({ set }) => {
+      set(SwitchState(), options.default)
     },
   })
 

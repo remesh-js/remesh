@@ -38,15 +38,19 @@ export const TodoFilterDomain = Remesh.domain({
 
     const SetFilterCommand = domain.command({
       name: 'SetFilterCommand',
-      impl: (_, input: string) => {
+      impl: ({ send, emit }, input: string) => {
         const filter = getValidTodoFilter(input)
-        return [todoFilterModule.command.SwitchCommand(filter), TodoFilterChangedEvent(filter)]
+
+        send(todoFilterModule.command.SwitchCommand(filter))
+        emit(TodoFilterChangedEvent(filter))
       },
     })
 
     syncStorage(domain, TODO_FILTER_STORAGE_KEY)
       .listenTo(TodoFilterChangedEvent)
-      .readData((value) => SetFilterCommand(value))
+      .set(({ send }, value) => {
+        send(SetFilterCommand(value))
+      })
 
     return {
       query: {

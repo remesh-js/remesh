@@ -3,6 +3,7 @@ import { ListModule } from 'remesh/modules/list'
 
 import { uuid } from '../utils/uuid'
 import { syncStorage } from '../domain-modules/sync-storage'
+import { map } from 'rxjs/operators'
 
 export const TODO_LIST_STORAGE_KEY = 'remesh-example/todo-list'
 
@@ -32,16 +33,16 @@ export const TodoListDomain = Remesh.domain({
 
     const TodoListChangedEvent = domain.event({
       name: 'TodoListChangedEvent',
-      impl: ({ get }) => {
-        const todos = get(TodoListQuery())
-        return todos
+      impl: ({ get }, arg$) => {
+        return arg$.pipe(map(() => get(TodoListQuery())))
       },
     })
 
     const SetTodoListCommand = domain.command({
       name: 'SetTodoListCommand',
-      impl: (_, todos: Todos) => {
-        return [todoListModule.command.SetListCommand(todos), TodoListChangedEvent()]
+      impl: ({ send, emit }, todos: Todos) => {
+        send(todoListModule.command.SetListCommand(todos))
+        emit(TodoListChangedEvent())
       },
     })
 
@@ -55,11 +56,14 @@ export const TodoListDomain = Remesh.domain({
 
     const AddTodoCommand = domain.command({
       name: 'AddTodoCommand',
-      impl: (_, title: string) => {
+      impl: ({ send, emit }, title: string) => {
         if (title === '') {
-          return FailedToAddTodoEvent({
-            reason: 'Title cannot be empty',
-          })
+          emit(
+            FailedToAddTodoEvent({
+              reason: 'Title cannot be empty',
+            }),
+          )
+          return
         }
 
         const todo: Todo = {
@@ -68,28 +72,30 @@ export const TodoListDomain = Remesh.domain({
           completed: false,
         }
 
-        return [
-          todoListModule.command.AddItemCommand(todo),
-          TodoItemAddedEvent(todo),
-          TodoListChangedEvent(),
-        ]
+        send(todoListModule.command.AddItemCommand(todo))
+        emit(TodoItemAddedEvent(todo))
+        emit(TodoListChangedEvent())
       },
     })
 
     const UpdateTodoCommand = domain.command({
       name: 'UpdateTodoCommand',
-      impl: (_, todo: Todo) => {
+      impl: ({ send, emit }, todo: Todo) => {
         if (todo.title === '') {
-          return DeleteTodoCommand(todo.id)
+          send(DeleteTodoCommand(todo.id))
+          return
         }
-        return [todoListModule.command.UpdateItemCommand(todo), TodoListChangedEvent()]
+
+        send(todoListModule.command.UpdateItemCommand(todo))
+        emit(TodoListChangedEvent())
       },
     })
 
     const DeleteTodoCommand = domain.command({
       name: 'DeleteTodoCommand',
-      impl: (_, id: string) => {
-        return [todoListModule.command.DeleteItemCommand(id), TodoListChangedEvent()]
+      impl: ({ send, emit }, id: string) => {
+        send(todoListModule.command.DeleteItemCommand(id))
+        emit(TodoListChangedEvent())
       },
     })
 
@@ -142,20 +148,20 @@ export const TodoListDomain = Remesh.domain({
 
     const ToggleTodoCommand = domain.command({
       name: 'ToggleTodoCommand',
-      impl: ({ get }, id: Todo['id']) => {
+      impl: ({ get, send }, id: Todo['id']) => {
         const todo = get(TodoQuery(id))
         const newTodo: Todo = {
           ...todo,
           completed: !todo.completed,
         }
 
-        return UpdateTodoCommand(newTodo)
+        send(UpdateTodoCommand(newTodo))
       },
     })
 
     const ToggleAllCommand = domain.command({
       name: 'ToggleAllCommand',
-      impl: ({ get }) => {
+      impl: ({ get, send }) => {
         const todoList = get(TodoListQuery())
 
         if (todoList.length === 0) {
@@ -169,13 +175,13 @@ export const TodoListDomain = Remesh.domain({
           completed,
         }))
 
-        return SetTodoListCommand(newTodoList)
+        send(SetTodoListCommand(newTodoList))
       },
     })
 
     const ClearAllCompletedCommand = domain.command({
       name: 'ClearAllCompletedCommand',
-      impl: ({ get }) => {
+      impl: ({ get, send }) => {
         const todoList = get(TodoListQuery())
 
         if (todoList.length === 0) {
@@ -184,13 +190,15 @@ export const TodoListDomain = Remesh.domain({
 
         const newTodoList = todoList.filter((todo) => !todo.completed)
 
-        return SetTodoListCommand(newTodoList)
+        send(SetTodoListCommand(newTodoList))
       },
     })
 
     syncStorage(domain, TODO_LIST_STORAGE_KEY)
       .listenTo(TodoListChangedEvent)
-      .readData((todos) => SetTodoListCommand(todos))
+      .set(({ send }, todos) => {
+        send(SetTodoListCommand(todos))
+      })
 
     return {
       query: {

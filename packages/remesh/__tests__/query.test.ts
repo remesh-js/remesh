@@ -36,8 +36,8 @@ describe('query', () => {
 
     const UpdateACommand = RemeshCommand({
       name: 'UpdateACommand',
-      impl(_, a: number) {
-        return AState().new(a)
+      impl({ set }, a: number) {
+        set(AState(), a)
       },
     })
 
@@ -107,8 +107,8 @@ describe('query', () => {
 
     const UpdateNestedStateCommand = RemeshCommand({
       name: 'UpdateNestedStateCommand',
-      impl() {
-        return NestedState().new({ bar: { foo: 1 } })
+      impl({ set }) {
+        set(NestedState(), { bar: { foo: 1 } })
       },
     })
 
@@ -150,8 +150,8 @@ describe('query', () => {
 
     const UpdateFrameworkNameCommand = RemeshCommand({
       name: 'UpdateFrameworkNameCommand',
-      impl(_, frameworkName: string) {
-        return FrameworkNameState().new(frameworkName)
+      impl({ set }, frameworkName: string) {
+        set(FrameworkNameState(), frameworkName)
       },
     })
 
@@ -200,15 +200,15 @@ describe('query', () => {
 
     const UpdateACommand = RemeshCommand({
       name: 'UpdateACommand',
-      impl(_, num: number) {
-        return AState().new(num)
+      impl({ set }, num: number) {
+        set(AState(), num)
       },
     })
 
     const UpdateBCommand = RemeshCommand({
       name: 'UpdateBCommand',
-      impl(_, num: number) {
-        return BState().new(num)
+      impl({ set }, num: number) {
+        set(BState(), num)
       },
     })
 

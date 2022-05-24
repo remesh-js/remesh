@@ -17,9 +17,9 @@ export const CounterDomain = Remesh.domain({
 
     const IncreCommand = domain.command({
       name: 'IncreCommand',
-      impl: ({ get }) => {
+      impl: ({ get, set }) => {
         const count = get(CountState())
-        return CountState().new(count + 1)
+        set(CountState(), count + 1)
       },
     })
 

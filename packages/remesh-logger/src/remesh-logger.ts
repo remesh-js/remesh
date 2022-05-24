@@ -5,7 +5,7 @@ import {
   RemeshDomainAction,
   RemeshInspectorDomain,
   RemeshStoreInspector,
-  SerializableType,
+  Serializable,
 } from 'remesh'
 
 import { RemeshDebugOptions, RemeshDebuggerHelper, formatNow } from 'remesh-debugger-helper'
@@ -57,7 +57,7 @@ export const RemeshLogger = (options?: RemeshLoggerOptions): RemeshStoreInspecto
 
     const inspectorDomain = store.getDomain(RemeshInspectorDomain())
 
-    const getOwnerInfo = <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
+    const getOwnerInfo = <T extends RemeshDomainDefinition, U extends Args<Serializable>>(
       owner: RemeshDomainAction<T, U>,
     ) => {
       const ownerInfo = {
@@ -172,31 +172,6 @@ export const RemeshLogger = (options?: RemeshLoggerOptions): RemeshStoreInspecto
           )
         } else {
           log(info.type, info, config.colors.command)
-        }
-      })
-    })
-
-    helper.onActive('command$', () => {
-      store.subscribeEvent(inspectorDomain.event.RemeshCommand$ReceivedEvent, (event) => {
-        const Command$ = event.action.Command$
-        const info = {
-          type: `${event.type}::${Command$.command$Name}`,
-          owner: getOwnerInfo(Command$.owner),
-          command$Id: Command$.command$Id,
-          command$Name: Command$.command$Name,
-        }
-
-        if (event.action.arg !== undefined) {
-          log(
-            info.type,
-            {
-              ...info,
-              command$Arg: event.action.arg,
-            },
-            config.colors.command$,
-          )
-        } else {
-          log(info.type, info, config.colors.command$)
         }
       })
     })

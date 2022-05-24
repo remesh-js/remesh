@@ -1,9 +1,8 @@
 import {
   RemeshDomain,
-  RemeshCommand$Action,
   RemeshCommandAction,
   RemeshEventAction,
-  SerializableType,
+  Serializable,
   RemeshDomainDefinition,
   Args,
 } from './remesh'
@@ -17,34 +16,29 @@ import type {
   RemeshStoreInspector,
 } from './store'
 
-export type RemeshDomainStorageEventData<T extends RemeshDomainDefinition, U extends Args<SerializableType>> = {
+export type RemeshDomainStorageEventData<T extends RemeshDomainDefinition, U extends Args<Serializable>> = {
   type: 'Domain::Created' | 'Domain::Discarded' | 'Domain::Reused'
   storage: RemeshDomainStorage<T, U>
 }
 
-export type RemeshStateStorageEventData<T extends Args<SerializableType>, U> = {
+export type RemeshStateStorageEventData<T extends Args<Serializable>, U> = {
   type: 'State::Created' | 'State::Updated' | 'State::Discarded' | 'State::Reused'
   storage: RemeshStateStorage<T, U>
 }
 
-export type RemeshQueryStorageEventData<T extends Args<SerializableType>, U> = {
+export type RemeshQueryStorageEventData<T extends Args<Serializable>, U> = {
   type: 'Query::Created' | 'Query::Updated' | 'Query::Discarded' | 'Query::Reused'
   storage: RemeshQueryStorage<T, U>
 }
 
-export type RemeshEventEmittedEventData<T extends Args, U> = {
+export type RemeshEventEmittedEventData<T, U> = {
   type: 'Event::Emitted'
   action: RemeshEventAction<T, U>
 }
 
-export type RemeshCommandReceivedEventData<T extends Args> = {
+export type RemeshCommandReceivedEventData<T extends Args, U> = {
   type: 'Command::Received'
-  action: RemeshCommandAction<T>
-}
-
-export type RemeshCommand$ReceivedEventData<T> = {
-  type: 'Command$::Received'
-  action: RemeshCommand$Action<T>
+  action: RemeshCommandAction<T, U>
 }
 
 export const InspectorType = {
@@ -61,7 +55,6 @@ export const InspectorType = {
   QueryReused: 'Query::Reused',
   EventEmitted: 'Event::Emitted',
   CommandReceived: 'Command::Received',
-  Command$Received: 'Command$::Received',
 } as const
 
 export const RemeshInspectorDomain = RemeshDomain({
@@ -83,55 +76,19 @@ export const RemeshInspectorDomain = RemeshDomain({
       name: 'RemeshEventEmittedEvent',
     })
 
-    const RemeshCommandReceivedEvent = domain.event<RemeshCommandReceivedEventData<any>>({
+    const RemeshCommandReceivedEvent = domain.event<RemeshCommandReceivedEventData<any, any>>({
       name: 'RemeshCommandReceivedEvent',
     })
 
-    const RemeshCommand$ReceivedEvent = domain.event<RemeshCommand$ReceivedEventData<any>>({
-      name: 'RemeshCommand$ReceivedEvent',
-    })
+    const InspectQueryStorageCommand = RemeshQueryStorageEvent.asCommand('InspectQueryStorageCommand')
 
-    const InspectQueryStorageCommand = domain.command({
-      name: 'InspectQueryStorageCommand',
-      impl: (_, data: RemeshQueryStorageEventData<any, any>) => {
-        return RemeshQueryStorageEvent(data)
-      },
-    })
+    const InspectStateStorageCommand = RemeshStateStorageEvent.asCommand('InspectStateStorageCommand')
 
-    const InspectStateStorageCommand = domain.command({
-      name: 'InspectStateStorageCommand',
-      impl: (_, data: RemeshStateStorageEventData<any, any>) => {
-        return RemeshStateStorageEvent(data)
-      },
-    })
+    const InspectDomainStorageCommand = RemeshDomainStorageEvent.asCommand('InspectDomainStorageCommand')
 
-    const InspectDomainStorageCommand = domain.command({
-      name: 'InspectDomainStorageCommand',
-      impl: (_, data: RemeshDomainStorageEventData<any, any>) => {
-        return RemeshDomainStorageEvent(data)
-      },
-    })
+    const InspectEventEmittedCommand = RemeshEventEmittedEvent.asCommand('InspectEventEmittedCommand')
 
-    const InspectEventEmittedCommand = domain.command({
-      name: 'InspectEventEmittedCommand',
-      impl: (_, data: RemeshEventEmittedEventData<any, any>) => {
-        return RemeshEventEmittedEvent(data)
-      },
-    })
-
-    const InspectCommandReceivedCommand = domain.command({
-      name: 'InspectCommandReceivedCommand',
-      impl: (_, data: RemeshCommandReceivedEventData<any>) => {
-        return RemeshCommandReceivedEvent(data)
-      },
-    })
-
-    const InspectCommand$ReceivedCommand = domain.command({
-      name: 'InspectCommand$ReceivedCommand',
-      impl: (_, data: RemeshCommand$ReceivedEventData<any>) => {
-        return RemeshCommand$ReceivedEvent(data)
-      },
-    })
+    const InspectCommandReceivedCommand = RemeshCommandReceivedEvent.asCommand('InspectCommandReceivedCommand')
 
     return {
       event: {
@@ -140,7 +97,6 @@ export const RemeshInspectorDomain = RemeshDomain({
         RemeshQueryStorageEvent,
         RemeshEventEmittedEvent,
         RemeshCommandReceivedEvent,
-        RemeshCommand$ReceivedEvent,
       },
       command: {
         InspectQueryStorageCommand,
@@ -148,7 +104,6 @@ export const RemeshInspectorDomain = RemeshDomain({
         InspectDomainStorageCommand,
         InspectEventEmittedCommand,
         InspectCommandReceivedCommand,
-        InspectCommand$ReceivedCommand,
       },
     }
   },
@@ -200,7 +155,7 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
     }
   }
 
-  const inspectDomainStorage = <T extends RemeshDomainDefinition, U extends Args<SerializableType>>(
+  const inspectDomainStorage = <T extends RemeshDomainDefinition, U extends Args<Serializable>>(
     type: RemeshDomainStorageEventData<T, U>['type'],
     domainStorage: RemeshDomainStorage<T, U>,
   ) => {
@@ -215,7 +170,7 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
     }
   }
 
-  const inspectStateStorage = <T extends Args<SerializableType>, U>(
+  const inspectStateStorage = <T extends Args<Serializable>, U>(
     type: RemeshStateStorageEventData<T, U>['type'],
     stateStorage: RemeshStateStorage<T, U>,
   ) => {
@@ -230,7 +185,7 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
     }
   }
 
-  const inspectQueryStorage = <T extends Args<SerializableType>, U>(
+  const inspectQueryStorage = <T extends Args<Serializable>, U>(
     type: RemeshQueryStorageEventData<T, U>['type'],
     queryStorage: RemeshQueryStorage<T, U>,
   ) => {
@@ -245,7 +200,7 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
     }
   }
 
-  const inspectEventEmitted = <T extends Args, U>(
+  const inspectEventEmitted = <T, U>(
     type: RemeshEventEmittedEventData<T, U>['type'],
     eventAction: RemeshEventAction<T, U>,
   ) => {
@@ -260,9 +215,9 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
     }
   }
 
-  const inspectCommandReceived = <T extends Args>(
-    type: RemeshCommandReceivedEventData<T>['type'],
-    commandAction: RemeshCommandAction<T>,
+  const inspectCommandReceived = <T extends Args, U>(
+    type: RemeshCommandReceivedEventData<T, U>['type'],
+    commandAction: RemeshCommandAction<T, U>,
   ) => {
     if (isInspectable(commandAction.Command)) {
       for (const inspector of getInspectors()) {
@@ -275,21 +230,6 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
     }
   }
 
-  const inspectCommand$Received = <T>(
-    type: RemeshCommand$ReceivedEventData<T>['type'],
-    command$Action: RemeshCommand$Action<T>,
-  ) => {
-    if (isInspectable(command$Action.Command$)) {
-      for (const inspector of getInspectors()) {
-        const inspectorDomain = inspector.getDomain(RemeshInspectorDomain())
-        inspectorDomain.command.InspectCommand$ReceivedCommand({
-          type,
-          action: command$Action,
-        })
-      }
-    }
-  }
-
   return {
     destroyInspectors,
     inspectDomainStorage,
@@ -297,6 +237,5 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
     inspectQueryStorage,
     inspectEventEmitted,
     inspectCommandReceived,
-    inspectCommand$Received,
   }
 }
