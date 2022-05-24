@@ -198,13 +198,18 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
 
           promise.then(
             (value) => {
-              const successAsyncData = AsyncData.success(value)
-              handleAsyncData(ctx, successAsyncData)
+              if (!isUnsubscribed) {
+                const successAsyncData = AsyncData.success(value)
+                handleAsyncData(ctx, successAsyncData)
+              }
+
               subscriber.complete()
             },
             (error) => {
-              const errorAsyncData = AsyncData.failed(error instanceof Error ? error : new Error(`${error}`))
-              handleAsyncData(ctx, errorAsyncData as AsyncData<U>)
+              if (!isUnsubscribed) {
+                const errorAsyncData = AsyncData.failed(error instanceof Error ? error : new Error(`${error}`))
+                handleAsyncData(ctx, errorAsyncData as AsyncData<U>)
+              }
               subscriber.complete()
             },
           )
