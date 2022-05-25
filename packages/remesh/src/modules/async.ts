@@ -1,5 +1,5 @@
-import { merge, Observable, Subscriber, Subscription } from 'rxjs'
-import { switchMap, concatMap, mergeMap, exhaustMap } from 'rxjs/operators'
+import { fromEvent, merge, Observable, Subscriber, Subscription } from 'rxjs'
+import { switchMap, concatMap, mergeMap, exhaustMap, takeUntil } from 'rxjs/operators'
 
 import { Remesh, RemeshDomainContext, RemeshCommandContext, RemeshQueryContext, Capitalize } from '../index'
 
@@ -109,43 +109,6 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
     },
   })
 
-  const IsTypeQuery = domain.query({
-    name: `${options.name}.IsTypeQuery`,
-    inspectable: false,
-    impl: ({ get }, type: AsyncData<U>['type']) => {
-      const asyncData = get(AsyncDataState())
-      return asyncData.type === type
-    },
-  })
-
-  const IsDefaultQuery = domain.query({
-    name: `${options.name}.IsDefaultQuery`,
-    impl: ({ get }) => {
-      return get(IsTypeQuery('default'))
-    },
-  })
-
-  const IsLoadingQuery = domain.query({
-    name: `${options.name}.IsLoadingQuery`,
-    impl: ({ get }) => {
-      return get(IsTypeQuery('loading'))
-    },
-  })
-
-  const IsSuccessQuery = domain.query({
-    name: `${options.name}.IsSuccessQuery`,
-    impl: ({ get }) => {
-      return get(IsTypeQuery('success'))
-    },
-  })
-
-  const IsFailedQuery = domain.query({
-    name: `${options.name}.IsFailedQuery`,
-    impl: ({ get }) => {
-      return get(IsTypeQuery('failed'))
-    },
-  })
-
   const LoadingEvent = domain.event({
     name: `${options.name}.LoadingEvent`,
   })
@@ -185,39 +148,47 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
     throw new Error(`Unknown async data: ${data}`)
   }
 
-  const LoadCommand = domain.command$<T>({
-    name: `${options.name}.LoadCommand`,
+  const CanceledEvent = domain.event({
+    name: `${options.name}.CanceledEvent`,
+  })
+
+  const LoadEvent = domain.event<T, AsyncData<U>>({
+    name: `${options.name}.LoadEvent`,
     impl: (ctx, arg$) => {
       const handleArg = (arg: T) => {
-        return new Observable((subscriber) => {
+        return new Observable<AsyncData<U>>((subscriber) => {
           let isUnsubscribed = false
 
           const promise = options.query(ctx, arg)
 
-          handleAsyncData(ctx, AsyncData.loading(promise))
+          const loadingAsyncData = AsyncData.loading(promise)
+
+          handleAsyncData(ctx, loadingAsyncData)
+          subscriber.next(loadingAsyncData)
 
           promise.then(
             (value) => {
               if (!isUnsubscribed) {
                 const successAsyncData = AsyncData.success(value)
                 handleAsyncData(ctx, successAsyncData)
+                subscriber.next(successAsyncData)
+                subscriber.complete()
               }
-
-              subscriber.complete()
             },
             (error) => {
               if (!isUnsubscribed) {
-                const errorAsyncData = AsyncData.failed(error instanceof Error ? error : new Error(`${error}`))
+                const errorAsyncData = AsyncData.failed<U>(error instanceof Error ? error : new Error(`${error}`))
                 handleAsyncData(ctx, errorAsyncData as AsyncData<U>)
+                subscriber.next(errorAsyncData)
+                subscriber.complete()
               }
-              subscriber.complete()
             },
           )
 
           return () => {
             isUnsubscribed = true
           }
-        })
+        }).pipe(takeUntil(ctx.fromEvent(CanceledEvent)))
       }
 
       if (!options.mode || options.mode === 'switch') {
@@ -240,21 +211,45 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
     },
   })
 
+  const ArgState = domain.state<void, T>({
+    name: `${options.name}.ArgState`,
+  })
+
+  const LoadCommand = domain.command({
+    name: `${options.name}.LoadCommand`,
+    impl: ({ emit, set }, arg: T) => {
+      set(ArgState(), arg)
+      emit(LoadEvent(arg))
+    },
+  })
+
+  const CancelCommand = domain.command({
+    name: `${options.name}.CancelCommand`,
+    impl: ({ emit }) => {
+      emit(CanceledEvent())
+    },
+  })
+
+  const RetryCommand = domain.command({
+    name: `${options.name}.RetryCommand`,
+    impl: ({ get, send }) => {
+      send(LoadCommand(get(ArgState())))
+    },
+  })
+
   return Remesh.module({
     query: {
       AsyncDataQuery,
-      IsDefaultQuery,
-      IsLoadingQuery,
-      IsSuccessQuery,
-      IsFailedQuery,
     },
     command: {
       LoadCommand,
+      CancelCommand,
+      RetryCommand,
     },
     event: {
-      LoadingEvent,
-      SuccessEvent,
-      FailedEvent,
+      LoadingEvent: LoadEvent.toSubscribeOnlyEvent(),
+      SuccessEvent: SuccessEvent.toSubscribeOnlyEvent(),
+      FailedEvent: FailedEvent.toSubscribeOnlyEvent(),
     },
   })
 }

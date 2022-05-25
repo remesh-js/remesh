@@ -92,16 +92,16 @@ describe('store', () => {
           },
         })
 
-        const InitCommand = domain.command$({
-          name: 'InitCommand',
+        const InitEvent = domain.event({
+          name: 'InitEvent',
           impl(_, payload$) {
             command$Called()
             return payload$
           },
         })
 
-        domain.ignite(({ send }) => {
-          send(InitCommand())
+        domain.ignite(({ emit }) => {
+          emit(InitEvent())
         })
 
         return {
@@ -327,8 +327,8 @@ describe('store', () => {
           },
         })
 
-        const RemoteUpdateNameCommand = domain.command$({
-          name: 'RemoteUpdateNameCommand',
+        const RemoteUpdateNameEvent = domain.event({
+          name: 'RemoteUpdateNameEvent',
           impl({ send  }, payload$: Observable<string>) {
             return payload$.pipe(
               delay(1),
@@ -339,8 +339,8 @@ describe('store', () => {
           },
         })
 
-        domain.ignite(({ send }) => {
-          send(RemoteUpdateNameCommand('bar'))
+        domain.ignite(({ emit }) => {
+          emit(RemoteUpdateNameEvent('bar'))
         })
 
         return {
@@ -384,7 +384,7 @@ describe('store', () => {
     const expectedHistory: string[] = [
       InspectorType.DomainCreated,
       InspectorType.DomainCreated,
-      InspectorType.CommandReceived,
+      InspectorType.EventEmitted,
       InspectorType.CommandReceived,
       InspectorType.StateCreated,
       InspectorType.EventEmitted,
@@ -410,7 +410,7 @@ describe('store', () => {
     const restoreExpectedHistory = expectedHistory.concat([
       InspectorType.DomainReused,
       InspectorType.DomainReused,
-      InspectorType.CommandReceived,
+      InspectorType.EventEmitted,
       InspectorType.CommandReceived,
       InspectorType.StateReused,
       InspectorType.EventEmitted,

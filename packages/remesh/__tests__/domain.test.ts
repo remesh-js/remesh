@@ -109,15 +109,15 @@ describe('domain', () => {
           },
         })
 
-        const RemoteContentCommand = domain.command$({
-          name: 'RemoteContentCommand',
+        const RemoteContentEvent = domain.event({
+          name: 'RemoteContentEvent',
           impl({ set }, payload$) {
             return payload$.pipe(switchMap(() => utils.delay(1).then(() => set(ContentState(), 'ddd'))))
           },
         })
 
-        domain.ignite(({ send }) => {
-          send(RemoteContentCommand())
+        domain.ignite(({ emit }) => {
+          emit(RemoteContentEvent())
         })
 
         return {

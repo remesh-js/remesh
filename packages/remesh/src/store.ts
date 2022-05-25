@@ -38,7 +38,6 @@ import {
   RemeshEventContext,
   RemeshDomainIgniteContext,
   RemeshDomainPreloadCommandContext,
-  RemeshCommand$,
 } from './remesh'
 
 import { createInspectorManager, InspectorType } from './inspector'
@@ -580,11 +579,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       },
       command: (options) => {
         const Command = RemeshCommand(options)
-        Command.owner = domainAction
-        return Command
-      },
-      command$: (options) => {
-        const Command = RemeshCommand$(options)
         Command.owner = domainAction
         return Command
       },

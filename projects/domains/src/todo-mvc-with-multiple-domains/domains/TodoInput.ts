@@ -26,7 +26,13 @@ export const TodoInputDomain = Remesh.domain({
       },
     })
 
-    const ClearTodoInputCommand = todoInputModule.command.ClearTextCommand
+    const ClearTodoInputCommand = domain.command({
+      name: 'ClearTodoInputCommand',
+      impl: ({ send, emit, get }) => {
+        send(todoInputModule.command.ClearTextCommand())
+        emit(TodoInputChangedEvent(get(TodoInputQuery())))
+      },
+    })
 
     syncStorage(domain, TODO_INPUT_STORAGE_KEY)
       .listenTo(TodoInputChangedEvent)

@@ -73,4 +73,22 @@ describe('event', () => {
     store.sendCommand(IncreaseCounterCommand())
     expect(changed).toHaveBeenCalledWith({ count: 1, from: 'IncreaseCounterCommand' })
   })
+
+  it('support SubscribeOnlyEvent', () => {
+    const TestEvent = RemeshEvent<number>({
+      name: 'TestEvent',
+    })
+
+    const changed = jest.fn()
+
+    const SubscribeOnlyTestEvent = TestEvent.toSubscribeOnlyEvent()
+
+    const store = RemeshStore()
+
+    store.subscribeEvent(SubscribeOnlyTestEvent, changed)
+
+    store.emitEvent(TestEvent(1))
+
+    expect(changed).toHaveBeenCalledWith(1)
+  })
 })

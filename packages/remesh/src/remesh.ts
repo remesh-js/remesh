@@ -53,10 +53,7 @@ export type RemeshEvent<T, U> = {
   (arg: T): RemeshEventAction<T, U>
   owner: RemeshDomainAction<any, any>
   inspectable: boolean
-  asCommand: (
-    commandName: DomainConceptName<'Command'>,
-    options?: Omit<RemeshCommandOptions<[T], void>, 'name' | 'impl'>,
-  ) => RemeshCommand<[T], void>
+  toSubscribeOnlyEvent: () => RemeshSubscribeOnlyEvent<T, U>
 }
 
 export type RemeshEventAction<T, U> = {
@@ -93,15 +90,8 @@ export function RemeshEvent<T, U>(
   Event.eventName = options.name
   Event.owner = DefaultDomain()
   Event.inspectable = 'inspectable' in options ? options.inspectable ?? true : true
-  Event.asCommand = (commandName, options) => {
-    return RemeshCommand({
-      inspectable: false,
-      ...options,
-      name: commandName,
-      impl: ({ emit }, arg) => {
-        emit(Event(arg))
-      },
-    })
+  Event.toSubscribeOnlyEvent = () => {
+    return toRemeshSubscribeOnlyEvent(Event)
   }
 
   if ('impl' in options) {
@@ -125,25 +115,6 @@ export type ToRemeshSubscribeOnlyEvent<T> = T extends RemeshSubscribeOnlyEvent<a
 
 export type ToRemeshSubscribeOnlyEventMap<T extends RemeshDomainOutput['event']> = {
   [K in keyof T]: ToRemeshSubscribeOnlyEvent<T[K]>
-}
-
-export const toRemeshSubscribeOnlyEventMap = <T extends RemeshDomainOutput['event']>(
-  eventMap: T,
-): ToRemeshSubscribeOnlyEventMap<T> => {
-  const result = {} as ToRemeshSubscribeOnlyEventMap<T>
-
-  for (const key in eventMap) {
-    const Event = eventMap[key]
-    if (Event.type === 'RemeshEvent') {
-      result[key] = toRemeshSubscribeOnlyEvent(Event) as ToRemeshSubscribeOnlyEvent<T[Extract<keyof T, string>]>
-    } else if (Event.type === 'RemeshSubscribeOnlyEvent') {
-      result[key] = Event as ToRemeshSubscribeOnlyEvent<T[Extract<keyof T, string>]>
-    } else {
-      throw new Error(`Invalid event: ${Event}`)
-    }
-  }
-
-  return result
 }
 
 const eventToSubscribeOnlyEventWeakMap = new WeakMap<RemeshEvent<any, any>, RemeshSubscribeOnlyEvent<any, any>>()
@@ -423,30 +394,6 @@ export const RemeshCommand = <T extends Args = [], U = void>(
   return Command
 }
 
-export type RemeshCommand$Options<T> = {
-  name: DomainConceptName<'Command'>
-  inspectable?: boolean
-  impl: (context: RemeshEventContext, arg$: Observable<T>) => Observable<unknown>
-}
-
-export const RemeshCommand$ = <T = void>(options: RemeshCommand$Options<T>): RemeshCommand<[T], void> => {
-  const RemeshCommand$Event = RemeshEvent<T>({
-    inspectable: false,
-    name: `${options.name}Event`,
-    impl: options.impl,
-  })
-
-  const Command = RemeshCommand$Event.asCommand(options.name, {
-    inspectable: true,
-  })
-
-  Object.defineProperty(RemeshCommand$Event, 'owner', {
-    get: () => Command.owner,
-  })
-
-  return Command
-}
-
 export type RemeshExternImpl<T> = {
   type: 'RemeshExternImpl'
   Extern: RemeshExtern<T>
@@ -514,7 +461,6 @@ export type RemeshDomainContext = {
   event: typeof RemeshEvent
   query: typeof RemeshQuery
   command: typeof RemeshCommand
-  command$: typeof RemeshCommand$
   ignite: (fn: RemeshDomainIgniteFn) => void
   preload: <T extends Serializable>(options: RemeshDomainPreloadOptions<T>) => void
   // methods
@@ -546,7 +492,7 @@ export type VerifiedRemeshDomainDefinition<T extends RemeshDomainDefinition> = P
   {
     event: {
       [key in keyof T['event']]: key extends DomainConceptName<'Event'>
-        ? ToRemeshSubscribeOnlyEvent<T['event'][key]>
+        ? T['event'][key]
         : `${ShowKey<key>} is not a valid event name`
     }
     query: {
@@ -569,7 +515,7 @@ export const toValidRemeshDomainDefinition = <T extends RemeshDomainDefinition>(
   const result = {} as VerifiedRemeshDomainDefinition<T>
 
   if (domainDefinition.event) {
-    result.event = toRemeshSubscribeOnlyEventMap(domainDefinition.event) as unknown as typeof result.event
+    result.event = domainDefinition.event as unknown as typeof result.event
   }
 
   if (domainDefinition.query) {

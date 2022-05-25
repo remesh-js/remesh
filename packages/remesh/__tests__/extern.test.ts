@@ -52,8 +52,8 @@ describe('extern', () => {
           },
         })
 
-        const FromStateToStorageCommand = domain.command$({
-          name: 'FromStateToStorageCommand',
+        const FromStateToStorageEvent = domain.event({
+          name: 'FromStateToStorageEvent',
           impl({ fromEvent }) {
             return fromEvent(UpdateCounterEvent).pipe(
               tap((value) => {
@@ -68,9 +68,8 @@ describe('extern', () => {
           query: { CountQuery },
           command: {
             UpdateCounterCommand,
-            FromStateToStorageCommand,
           },
-          event: { UpdateCounterEvent },
+          event: { UpdateCounterEvent, FromStateToStorageEvent },
         }
       },
     })
@@ -85,7 +84,7 @@ describe('extern', () => {
 
     store1.subscribeEvent(counter.event.UpdateCounterEvent, changed)
 
-    counter.command.FromStateToStorageCommand()
+    store1.emitEvent(counter.event.FromStateToStorageEvent())
     counter.command.UpdateCounterCommand(1)
 
     expect(changed).toBeCalled()

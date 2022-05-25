@@ -55,16 +55,20 @@ const createSyncStorage = <T, U = T>(domain: RemeshDomainContext, options: SyncS
     },
   })
 
-  const WriteStorageCommand = domain.command$({
-    name: 'WriteStorageCommand',
+  const WriteStorageEvent = domain.event({
+    name: 'WriteStorageEvent',
     impl: ({ fromEvent }) => {
-      return fromEvent(options.TriggerEvent).pipe(tap((value) => storage.set(options.storageKey, options.get(value))))
+      return fromEvent(options.TriggerEvent).pipe(
+        tap((value) => {
+          storage.set(options.storageKey, options.get(value))
+        }),
+      )
     },
   })
 
-  domain.ignite(({ send }) => {
+  domain.ignite(({ send, emit }) => {
     send(ReadStorageCommand())
-    send(WriteStorageCommand())
+    emit(WriteStorageEvent())
   })
 }
 

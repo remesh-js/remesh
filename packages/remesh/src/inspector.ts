@@ -80,16 +80,6 @@ export const RemeshInspectorDomain = RemeshDomain({
       name: 'RemeshCommandReceivedEvent',
     })
 
-    const InspectQueryStorageCommand = RemeshQueryStorageEvent.asCommand('InspectQueryStorageCommand')
-
-    const InspectStateStorageCommand = RemeshStateStorageEvent.asCommand('InspectStateStorageCommand')
-
-    const InspectDomainStorageCommand = RemeshDomainStorageEvent.asCommand('InspectDomainStorageCommand')
-
-    const InspectEventEmittedCommand = RemeshEventEmittedEvent.asCommand('InspectEventEmittedCommand')
-
-    const InspectCommandReceivedCommand = RemeshCommandReceivedEvent.asCommand('InspectCommandReceivedCommand')
-
     return {
       event: {
         RemeshDomainStorageEvent,
@@ -97,13 +87,6 @@ export const RemeshInspectorDomain = RemeshDomain({
         RemeshQueryStorageEvent,
         RemeshEventEmittedEvent,
         RemeshCommandReceivedEvent,
-      },
-      command: {
-        InspectQueryStorageCommand,
-        InspectStateStorageCommand,
-        InspectDomainStorageCommand,
-        InspectEventEmittedCommand,
-        InspectCommandReceivedCommand,
       },
     }
   },
@@ -162,10 +145,13 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
     if (isInspectable(domainStorage.Domain)) {
       for (const inspector of getInspectors()) {
         const inspectorDomain = inspector.getDomain(RemeshInspectorDomain())
-        inspectorDomain.command.InspectDomainStorageCommand({
-          type,
-          storage: domainStorage,
-        })
+
+        inspector.emitEvent(
+          inspectorDomain.event.RemeshDomainStorageEvent({
+            type,
+            storage: domainStorage,
+          }),
+        )
       }
     }
   }
@@ -177,10 +163,13 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
     if (isInspectable(stateStorage.State)) {
       for (const inspector of getInspectors()) {
         const inspectorDomain = inspector.getDomain(RemeshInspectorDomain())
-        inspectorDomain.command.InspectStateStorageCommand({
-          type,
-          storage: stateStorage,
-        })
+
+        inspector.emitEvent(
+          inspectorDomain.event.RemeshStateStorageEvent({
+            type,
+            storage: stateStorage,
+          }),
+        )
       }
     }
   }
@@ -192,10 +181,13 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
     if (isInspectable(queryStorage.Query)) {
       for (const inspector of getInspectors()) {
         const inspectorDomain = inspector.getDomain(RemeshInspectorDomain())
-        inspectorDomain.command.InspectQueryStorageCommand({
-          type,
-          storage: queryStorage,
-        })
+
+        inspector.emitEvent(
+          inspectorDomain.event.RemeshQueryStorageEvent({
+            type,
+            storage: queryStorage,
+          }),
+        )
       }
     }
   }
@@ -207,10 +199,13 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
     if (isInspectable(eventAction.Event)) {
       for (const inspector of getInspectors()) {
         const inspectorDomain = inspector.getDomain(RemeshInspectorDomain())
-        inspectorDomain.command.InspectEventEmittedCommand({
-          type,
-          action: eventAction,
-        })
+
+        inspector.emitEvent(
+          inspectorDomain.event.RemeshEventEmittedEvent({
+            type,
+            action: eventAction,
+          }),
+        )
       }
     }
   }
@@ -222,10 +217,13 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
     if (isInspectable(commandAction.Command)) {
       for (const inspector of getInspectors()) {
         const inspectorDomain = inspector.getDomain(RemeshInspectorDomain())
-        inspectorDomain.command.InspectCommandReceivedCommand({
-          type,
-          action: commandAction,
-        })
+
+        inspector.emitEvent(
+          inspectorDomain.event.RemeshCommandReceivedEvent({
+            type,
+            action: commandAction,
+          }),
+        )
       }
     }
   }
