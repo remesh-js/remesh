@@ -5,6 +5,7 @@ import {
   Serializable,
   RemeshDomainDefinition,
   Args,
+  RemeshCommand$Action,
 } from './remesh'
 
 import type {
@@ -41,6 +42,11 @@ export type RemeshCommandReceivedEventData<T extends Args, U> = {
   action: RemeshCommandAction<T, U>
 }
 
+export type RemeshCommand$ReceivedEventData<T> = {
+  type: 'Command$::Received'
+  action: RemeshCommand$Action<T>
+}
+
 export const InspectorType = {
   DomainCreated: 'Domain::Created',
   DomainDiscarded: 'Domain::Discarded',
@@ -55,6 +61,7 @@ export const InspectorType = {
   QueryReused: 'Query::Reused',
   EventEmitted: 'Event::Emitted',
   CommandReceived: 'Command::Received',
+  Command$Received: 'Command$::Received',
 } as const
 
 export const RemeshInspectorDomain = RemeshDomain({
@@ -80,6 +87,10 @@ export const RemeshInspectorDomain = RemeshDomain({
       name: 'RemeshCommandReceivedEvent',
     })
 
+    const RemeshCommand$ReceivedEvent = domain.event<RemeshCommand$ReceivedEventData<any>>({
+      name: 'RemeshCommand$ReceivedEvent',
+    })
+
     return {
       event: {
         RemeshDomainStorageEvent,
@@ -87,6 +98,7 @@ export const RemeshInspectorDomain = RemeshDomain({
         RemeshQueryStorageEvent,
         RemeshEventEmittedEvent,
         RemeshCommandReceivedEvent,
+        RemeshCommand$ReceivedEvent,
       },
     }
   },
@@ -228,6 +240,24 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
     }
   }
 
+  const inspectCommand$Received = <T>(
+    type: RemeshCommand$ReceivedEventData<T>['type'],
+    command$Action: RemeshCommand$Action<T>,
+  ) => {
+    if (isInspectable(command$Action.Command$)) {
+      for (const inspector of getInspectors()) {
+        const inspectorDomain = inspector.getDomain(RemeshInspectorDomain())
+
+        inspector.emitEvent(
+          inspectorDomain.event.RemeshCommand$ReceivedEvent({
+            type,
+            action: command$Action,
+          }),
+        )
+      }
+    }
+  }
+
   return {
     destroyInspectors,
     inspectDomainStorage,
@@ -235,5 +265,6 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
     inspectQueryStorage,
     inspectEventEmitted,
     inspectCommandReceived,
+    inspectCommand$Received,
   }
 }

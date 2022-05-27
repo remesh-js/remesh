@@ -52,7 +52,7 @@ describe('extern', () => {
           },
         })
 
-        const FromStateToStorageCommand = domain.command({
+        const FromStateToStorageCommand = domain.command$({
           name: 'FromStateToStorageCommand',
           impl({ fromEvent }) {
             return fromEvent(UpdateCounterEvent).pipe(

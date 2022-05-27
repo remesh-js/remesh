@@ -1,6 +1,7 @@
 import {
   DefaultDomain,
   RemeshCommand,
+  RemeshCommand$,
   RemeshDefaultState,
   RemeshDomain,
   RemeshEvent,
@@ -8,7 +9,7 @@ import {
   RemeshStore,
 } from '../src'
 import { delay, Observable, switchMap, timer } from 'rxjs'
-import { map, tap } from 'rxjs/operators'
+import { map, mergeMap, tap } from 'rxjs/operators'
 import * as utils from './utils'
 
 let store: ReturnType<typeof RemeshStore>
@@ -267,5 +268,54 @@ describe('command$', () => {
 
     expect(changed).toHaveBeenCalledWith(1)
     expect(store.query(CountQuery())).toBe(1)
+  })
+
+  it('support command$', () => {
+    const fn0 = jest.fn()
+    const fn1 = jest.fn()
+    const TestDomain = RemeshDomain({
+      name: 'TestDomain',
+      impl(domain) {
+        const ACommand = domain.command$({
+          name: 'ACommand',
+          impl: (_, arg$: Observable<number>) => {
+            fn0()
+            return arg$.pipe(
+              mergeMap((arg) => {
+                return timer(arg)
+              }),
+              tap((value) => {
+                fn1(value)
+              }),
+            )
+          },
+        })
+
+        return {
+          command: {
+            ACommand,
+          },
+        }
+      },
+    })
+
+    const testDomain = store.getDomain(TestDomain())
+    store.subscribeDomain(TestDomain())
+
+    // should not call command$.impl when domain is subscribed
+    expect(fn0).not.toHaveBeenCalled()
+    expect(fn1).not.toHaveBeenCalled()
+
+    jest.useFakeTimers()
+
+    testDomain.command.ACommand(1)
+
+    // should call command$.impl when command was sended
+    expect(fn0).toHaveBeenCalled()
+    expect(fn1).not.toHaveBeenCalled()
+
+    jest.runOnlyPendingTimers()
+
+    expect(fn1).toHaveBeenCalledWith(0)
   })
 })

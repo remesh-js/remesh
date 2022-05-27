@@ -78,8 +78,8 @@ export const TimerDomain = Remesh.domain({
       },
     })
 
-    const UpdateElapsedEvent = domain.event({
-      name: 'UpdateElapsedEvent',
+    const UpdateElapsedByAnimationCommand = domain.command({
+      name: 'UpdateElapsedByAnimationCommand',
       impl: ({ fromEvent, send }) => {
         const startEvent$ = fromEvent(StartEvent).pipe(
           startWith(StartEvent()),
@@ -106,8 +106,8 @@ export const TimerDomain = Remesh.domain({
       },
     })
 
-    domain.ignite(({ emit }) => {
-      emit(UpdateElapsedEvent())
+    domain.ignite(({ send }) => {
+      return send(UpdateElapsedByAnimationCommand())
     })
 
     return {

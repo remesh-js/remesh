@@ -29,7 +29,8 @@ export type RemeshInjectedContext = {
   get: <T extends Args<Serializable>, U>(input: GetterInput<T, U>) => U
   peek: <T extends Args<Serializable>, U>(input: GetterInput<T, U>) => U | RemeshValuePlaceholder
   set: <T extends Args<Serializable>, U>(input: SetterInput<T, U>, value: U) => void
-  send: <T extends Args, U>(input: RemeshCommandAction<T, U>) => U
+  send<T extends Args, U>(input: RemeshCommandAction<T, U>): U
+  send<T>(input: RemeshCommand$Action<T>): void
   emit: <T extends Args, U>(input: RemeshEventAction<T, U>) => void
   fromEvent: <T extends Args, U>(Event: RemeshEvent<T, U> | RemeshSubscribeOnlyEvent<T, U>) => Observable<U>
   fromQuery: <T extends Args<Serializable>, U>(Query: RemeshQueryAction<T, U>) => Observable<U>
@@ -384,6 +385,60 @@ export const RemeshCommand = <T extends Args = [], U = void>(
   return Command
 }
 
+export type RemeshCommand$Context = {
+  get: RemeshInjectedContext['get']
+  peek: RemeshInjectedContext['peek']
+  set: RemeshInjectedContext['set']
+  send: RemeshInjectedContext['send']
+  emit: RemeshInjectedContext['emit']
+  fromEvent: RemeshInjectedContext['fromEvent']
+  fromQuery: RemeshInjectedContext['fromQuery']
+}
+
+export type RemeshCommand$Action<T> = {
+  type: 'RemeshCommand$Action'
+  arg: T
+  Command$: RemeshCommand$<T>
+}
+
+export type RemeshCommand$<T> = {
+  type: 'RemeshCommand$'
+  command$Id: number
+  command$Name: DomainConceptName<'Command'>
+  impl: (context: RemeshCommand$Context, arg$: Observable<T>) => Observable<unknown>
+  (arg: T): RemeshCommand$Action<T>
+  owner: RemeshDomainAction<any, any>
+  inspectable: boolean
+}
+
+export type RemeshCommand$Options<T> = {
+  name: DomainConceptName<'Command'>
+  inspectable?: boolean
+  impl: RemeshCommand$<T>['impl']
+}
+let command$Uid = 0
+
+export const RemeshCommand$ = <T = void>(options: RemeshCommand$Options<T>): RemeshCommand$<T> => {
+  const command$Id = command$Uid++
+
+  const Command$ = ((arg) => {
+    return {
+      type: 'RemeshCommand$Action',
+      arg,
+      Command$,
+    }
+  }) as RemeshCommand$<T>
+
+  Command$.type = 'RemeshCommand$'
+  Command$.command$Id = command$Id
+  Command$.command$Name = options.name
+  Command$.impl = options.impl
+  Command$.owner = DefaultDomain()
+  Command$.inspectable = options.inspectable ?? true
+
+  return Command$
+}
+
 export type RemeshExternImpl<T> = {
   type: 'RemeshExternImpl'
   Extern: RemeshExtern<T>
@@ -451,6 +506,7 @@ export type RemeshDomainContext = {
   event: typeof RemeshEvent
   query: typeof RemeshQuery
   command: typeof RemeshCommand
+  command$: typeof RemeshCommand$
   ignite: (fn: RemeshDomainIgniteFn) => void
   preload: <T extends Serializable>(options: RemeshDomainPreloadOptions<T>) => void
   // methods
@@ -470,7 +526,7 @@ export type RemeshDomainOutput = {
     [key: string]: RemeshQuery<any, any>
   }
   command: {
-    [key: string]: RemeshCommand<any, any>
+    [key: string]: RemeshCommand<any, any> | RemeshCommand$<any>
   }
 }
 

@@ -158,6 +158,27 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
       })
     })
 
+    helper.onActive('command$', () => {
+      store.subscribeEvent(inspectorDomain.event.RemeshCommand$ReceivedEvent, (event) => {
+        const Command$ = event.action.Command$
+        const info = {
+          type: `${event.type}::${Command$.command$Name}`,
+          owner: getOwnerInfo(Command$.owner),
+          command$Id: Command$.command$Id,
+          command$Name: Command$.command$Name,
+        }
+
+        if (event.action.arg !== undefined) {
+          send(info.type, {
+            ...info,
+            command$Arg: event.action.arg,
+          })
+        } else {
+          send(info.type, info)
+        }
+      })
+    })
+
     helper.onActive('event', () => {
       store.subscribeEvent(inspectorDomain.event.RemeshEventEmittedEvent, (event) => {
         const Event = event.action.Event

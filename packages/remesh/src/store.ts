@@ -1,12 +1,15 @@
-import { isObservable, Observable, Observer, Subject, Subscription } from 'rxjs'
+import { concat, isObservable, Observable, Observer, Subject, Subscription } from 'rxjs'
 
-import { map } from 'rxjs/operators'
+import { flatMap, map, mergeMap, startWith, take } from 'rxjs/operators'
 
 import {
   RemeshDomainIgniteFn,
   RemeshCommand,
   RemeshCommandContext,
   RemeshCommandAction,
+  RemeshCommand$,
+  RemeshCommand$Action,
+  RemeshCommand$Context,
   RemeshDefaultState,
   RemeshDefaultStateOptions,
   RemeshDeferState,
@@ -38,6 +41,7 @@ import {
   RemeshEventContext,
   RemeshDomainIgniteContext,
   RemeshDomainPreloadCommandContext,
+  RemeshCommand$Options,
 } from './remesh'
 
 import { createInspectorManager, InspectorType } from './inspector'
@@ -74,6 +78,14 @@ export type RemeshQueryStorage<T extends Args<Serializable>, U> = {
   wipUpstreamSet: Set<RemeshQueryStorage<any, any> | RemeshStateStorage<any, any>>
 }
 
+export type RemeshCommand$Storage<T> = {
+  id: number
+  type: 'RemeshCommand$Storage'
+  Command$: RemeshCommand$<T>
+  subject: Subject<T>
+  subscription?: Subscription | null
+}
+
 export type RemeshEventStorage<T extends Args, U> = {
   id: number
   type: 'RemeshEventStorage'
@@ -102,6 +114,7 @@ export type RemeshDomainStorage<T extends RemeshDomainDefinition, U extends Args
   preloadOptionsList: RemeshDomainPreloadOptions<any>[]
   preloadedPromise?: Promise<void>
   preloadedState: PreloadedState
+  command$Map: Map<RemeshCommand$<any>, RemeshCommand$Storage<any>>
   stateMap: Map<string, RemeshStateStorage<any, any>>
   queryMap: Map<string, RemeshQueryStorage<any, any>>
   eventMap: Map<RemeshEvent<any, any>, RemeshEventStorage<any, any>>
@@ -523,6 +536,50 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     return createQueryStorage(queryAction)
   }
 
+  const command$StorageWeakMap = new WeakMap<RemeshCommand$<any>, RemeshCommand$Storage<any>>()
+
+  const createCommand$Storage = <T>(command$Action: RemeshCommand$Action<T>): RemeshCommand$Storage<T> => {
+    const Command$ = command$Action.Command$
+    const domainStorage = getDomainStorage(Command$.owner)
+    const subject = new Subject<T>()
+
+    const currentCommand$Storage: RemeshCommand$Storage<T> = {
+      id: uid++,
+      type: 'RemeshCommand$Storage',
+      Command$: Command$,
+      subject,
+    }
+
+    domainStorage.command$Map.set(Command$, currentCommand$Storage)
+    command$StorageWeakMap.set(Command$, currentCommand$Storage)
+
+    return currentCommand$Storage
+  }
+
+  const getCommand$Storage = <T>(command$Action: RemeshCommand$Action<T>): RemeshCommand$Storage<T> => {
+    const Command$ = command$Action.Command$
+    const domainStorage = getDomainStorage(Command$.owner)
+    const command$Storage = domainStorage.command$Map.get(Command$)
+
+    if (command$Storage) {
+      return command$Storage
+    }
+
+    const cachedStorage = command$StorageWeakMap.get(Command$)
+
+    if (cachedStorage) {
+      const subject = new Subject<T>()
+
+      cachedStorage.subject = subject
+      cachedStorage.subscription = null
+      domainStorage.command$Map.set(Command$, cachedStorage)
+
+      return cachedStorage
+    }
+
+    return createCommand$Storage(command$Action)
+  }
+
   const domainStorageWeakMap = new WeakMap<RemeshDomainAction<any, any>, RemeshDomainStorage<any, any>>()
 
   const createDomainStorage = <T extends RemeshDomainDefinition, U extends Args<Serializable>>(
@@ -567,6 +624,11 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
         const Command = RemeshCommand(options)
         Command.owner = domainAction
         return Command
+      },
+      command$: (options) => {
+        const Command$ = RemeshCommand$(options)
+        Command$.owner = domainAction
+        return Command$
       },
       ignite: (fn) => {
         if (!currentDomainStorage.running) {
@@ -872,8 +934,13 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       const queryStorage = getQueryStorage(queryAction)
       return queryStorage.observable
     },
-    send: (commandAction) => {
-      return handleCommandAction(commandAction)
+    send: (action: RemeshCommandAction<any, any> | RemeshCommand$Action<any>): any => {
+      if (action.type === 'RemeshCommandAction') {
+        return handleCommandAction(action)
+      } else if (action.type === 'RemeshCommand$Action') {
+        return handleCommand$Action(action)
+      }
+      throw new Error(`Unexpected input in send(..): ${action}`)
     },
     emit: (eventAction) => {
       return emitEvent(eventAction)
@@ -1128,6 +1195,34 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     return fn(commandContext, arg)
   }
 
+  const command$Context: RemeshCommand$Context = {
+    get: remeshInjectedContext.get,
+    peek: remeshInjectedContext.peek,
+    set: remeshInjectedContext.set,
+    send: remeshInjectedContext.send,
+    emit: remeshInjectedContext.emit,
+    fromEvent: remeshInjectedContext.fromEvent,
+    fromQuery: remeshInjectedContext.fromQuery,
+  }
+
+  const handleCommand$Action = <T>(command$Action: RemeshCommand$Action<T>) => {
+    inspectorManager.inspectCommand$Received(InspectorType.Command$Received, command$Action)
+
+    const Command$ = command$Action.Command$
+    const command$Storage = getCommand$Storage(command$Action)
+
+    if (!command$Storage.subscription) {
+      const subscription = Command$.impl(command$Context, command$Storage.subject.asObservable()).subscribe(commit)
+
+      command$Storage.subscription = subscription
+      subscription.add(() => {
+        command$Storage.subscription = null
+      })
+    }
+
+    command$Storage.subject.next(command$Action.arg)
+  }
+
   const handleSubscription = (subscriptionSet: Set<Subscription>, subscription: Subscription) => {
     subscriptionSet.add(subscription)
 
@@ -1368,17 +1463,25 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     return domainStorage.preloadedState
   }
 
-  const sendCommand = <T extends Args, U>(commandAction: RemeshCommandAction<T, U>) => {
-    const result = handleCommandAction(commandAction)
-    if (isObservable(result)) {
-      const domainStorage = getDomainStorage(commandAction.Command.owner)
-      const subscription = result.subscribe(commit)
-      domainStorage.commandSubscriptionSet.add(subscription)
-      subscription.add(() => {
-        domainStorage.commandSubscriptionSet.delete(subscription)
-      })
+  function sendCommand<T extends Args, U>(commandAction: RemeshCommandAction<T, U>): void
+  function sendCommand<T>(command$Action: RemeshCommand$Action<T>): void
+  function sendCommand(action: RemeshCommandAction<any, any> | RemeshCommand$Action<any>): void {
+    if (action.type === 'RemeshCommandAction') {
+      const result = handleCommandAction(action)
+      if (isObservable(result)) {
+        const domainStorage = getDomainStorage(action.Command.owner)
+        const subscription = result.subscribe(commit)
+        domainStorage.commandSubscriptionSet.add(subscription)
+        subscription.add(() => {
+          domainStorage.commandSubscriptionSet.delete(subscription)
+        })
+      }
+      commit()
+    } else if (action.type === 'RemeshCommand$Action') {
+      handleCommand$Action(action)
+    } else {
+      throw new Error(`Unknown action in sendCommand(..): ${action}`)
     }
-    commit()
   }
 
   return {

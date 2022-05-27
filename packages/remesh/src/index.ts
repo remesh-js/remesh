@@ -5,6 +5,7 @@ import {
   RemeshQuery,
   RemeshEvent,
   RemeshCommand,
+  RemeshCommand$,
   RemeshModule,
 } from './remesh'
 
@@ -22,6 +23,7 @@ export const Remesh = {
   state: RemeshState,
   query: RemeshQuery,
   command: RemeshCommand,
+  command$: RemeshCommand$,
   event: RemeshEvent,
   module: RemeshModule,
 }

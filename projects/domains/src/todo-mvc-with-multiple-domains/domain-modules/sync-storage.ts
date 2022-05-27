@@ -1,6 +1,6 @@
 import { RemeshDomainContext, RemeshCommandContext, RemeshEvent } from 'remesh'
 
-import { from } from 'rxjs'
+import { from, merge } from 'rxjs'
 import { filter, map, tap } from 'rxjs/operators'
 
 import { Storage } from '../domain-externs/storage'
@@ -55,8 +55,8 @@ const createSyncStorage = <T, U = T>(domain: RemeshDomainContext, options: SyncS
     },
   })
 
-  const WriteStorageEvent = domain.event({
-    name: 'WriteStorageEvent',
+  const WriteStorageCommand = domain.command({
+    name: 'WriteStorageCommand',
     impl: ({ fromEvent }) => {
       return fromEvent(options.TriggerEvent).pipe(
         tap((value) => {
@@ -66,9 +66,8 @@ const createSyncStorage = <T, U = T>(domain: RemeshDomainContext, options: SyncS
     },
   })
 
-  domain.ignite(({ send, emit }) => {
-    send(ReadStorageCommand())
-    emit(WriteStorageEvent())
+  domain.ignite(({ send }) => {
+    return merge(send(ReadStorageCommand()), send(WriteStorageCommand()))
   })
 }
 

@@ -152,28 +152,15 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
     name: `${options.name}.CanceledEvent`,
   })
 
-  const LoadEvent = domain.event<T>({
-    name: `${options.name}.LoadEvent`,
-  })
-
   const ArgState = domain.state<void, T>({
     name: `${options.name}.ArgState`,
   })
 
-  const LoadCommand = domain.command({
+  const LoadCommand = domain.command$({
     name: `${options.name}.LoadCommand`,
-    impl: ({ emit, set }, arg: T) => {
-      set(ArgState(), arg)
-      emit(LoadEvent(arg))
-    },
-  })
-
-  const LoadingCommand = domain.command({
-    name: `${options.name}.LoadingCommand`,
-    impl: (ctx) => {
-      const arg$ = ctx.fromEvent(LoadEvent)
-
+    impl: (ctx, arg$: Observable<T>) => {
       const handleArg = (arg: T) => {
+        ctx.set(ArgState(), arg)
         return new Observable<AsyncData<U>>((subscriber) => {
           let isUnsubscribed = false
 
@@ -229,13 +216,6 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
     },
   })
 
-  domain.ignite(({ send }) => {
-    /**
-     * start loading$
-     */
-    return send(LoadingCommand())
-  })
-
   const CancelCommand = domain.command({
     name: `${options.name}.CancelCommand`,
     impl: ({ emit }) => {
@@ -246,7 +226,8 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
   const RetryCommand = domain.command({
     name: `${options.name}.RetryCommand`,
     impl: ({ get, send }) => {
-      send(LoadCommand(get(ArgState())))
+      const arg = get(ArgState())
+      send(LoadCommand(arg))
     },
   })
 
@@ -261,7 +242,7 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
     },
     event: {
       CanceledEvent: CanceledEvent.toSubscribeOnlyEvent(),
-      LoadingEvent: LoadEvent.toSubscribeOnlyEvent(),
+      LoadingEvent: LoadingEvent.toSubscribeOnlyEvent(),
       SuccessEvent: SuccessEvent.toSubscribeOnlyEvent(),
       FailedEvent: FailedEvent.toSubscribeOnlyEvent(),
     },
