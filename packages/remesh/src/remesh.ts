@@ -30,60 +30,55 @@ export type RemeshInjectedContext = {
   peek: <T extends Args<Serializable>, U>(input: GetterInput<T, U>) => U | RemeshValuePlaceholder
   set: <T extends Args<Serializable>, U>(input: SetterInput<T, U>, value: U) => void
   send: <T extends Args, U>(input: RemeshCommandAction<T, U>) => U
-  emit: <T, U>(input: RemeshEventAction<T, U>) => void
-  fromEvent: <T, U>(Event: RemeshEvent<T, U> | RemeshSubscribeOnlyEvent<T, U>) => Observable<U>
+  emit: <T extends Args, U>(input: RemeshEventAction<T, U>) => void
+  fromEvent: <T extends Args, U>(Event: RemeshEvent<T, U> | RemeshSubscribeOnlyEvent<T, U>) => Observable<U>
   fromQuery: <T extends Args<Serializable>, U>(Query: RemeshQueryAction<T, U>) => Observable<U>
 }
 
 export type RemeshEventContext = {
   get: RemeshInjectedContext['get']
   peek: RemeshInjectedContext['peek']
-  set: RemeshInjectedContext['set']
-  send: RemeshInjectedContext['send']
-  emit: RemeshInjectedContext['emit']
-  fromEvent: RemeshInjectedContext['fromEvent']
-  fromQuery: RemeshInjectedContext['fromQuery']
 }
 
-export type RemeshEvent<T, U> = {
+export type RemeshEvent<T extends Args, U> = {
   type: 'RemeshEvent'
   eventId: number
   eventName: DomainConceptName<'Event'>
-  impl?: (context: RemeshEventContext, arg$: Observable<T>) => Observable<U>
-  (arg: T): RemeshEventAction<T, U>
+  impl?: (context: RemeshEventContext, arg: T[0]) => U
+  (...args: T): RemeshEventAction<T, U>
   owner: RemeshDomainAction<any, any>
   inspectable: boolean
   toSubscribeOnlyEvent: () => RemeshSubscribeOnlyEvent<T, U>
 }
 
-export type RemeshEventAction<T, U> = {
+export type RemeshEventAction<T extends Args, U> = {
   type: 'RemeshEventAction'
-  arg: T
+  arg: T[0]
   Event: RemeshEvent<T, U>
 }
 
-export type RemeshEventOptions<T, U> = {
+export type RemeshEventOptions<T extends Args, U> = {
   name: DomainConceptName<'Event'>
   inspectable?: boolean
-  impl: (context: RemeshEventContext, arg$: Observable<T>) => Observable<U>
+  impl: (context: RemeshEventContext, ...args: T) => U
 }
 
 let eventUid = 0
 
-export function RemeshEvent<T = void, U = void>(options: RemeshEventOptions<T, U>): RemeshEvent<T, U>
-export function RemeshEvent<T = void>(options: Omit<RemeshEventOptions<T, T>, 'impl'>): RemeshEvent<T, T>
-export function RemeshEvent<T, U>(
+export function RemeshEvent<T extends Args = [], U = void>(options: RemeshEventOptions<T, U>): RemeshEvent<T, U>
+export function RemeshEvent<T = void>(options: Omit<RemeshEventOptions<[T], T>, 'impl'>): RemeshEvent<[T], T>
+export function RemeshEvent<T extends Args, U>(
   options: RemeshEventOptions<T, U> | Omit<RemeshEventOptions<[], void>, 'impl'>,
 ): RemeshEvent<T, U> {
   const eventId = eventUid++
 
-  const Event = ((arg: T) => {
+  const Event = ((arg: T[0]): RemeshEventAction<T, U> => {
     return {
       type: 'RemeshEventAction',
       arg,
       Event: Event,
     }
-  }) as RemeshEvent<T, U>
+  }) as unknown as RemeshEvent<T, U>
 
   Event.type = 'RemeshEvent'
   Event.eventId = eventId
@@ -95,7 +90,7 @@ export function RemeshEvent<T, U>(
   }
 
   if ('impl' in options) {
-    Event.impl = options.impl
+    Event.impl = options.impl as unknown as typeof Event.impl
   }
 
   return Event
@@ -265,13 +260,6 @@ export const RemeshState = <T extends Args<Serializable>, U>(options: RemeshStat
   return State
 }
 
-export type RemeshSchedulerContext = {
-  get: RemeshInjectedContext['get']
-  peek: RemeshInjectedContext['peek']
-  fromEvent: RemeshInjectedContext['fromEvent']
-  fromQuery: RemeshInjectedContext['fromQuery']
-}
-
 export type RemeshQueryContext = {
   get: RemeshInjectedContext['get']
   peek: RemeshInjectedContext['peek']
@@ -345,6 +333,8 @@ export type RemeshCommandContext = {
   set: RemeshInjectedContext['set']
   send: RemeshInjectedContext['send']
   emit: RemeshInjectedContext['emit']
+  fromEvent: RemeshInjectedContext['fromEvent']
+  fromQuery: RemeshInjectedContext['fromQuery']
 }
 
 export type RemeshCommandAction<T extends Args, U> = {
@@ -435,18 +425,18 @@ export const RemeshExtern = <T = void>(options: RemeshExternOptions<T>): RemeshE
 export type RemeshDomainIgniteContext = {
   get: RemeshInjectedContext['get']
   peek: RemeshInjectedContext['peek']
-  set: RemeshInjectedContext['set']
   send: RemeshInjectedContext['send']
   emit: RemeshInjectedContext['emit']
+  fromEvent: RemeshInjectedContext['fromEvent']
+  fromQuery: RemeshInjectedContext['fromQuery']
 }
 
-export type RemeshDomainIgniteFn = (context: RemeshDomainIgniteContext) => unknown
+export type RemeshDomainIgniteFn = (context: RemeshDomainIgniteContext) => void | Promise<unknown> | Observable<unknown>
 
 export type RemeshDomainPreloadCommandContext = {
   get: RemeshInjectedContext['get']
   peek: RemeshInjectedContext['peek']
   set: RemeshInjectedContext['set']
-  send: RemeshInjectedContext['send']
 }
 
 export type RemeshDomainPreloadOptions<T extends Serializable> = {

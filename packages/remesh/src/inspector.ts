@@ -31,7 +31,7 @@ export type RemeshQueryStorageEventData<T extends Args<Serializable>, U> = {
   storage: RemeshQueryStorage<T, U>
 }
 
-export type RemeshEventEmittedEventData<T, U> = {
+export type RemeshEventEmittedEventData<T extends Args, U> = {
   type: 'Event::Emitted'
   action: RemeshEventAction<T, U>
 }
@@ -192,7 +192,7 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
     }
   }
 
-  const inspectEventEmitted = <T, U>(
+  const inspectEventEmitted = <T extends Args, U>(
     type: RemeshEventEmittedEventData<T, U>['type'],
     eventAction: RemeshEventAction<T, U>,
   ) => {

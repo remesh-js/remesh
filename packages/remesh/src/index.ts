@@ -3,6 +3,7 @@ import {
   RemeshExtern,
   RemeshState,
   RemeshQuery,
+  RemeshEvent,
   RemeshCommand,
   RemeshModule,
 } from './remesh'
@@ -21,5 +22,6 @@ export const Remesh = {
   state: RemeshState,
   query: RemeshQuery,
   command: RemeshCommand,
+  event: RemeshEvent,
   module: RemeshModule,
 }

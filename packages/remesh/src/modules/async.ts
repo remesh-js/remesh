@@ -152,9 +152,27 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
     name: `${options.name}.CanceledEvent`,
   })
 
-  const LoadEvent = domain.event<T, AsyncData<U>>({
+  const LoadEvent = domain.event<T>({
     name: `${options.name}.LoadEvent`,
-    impl: (ctx, arg$) => {
+  })
+
+  const ArgState = domain.state<void, T>({
+    name: `${options.name}.ArgState`,
+  })
+
+  const LoadCommand = domain.command({
+    name: `${options.name}.LoadCommand`,
+    impl: ({ emit, set }, arg: T) => {
+      set(ArgState(), arg)
+      emit(LoadEvent(arg))
+    },
+  })
+
+  const LoadingCommand = domain.command({
+    name: `${options.name}.LoadingCommand`,
+    impl: (ctx) => {
+      const arg$ = ctx.fromEvent(LoadEvent)
+
       const handleArg = (arg: T) => {
         return new Observable<AsyncData<U>>((subscriber) => {
           let isUnsubscribed = false
@@ -211,16 +229,11 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
     },
   })
 
-  const ArgState = domain.state<void, T>({
-    name: `${options.name}.ArgState`,
-  })
-
-  const LoadCommand = domain.command({
-    name: `${options.name}.LoadCommand`,
-    impl: ({ emit, set }, arg: T) => {
-      set(ArgState(), arg)
-      emit(LoadEvent(arg))
-    },
+  domain.ignite(({ send }) => {
+    /**
+     * start loading$
+     */
+    return send(LoadingCommand())
   })
 
   const CancelCommand = domain.command({

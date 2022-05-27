@@ -48,15 +48,11 @@ describe('event', () => {
 
     const CounterChangedEvent = RemeshEvent({
       name: 'CounterChangedEvent',
-      impl({ get }, from$: Observable<string>) {
-        return from$.pipe(
-          map((from) => {
-            return {
-              from,
-              count: get(CountState()),
-            }
-          }),
-        )
+      impl({ get }, from: string) {
+        return {
+          from,
+          count: get(CountState()),
+        }
       },
     })
 

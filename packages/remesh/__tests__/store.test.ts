@@ -13,7 +13,7 @@ import {
   RemeshStore,
   RemeshStoreOptions,
 } from '../src'
-import { delay, tap, Observable } from 'rxjs'
+import { delay, tap, Observable, timer } from 'rxjs'
 
 import * as utils from './utils'
 
@@ -36,7 +36,8 @@ describe('store', () => {
 
     expect(store.name).toBe('store')
 
-    const command$Called = jest.fn()
+    const igniteCallback = jest.fn()
+
     const TestDomain = RemeshDomain({
       name: 'TestDomain',
       impl(domain) {
@@ -80,8 +81,8 @@ describe('store', () => {
 
         const TestEvent = domain.event({
           name: 'TestEvent',
-          impl(_, arg$: Observable<void | string>) {
-            return arg$
+          impl(_, arg?: string) {
+            return arg
           },
         })
 
@@ -92,16 +93,8 @@ describe('store', () => {
           },
         })
 
-        const InitEvent = domain.event({
-          name: 'InitEvent',
-          impl(_, payload$) {
-            command$Called()
-            return payload$
-          },
-        })
-
-        domain.ignite(({ emit }) => {
-          emit(InitEvent())
+        domain.ignite(() => {
+          igniteCallback()
         })
 
         return {
@@ -114,7 +107,7 @@ describe('store', () => {
 
     const testDomain = store.getDomain(TestDomain())
     store.subscribeDomain(TestDomain())
-    expect(command$Called).toHaveBeenCalled()
+    expect(igniteCallback).toHaveBeenCalled()
 
     expect(store.getKey(testDomain.query.AQuery())).toMatch(testDomain.query.AQuery.queryName)
     expect(store.getKey(testDomain.query.BQuery())).toMatch(testDomain.query.BQuery.queryName)
@@ -327,20 +320,19 @@ describe('store', () => {
           },
         })
 
-        const RemoteUpdateNameEvent = domain.event({
-          name: 'RemoteUpdateNameEvent',
-          impl({ send  }, payload$: Observable<string>) {
-            return payload$.pipe(
-              delay(1),
-              tap((name) => {
+        const RemoteUpdateNameCommand = domain.command({
+          name: 'RemoteUpdateNameCommand',
+          impl({ send }, name: string) {
+            return timer(1).pipe(
+              tap(() => {
                 send(nameDomain.command.UpdateNameCommand(name))
               }),
             )
           },
         })
 
-        domain.ignite(({ emit }) => {
-          emit(RemoteUpdateNameEvent('bar'))
+        domain.ignite(({ send }) => {
+          return send(RemoteUpdateNameCommand('bar'))
         })
 
         return {
@@ -363,7 +355,6 @@ describe('store', () => {
       const changed = jest.fn()
       store.subscribeEvent(testDomain.event.NameChangedEvent, changed)
 
-
       jest.runOnlyPendingTimers()
 
       expect(changed).toHaveBeenCalledWith('bar')
@@ -384,7 +375,7 @@ describe('store', () => {
     const expectedHistory: string[] = [
       InspectorType.DomainCreated,
       InspectorType.DomainCreated,
-      InspectorType.EventEmitted,
+      InspectorType.CommandReceived,
       InspectorType.CommandReceived,
       InspectorType.StateCreated,
       InspectorType.EventEmitted,
@@ -410,7 +401,7 @@ describe('store', () => {
     const restoreExpectedHistory = expectedHistory.concat([
       InspectorType.DomainReused,
       InspectorType.DomainReused,
-      InspectorType.EventEmitted,
+      InspectorType.CommandReceived,
       InspectorType.CommandReceived,
       InspectorType.StateReused,
       InspectorType.EventEmitted,
@@ -448,21 +439,14 @@ describe('store', () => {
           },
         })
 
-        const UpdateCountCommand = domain.command({
-          name: 'UpdateCountCommand',
-          impl({ set }, count: number) {
-            set(CountState(), count)
-          },
-        })
-
         domain.preload({
           key: 'preload_count',
           query: async () => {
             await utils.delay(100)
             return 10
           },
-          command: ({ send }, count) => {
-            send(UpdateCountCommand(count))
+          command: ({ set }, count) => {
+            set(CountState(), count)
           },
         })
 

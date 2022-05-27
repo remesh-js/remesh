@@ -39,8 +39,8 @@ describe('extern', () => {
 
         const UpdateCounterEvent = domain.event({
           name: 'UpdateCounterEvent',
-          impl({ get }, arg$) {
-            return arg$.pipe(map(() => get(CountState())))
+          impl({ get }) {
+            return get(CountState())
           },
         })
 
@@ -52,8 +52,8 @@ describe('extern', () => {
           },
         })
 
-        const FromStateToStorageEvent = domain.event({
-          name: 'FromStateToStorageEvent',
+        const FromStateToStorageCommand = domain.command({
+          name: 'FromStateToStorageCommand',
           impl({ fromEvent }) {
             return fromEvent(UpdateCounterEvent).pipe(
               tap((value) => {
@@ -64,12 +64,16 @@ describe('extern', () => {
           },
         })
 
+        domain.ignite(({ send }) => {
+          return send(FromStateToStorageCommand())
+        })
+
         return {
           query: { CountQuery },
           command: {
             UpdateCounterCommand,
           },
-          event: { UpdateCounterEvent, FromStateToStorageEvent },
+          event: { UpdateCounterEvent },
         }
       },
     })
@@ -82,9 +86,9 @@ describe('extern', () => {
 
     const changed = jest.fn()
 
-    store1.subscribeEvent(counter.event.UpdateCounterEvent, changed)
+    store1.subscribeDomain(CounterDomain())
 
-    store1.emitEvent(counter.event.FromStateToStorageEvent())
+    store1.subscribeEvent(counter.event.UpdateCounterEvent, changed)
     counter.command.UpdateCounterCommand(1)
 
     expect(changed).toBeCalled()
