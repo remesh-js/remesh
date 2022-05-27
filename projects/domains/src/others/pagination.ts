@@ -63,30 +63,37 @@ export const PaginationDomain = Remesh.domain({
         const newUserList = await getUserList(pagination)
         return newUserList
       },
-      command: ({ get }, result) => {
+      command: ({ get, set }, result) => {
         if (!AsyncData.isSuccess(result)) {
           return null
         }
+
         const nextPagination = get(NextPaginationQuery())
         const currentUserList = get(UserListState())
-        return [PaginationState().new(nextPagination), UserListState().new(currentUserList.concat(result.value))]
+
+        set(PaginationState(), nextPagination)
+        set(UserListState(), currentUserList.concat(result.value))
       },
     })
 
-    domain.ignite(() => UserFetcher.command.LoadCommand(defaultPagination))
+    domain.ignite(({ send }) => {
+      send(UserFetcher.command.LoadCommand(defaultPagination))
+    })
 
     const LoadMoreCommand = domain.command({
       name: 'LoadMoreCommand',
-      impl: ({ get }) => {
+      impl: ({ get, send }) => {
         const nextPagination = get(NextPaginationQuery())
-        return UserFetcher.command.LoadCommand(nextPagination)
+        send(UserFetcher.command.LoadCommand(nextPagination))
       },
     })
 
     const ResetCommand = domain.command({
       name: 'ResetCommand',
-      impl: ({}) => {
-        return [PaginationState().new(defaultPagination), UserListState().new([]), LoadMoreCommand()]
+      impl: ({ set, send }) => {
+        set(PaginationState(), defaultPagination)
+        set(UserListState(), [])
+        send(LoadMoreCommand())
       },
     })
 
@@ -94,7 +101,6 @@ export const PaginationDomain = Remesh.domain({
       query: {
         UserListQuery,
         IsEmptyUserListQuery,
-        IsLoadingQuery: UserFetcher.query.IsLoadingQuery,
         AsyncDataQuery: UserFetcher.query.AsyncDataQuery,
       },
       command: {

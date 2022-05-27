@@ -1,6 +1,7 @@
 import { useRemeshDomain, useRemeshQuery } from 'remesh-react'
 
 import { PaginationDomain } from 'remesh-domains-for-demos/dist/others/pagination'
+import { AsyncData } from 'remesh/modules/async'
 
 export default () => {
   const paginationDomain = useRemeshDomain(PaginationDomain())
@@ -17,7 +18,9 @@ export default () => {
 const UserListView = () => {
   const paginationDomain = useRemeshDomain(PaginationDomain())
 
-  const isLoading = useRemeshQuery(paginationDomain.query.IsLoadingQuery())
+  const asyncData = useRemeshQuery(paginationDomain.query.AsyncDataQuery())
+
+  const isLoading = AsyncData.isLoading(asyncData)
 
   const handleRest = () => {
     paginationDomain.command.ResetCommand()

@@ -33,8 +33,8 @@ export const TodoListDomain = Remesh.domain({
 
     const TodoListChangedEvent = domain.event({
       name: 'TodoListChangedEvent',
-      impl: ({ get }, arg$) => {
-        return arg$.pipe(map(() => get(TodoListQuery())))
+      impl: ({ get }) => {
+        return get(TodoListQuery())
       },
     })
 

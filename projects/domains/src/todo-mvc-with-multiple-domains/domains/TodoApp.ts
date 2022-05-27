@@ -34,7 +34,7 @@ export const TodoAppDomain = Remesh.domain({
       },
     })
 
-    const ClearTodoInputWhenTodoAddedCommand = domain.command({
+    const ClearTodoInputWhenTodoAddedCommand = domain.command$({
       name: 'ClearTodoInputWhenTodoAddedCommand',
       impl: ({ fromEvent, get, send }) => {
         return fromEvent(todoList.event.TodoItemAddedEvent).pipe(
@@ -50,7 +50,7 @@ export const TodoAppDomain = Remesh.domain({
     })
 
     domain.ignite(({ send }) => {
-      return send(ClearTodoInputWhenTodoAddedCommand())
+      send(ClearTodoInputWhenTodoAddedCommand())
     })
 
     return {
