@@ -247,6 +247,7 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
       RetryCommand,
     },
     event: {
+      CanceledEvent: CanceledEvent.toSubscribeOnlyEvent(),
       LoadingEvent: LoadEvent.toSubscribeOnlyEvent(),
       SuccessEvent: SuccessEvent.toSubscribeOnlyEvent(),
       FailedEvent: FailedEvent.toSubscribeOnlyEvent(),
