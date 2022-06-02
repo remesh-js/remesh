@@ -172,7 +172,7 @@ describe('domain', () => {
 
     store.subscribeEvent(contentDomain.event.ContentChangeEvent, changed)
 
-    contentDomain.command.UpdateContentCommand('remesh')
+    store.sendCommand(contentDomain.command.UpdateContentCommand('remesh'))
 
     expect(store.query(contentDomain.query.DisplayContentQuery())).toBe('content: remesh')
     expect(changed).toHaveBeenCalled()

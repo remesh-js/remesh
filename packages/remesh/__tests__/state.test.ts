@@ -226,13 +226,13 @@ describe('state', () => {
 
     expect(store.query(domain.query.AgeQuery())).toBe(18)
 
-    domain.command.UpdateAgeCommand(20)
+    store.sendCommand(domain.command.UpdateAgeCommand(20))
 
     expect(store.query(domain.query.AgeQuery())).toBe(20)
 
     expect(() => store.query(domain.query.SalaryQuery())).toThrow()
 
-    domain.command.SaveSalaryCommand(20000)
+    store.sendCommand(domain.command.SaveSalaryCommand(20000))
 
     expect(store.query(domain.query.SalaryQuery())).toBe(20000)
   })

@@ -89,7 +89,7 @@ describe('extern', () => {
     store1.subscribeDomain(CounterDomain())
 
     store1.subscribeEvent(counter.event.UpdateCounterEvent, changed)
-    counter.command.UpdateCounterCommand(1)
+    store1.sendCommand(counter.command.UpdateCounterCommand(1))
 
     expect(changed).toBeCalled()
     expect(store1.query(counter.query.CountQuery())).toBe(memoryCache.get('counter'))

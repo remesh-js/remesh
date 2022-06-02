@@ -308,7 +308,7 @@ describe('command$', () => {
 
     jest.useFakeTimers()
 
-    testDomain.command.ACommand(1)
+    store.sendCommand(testDomain.command.ACommand(1))
 
     // should call command$.impl when command was sended
     expect(fn0).toHaveBeenCalled()
@@ -317,5 +317,260 @@ describe('command$', () => {
     jest.runOnlyPendingTimers()
 
     expect(fn1).toHaveBeenCalledWith(0)
+  })
+
+  it('supports commandQuery', () => {
+    type AccountState = {
+      id: number
+      status: 'active' | 'inactive'
+      balance: number
+    }
+
+    const AccountDomain = RemeshDomain({
+      name: 'AccountDomain',
+      impl(domain, accountId: number) {
+        const AccountState = domain.state({
+          name: 'AccountState',
+          default: {
+            status: 'active',
+            id: accountId,
+            balance: 0,
+          } as AccountState,
+        })
+
+        const AccountQuery = domain.query({
+          name: 'AccountQuery',
+          impl: ({ get }) => {
+            return get(AccountState())
+          },
+        })
+
+        const DebtQuery = domain.query({
+          name: 'DebtQuery',
+          impl: ({ get }) => {
+            return get(AccountState()).balance < 0
+          },
+        })
+
+        const CloseAccountCommand = domain.command({
+          name: 'CloseAccountCommand',
+          impl: ({ get, set }) => {
+            const newAccountState = {
+              ...get(AccountState()),
+              status: 'inactive',
+            } as AccountState
+
+            set(AccountState(), newAccountState)
+          },
+        })
+
+        const ActivateAccountCommand = domain.command({
+          name: 'ActivateAccountCommand',
+          impl: ({ get, set }) => {
+            const newAccountState = {
+              ...get(AccountState()),
+              status: 'active',
+            } as AccountState
+
+            set(AccountState(), newAccountState)
+          },
+        })
+
+        const DepositCommand = domain.command({
+          name: 'DepositCommand',
+          impl({ get, set }, amount: number) {
+            const account = get(AccountState())
+            set(AccountState(), { ...account, balance: account.balance + amount })
+          },
+        })
+
+        const WithdrawFailedEvent = domain.event<string>({
+          name: 'WithdrawFailedEvent',
+        })
+
+        const WithdrawCommand = domain.command({
+          name: 'WithdrawCommand',
+          impl({ get, set, emit }, amount: number) {
+            const isDebt = get(DebtQuery())
+
+            if (isDebt) {
+              return emit(WithdrawFailedEvent('debt'))
+            }
+
+            const account = get(AccountState())
+
+            if (account.balance < amount) {
+              return emit(WithdrawFailedEvent('insufficient'))
+            }
+
+            set(AccountState(), { ...account, balance: account.balance - amount })
+          },
+        })
+
+        const TransferFailedEvent = domain.event<string>({
+          name: 'TransferFailedEvent',
+        })
+
+        const TransferCommand = domain.command({
+          name: 'TransferCommand',
+          impl({ get, send, emit }, { to, amount }: { to: number; amount: number }) {
+            const toAccountDomain = store.getDomain(AccountDomain(to))
+            const toAccountCommand = get(toAccountDomain.commandQuery())
+
+            const fromAccountState = get(AccountState())
+
+            if (toAccountCommand.status !== 'inactive') {
+              if (fromAccountState.balance < amount) {
+                return emit(TransferFailedEvent('insufficient'))
+              }
+              send(toAccountCommand.DepositCommand(amount))
+              send(WithdrawCommand(amount))
+            } else {
+              return emit(TransferFailedEvent(`account ${to} is inactive`))
+            }
+          },
+        })
+
+        const CommandQuery = domain.query({
+          name: 'CommandQuery',
+          impl({ get }) {
+            const isDebt = get(DebtQuery())
+
+            if (isDebt) {
+              return {
+                status: 'debt' as const,
+                DepositCommand,
+              }
+            }
+
+            const account = get(AccountState())
+
+            if (account.status === 'inactive') {
+              return {
+                status: 'inactive' as const,
+                ActivateAccountCommand,
+              }
+            }
+
+            return {
+              status: 'active' as const,
+              DepositCommand,
+              WithdrawCommand,
+              TransferCommand,
+              CloseAccountCommand,
+            }
+          },
+        })
+
+        return {
+          query: {
+            AccountQuery,
+            DebtQuery,
+          },
+          commandQuery: CommandQuery,
+          event: {
+            WithdrawFailedEvent,
+          },
+        }
+      },
+    })
+
+    const aAccountDomain = store.getDomain(AccountDomain(1))
+    const bAccountDomain = store.getDomain(AccountDomain(2))
+
+    store.subscribeDomain(AccountDomain(1))
+    store.subscribeDomain(AccountDomain(2))
+
+    expect(store.query(aAccountDomain.query.AccountQuery())).toEqual({
+      status: 'active',
+      id: 1,
+      balance: 0,
+    })
+
+    expect(store.query(bAccountDomain.query.AccountQuery())).toEqual({
+      status: 'active',
+      id: 2,
+      balance: 0,
+    })
+
+    let aAccountCommand = store.query(aAccountDomain.commandQuery())
+
+    if (aAccountCommand.status === 'active') {
+      store.sendCommand(aAccountCommand.DepositCommand(100))
+
+      expect(store.query(aAccountDomain.query.AccountQuery())).toEqual({
+        status: 'active',
+        id: 1,
+        balance: 100,
+      })
+    }
+
+    expect(store.query(bAccountDomain.query.AccountQuery())).toEqual({
+      status: 'active',
+      id: 2,
+      balance: 0,
+    })
+
+    aAccountCommand = store.query(aAccountDomain.commandQuery())
+
+    if (aAccountCommand.status === 'active') {
+      store.sendCommand(aAccountCommand.WithdrawCommand(50))
+
+      expect(store.query(aAccountDomain.query.AccountQuery())).toEqual({
+        status: 'active',
+        id: 1,
+        balance: 50,
+      })
+    }
+
+    expect(store.query(bAccountDomain.query.AccountQuery())).toEqual({
+      status: 'active',
+      id: 2,
+      balance: 0,
+    })
+
+    aAccountCommand = store.query(aAccountDomain.commandQuery())
+
+    if (aAccountCommand.status === 'active') {
+      store.sendCommand(aAccountCommand.TransferCommand({ to: 2, amount: 50 }))
+
+      expect(store.query(aAccountDomain.query.AccountQuery())).toEqual({
+        status: 'active',
+        id: 1,
+        balance: 0,
+      })
+
+      expect(store.query(bAccountDomain.query.AccountQuery())).toEqual({
+        status: 'active',
+        id: 2,
+        balance: 50,
+      })
+
+      store.sendCommand(aAccountCommand.CloseAccountCommand())
+
+      expect(store.query(aAccountDomain.query.AccountQuery())).toEqual({
+        status: 'inactive',
+        id: 1,
+        balance: 0,
+      })
+
+      expect(store.query(bAccountDomain.query.AccountQuery())).toEqual({
+        status: 'active',
+        id: 2,
+        balance: 50,
+      })
+    }
+
+    aAccountCommand = store.query(aAccountDomain.commandQuery())
+
+    if (aAccountCommand.status === 'inactive') {
+      store.sendCommand(aAccountCommand.ActivateAccountCommand())
+
+      expect(store.query(aAccountDomain.query.AccountQuery())).toEqual({
+        status: 'active',
+        id: 1,
+        balance: 0,
+      })
+    }
   })
 })

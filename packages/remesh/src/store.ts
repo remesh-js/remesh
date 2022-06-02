@@ -1,6 +1,6 @@
-import { concat, isObservable, Observable, Observer, Subject, Subscription } from 'rxjs'
+import { isObservable, Observable, Observer, Subject, Subscription } from 'rxjs'
 
-import { flatMap, map, mergeMap, startWith, take } from 'rxjs/operators'
+import { map } from 'rxjs/operators'
 
 import {
   RemeshDomainIgniteFn,
@@ -40,8 +40,7 @@ import {
   RemeshSubscribeOnlyEvent,
   RemeshEventContext,
   RemeshDomainIgniteContext,
-  RemeshDomainPreloadCommandContext,
-  RemeshCommand$Options,
+  RemeshDomainPreloadCommandContext
 } from './remesh'
 
 import { createInspectorManager, InspectorType } from './inspector'
@@ -102,7 +101,6 @@ export type RemeshDomainStorage<T extends RemeshDomainDefinition, U extends Args
   key: string
   domain: T
   domainContext: RemeshDomainContext
-  bindingDomainOutput?: BindingDomainOutput<T>
   commandSubscriptionSet: Set<Subscription>
   domainAction: RemeshDomainAction<T, U>
   upstreamSet: Set<RemeshDomainStorage<any, any>>
@@ -1279,48 +1277,14 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     throw new Error(`Unknown event type of ${Event}`)
   }
 
-  const getBindingCommand = <T extends RemeshDomainDefinition>(domain: T) => {
-    const command = {} as BindingDomainOutput<T>['command']
-
-    for (const key in domain.command) {
-      const Command = domain.command[key]
-      if (Command.type === 'RemeshCommand') {
-        const commandFactory = Command
-        // @ts-ignore - This is a hack to get the type of the command
-        command[key] = (arg: any) => sendCommand(commandFactory(arg))
-      } else if (Command.type === 'RemeshCommand$') {
-        const commandFactory = Command
-        // @ts-ignore - This is a hack to get the type of the command
-        command[key] = (arg: any) => sendCommand(commandFactory(arg))
-      } else {
-        throw new Error(`Unknown command: ${Command}`)
-      }
-    }
-
-    return command
-  }
-
   const getDomain = <T extends RemeshDomainDefinition, U extends Args<Serializable>>(
     domainAction: RemeshDomainAction<T, U>,
-  ): {
-    [key in keyof BindingDomainOutput<T>]: BindingDomainOutput<T>[key]
-  } => {
+  ) => {
     const domainStorage = getDomainStorage(domainAction)
-
-    if (domainStorage.bindingDomainOutput) {
-      return domainStorage.bindingDomainOutput
-    }
 
     const domain = domainStorage.domain
 
-    const command = getBindingCommand(domain)
-
-    const domainOutput = {
-      ...toValidRemeshDomainDefinition(domain),
-      command,
-    } as unknown as BindingDomainOutput<T>
-
-    domainStorage.bindingDomainOutput = domainOutput
+    const domainOutput = toValidRemeshDomainDefinition(domain)
 
     return domainOutput
   }

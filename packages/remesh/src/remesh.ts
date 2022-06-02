@@ -518,16 +518,23 @@ export type RemeshDomainContext = {
   getExtern: <T>(Extern: RemeshExtern<T>) => T
 }
 
+export type RemeshEvents = {
+  [key: string]: RemeshEvent<any, any> | RemeshSubscribeOnlyEvent<any, any>
+}
+
+export type RemeshQueries = {
+  [key: string]: RemeshQuery<any, any>
+}
+
+export type RemeshCommands = {
+  [key: string]: RemeshCommand<any, any> | RemeshCommand$<any>
+}
+
 export type RemeshDomainOutput = {
-  event: {
-    [key: string]: RemeshEvent<any, any> | RemeshSubscribeOnlyEvent<any, any>
-  }
-  query: {
-    [key: string]: RemeshQuery<any, any>
-  }
-  command: {
-    [key: string]: RemeshCommand<any, any> | RemeshCommand$<any>
-  }
+  event: RemeshEvents
+  query: RemeshQueries
+  command: RemeshCommands
+  commandQuery: RemeshQuery<[], any>
 }
 
 export type RemeshDomainDefinition = Partial<RemeshDomainOutput>
@@ -551,8 +558,22 @@ export type VerifiedRemeshDomainDefinition<T extends RemeshDomainDefinition> = P
         ? T['command'][key]
         : `${ShowKey<key>} is not a valid command name`
     }
+    commandQuery: T['commandQuery'] extends RemeshQuery<[], infer Commands>
+      ? RemeshQuery<
+          [],
+          {
+            [key in keyof Commands as Commands[key] extends undefined ? never : key]: key extends 'status'
+              ? Commands[key]
+              : Commands[key] extends RemeshCommand<any, any>
+              ? key extends DomainConceptName<'Command'>
+                ? Commands[key]
+                : `${ShowKey<key>} is not a valid command name`
+              : `${ShowKey<key>} is not a command`
+          }
+        >
+      : never
   },
-  ('event' | 'query' | 'command') & keyof T
+  ('event' | 'query' | 'command' | 'commandQuery') & keyof T
 >
 
 export const toValidRemeshDomainDefinition = <T extends RemeshDomainDefinition>(
@@ -570,6 +591,10 @@ export const toValidRemeshDomainDefinition = <T extends RemeshDomainDefinition>(
 
   if (domainDefinition.command) {
     result.command = domainDefinition.command as unknown as typeof result.command
+  }
+
+  if (domainDefinition.commandQuery) {
+    result.commandQuery = domainDefinition.commandQuery as unknown as typeof result.commandQuery
   }
 
   return result

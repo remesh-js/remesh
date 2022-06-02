@@ -118,16 +118,16 @@ describe('store', () => {
     const queryCalled = jest.fn()
     store.subscribeQuery(testDomain.query.JoinQuery('-'), queryCalled)
 
-    testDomain.command.UpdateACommand(2)
+    store.sendCommand(testDomain.command.UpdateACommand(2))
 
     expect(store.query(testDomain.query.JoinQuery('-'))).toBe('2-2')
     expect(queryCalled).toHaveBeenCalledWith('2-2')
 
     const eventCalled = jest.fn()
     store.subscribeEvent(testDomain.event.TestEvent, eventCalled)
-    testDomain.command.EmitTestEventCommand()
+    store.sendCommand(testDomain.command.EmitTestEventCommand())
     expect(eventCalled).toHaveBeenCalled()
-    testDomain.command.EmitTestEventCommand('test')
+    store.sendCommand(testDomain.command.EmitTestEventCommand('test'))
     expect(eventCalled).toHaveBeenCalledWith('test')
   })
 
@@ -361,7 +361,7 @@ describe('store', () => {
 
       expect(store.query(testDomain.query.NameQuery())).toBe('bar')
       expect(store.query(testDomain.query.HelloQuery())).toBe('hello~bar')
-      testDomain.command.UpdateNameCommand('foo')
+      store.sendCommand(testDomain.command.UpdateNameCommand('foo'))
 
       expect(changed).toHaveBeenCalledWith('foo')
       expect(store.query(testDomain.query.NameQuery())).toBe('foo')
