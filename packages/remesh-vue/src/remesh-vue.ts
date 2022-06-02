@@ -78,6 +78,12 @@ export const useRemeshEmit = function () {
   return store.emitEvent
 }
 
+export const useRemeshSend = function () {
+  const store = useRemeshStore()
+
+  return store.sendCommand
+}
+
 export const useRemeshDomain = function <T extends RemeshDomainDefinition, U extends Args<Serializable>>(
   domainAction: RemeshDomainAction<T, U>,
 ) {

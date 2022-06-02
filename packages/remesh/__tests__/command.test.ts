@@ -431,34 +431,40 @@ describe('command$', () => {
           },
         })
 
+        const DebtCommands = {
+          status: 'debt' as const,
+          DepositCommand,
+        }
+
+        const InactiveCommands = {
+          status: 'inactive' as const,
+          ActivateAccountCommand,
+        }
+
+        const ActiveCommands = {
+          status: 'active' as const,
+          DepositCommand,
+          WithdrawCommand,
+          TransferCommand,
+          CloseAccountCommand,
+        }
+
         const CommandQuery = domain.query({
           name: 'CommandQuery',
           impl({ get }) {
             const isDebt = get(DebtQuery())
 
             if (isDebt) {
-              return {
-                status: 'debt' as const,
-                DepositCommand,
-              }
+              return DebtCommands
             }
 
             const account = get(AccountState())
 
             if (account.status === 'inactive') {
-              return {
-                status: 'inactive' as const,
-                ActivateAccountCommand,
-              }
+              return InactiveCommands
             }
 
-            return {
-              status: 'active' as const,
-              DepositCommand,
-              WithdrawCommand,
-              TransferCommand,
-              CloseAccountCommand,
-            }
+            return ActiveCommands
           },
         })
 
