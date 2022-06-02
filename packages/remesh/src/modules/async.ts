@@ -154,6 +154,7 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
 
   const ArgState = domain.state<void, T>({
     name: `${options.name}.ArgState`,
+    inspectable: false
   })
 
   const LoadCommand = domain.command$({
