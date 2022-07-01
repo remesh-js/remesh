@@ -16,7 +16,7 @@ export type AnyCtor<Args extends unknown[] = unknown[], R = unknown> = (new (...
 
 export type StaticProperties<T extends AnyCtor> = Omit<T, 'prototype'>
 
-export type CtorTypeOf<T extends AnyCtor> =
+export type CtorType<T extends AnyCtor> =
   T extends AnyCtor<infer Args, infer R>
   ? (new (...args: Args) => R) & StaticProperties<T>
   : never
@@ -27,61 +27,78 @@ export type Prettier<T> = T extends (...args: any[]) => any ? T
   } : T
 
 
+export type ExtractType<T, K extends string> = T extends AnyCtor ? ExtractType<InstanceType<T>, K> : 
+T extends { [key in (K & keyof T)]: infer U } ? U 
+: never
+
+export type ExtractRecordType<T, K extends string> = {
+  [key in keyof T]: ExtractType<T[key], K>
+}
+
+export type ImplType<T> = ExtractType<T, '__for_impl__'>
+
+export type ImportType<T> = ExtractType<T, '__for_import__'>
+
+export type ExportType<T> = ExtractType<T, '__for_export__'>
+
+export type ImplsType<T> = ExtractRecordType<T, '__for_impl__'>
+
+export type ImportsType<T> = ExtractRecordType<T, '__for_import__'>
+
+export type ExportsType<T> = ExtractRecordType<T, '__for_export__'>
+
+export type Implementable =  AnyCtor<unknown[], {
+  __for_impl__: unknown
+}>
+
+const implWeakMap = new WeakMap<Implementable, unknown>()
+
+export const impl = <T extends Implementable>(Impl: T, impl: ImplType<T>) => {
+  if (implWeakMap.has(Impl)) {
+    throw new Error('Cannot implement twice')
+  }
+  implWeakMap.set(Impl, impl)
+}
+
 export abstract class DomainSchema {
   static __tag__: `${string}Ctor` = 'SchemaCtor'
   abstract __tag__: string
-  __type__: unknown
   description?: string
 }
 
-export type DomainSchemaCtor = CtorTypeOf<typeof DomainSchema>
+export type DomainSchemaShape<T extends string = string> =
+  ((new () => { __tag__: T }) | (abstract new () => { __tag__: T })) & { __tag__: `${T}Ctor` }
 
-export abstract class DomainArg<T extends Serializable> extends DomainSchema {
-  static __tag__ = 'DomainArgCtor' as const
-  __tag__ = 'DomainArg' as const
-  __type__!: T
-  default?: T
-}
+export type DomainConceptCtor<Tag extends string = string> =(new () => { __tag__: Tag }) & { __tag__: `${Tag}Ctor` }
 
-type DomainArgCtor<T extends Serializable = Serializable> = CtorTypeOf<typeof DomainArg<T>>
-
-export abstract class DomainOptionalArg<T extends Serializable> extends DomainSchema {
-  static __tag__ = 'DomainOptionalArgCtor' as const
-  __tag__ = 'DomainOptionalArg' as const
-  abstract Arg: DomainArgCtor<T>
-  default?: T
-}
-
-type DomainOptionalArgCtor<T extends Serializable = Serializable> = CtorTypeOf<typeof DomainOptionalArg<T>>
-
-export abstract class DomainArgList<T extends Serializable> extends DomainSchema {
-  static __tag__ = 'DomainArgListCtor' as const
-  __tag__ = 'DomainArgList' as const
-  abstract Arg: DomainArgCtor<T>
-  default: T[] = []
-}
-
-type DomainArgListCtor<T extends Serializable = Serializable> = CtorTypeOf<typeof DomainArgList<T>>
-
-export abstract class DomainArgProvider<T extends Serializable> extends DomainSchema {
-  static __tag__ = 'DomainArgProviderCtor' as const
-  __tag__ = 'DomainArgProvider' as const
-  abstract Arg: DomainArgCtor<T>
-  default?: T
-}
-
-type DomainArgProviderCtor<T extends Serializable = Serializable> = CtorTypeOf<typeof DomainArgProvider<T>>
+export type SchemaCtorType<T extends DomainSchemaShape> =
+  T extends DomainSchemaShape<infer Tag> ?
+  DomainConceptCtor<Tag>
+  : never
 
 /**
  * top-down input
  */
-export abstract class DomainInput<T extends Serializable> extends DomainSchema {
+export abstract class DomainInput<_T extends Serializable> extends DomainSchema {
   static __tag__ = 'DomainInputCtor' as const
   __tag__ = 'DomainInput' as const
-  __type__!: T
 }
 
-export type DomainInputCtor<T extends Serializable = Serializable> = CtorTypeOf<typeof DomainInput<T>>
+export type DomainInputCtor<T extends Serializable = Serializable> = CtorType<typeof DomainInput<T>>
+
+export type DomainInputReceiverImports = {
+  [key: string]: DomainInputCtor<any> | DomainEventCtor<any> | DomainQueryCtor<any, any> | DomainCommandCtor<any, any> | DomainContextCtor
+}
+
+export abstract class DomainInputReceiver<T extends Serializable> extends DomainSchema {
+  static __tag__ = 'DomainInputReceiverCtor' as const
+  __tag__ = 'DomainInputReceiver' as const
+  abstract Input: DomainInputCtor<T>
+  imports: DomainInputReceiverImports = {}
+  __for_impl__!: (imports: ImportsType<this['imports']>, input: T) => unknown
+}
+
+export type DomainInputReceiverCtor<T extends Serializable = Serializable> = CtorType<typeof DomainInputReceiver<T>>
 
 /**
  * bottom-up event
@@ -89,14 +106,15 @@ export type DomainInputCtor<T extends Serializable = Serializable> = CtorTypeOf<
 export abstract class DomainEvent<T = void> extends DomainSchema {
   static __tag__ = 'DomainEventCtor' as const
   __tag__ = 'DomainEvent' as const
-  __type__!: T
+  __for_import__!: (event: T) => void
+  __for_export__!: (event: T) => void
 }
 
-export type DomainEventCtor<T = unknown> = CtorTypeOf<typeof DomainEvent<T>>
+export type DomainEventCtor<T = unknown> = CtorType<typeof DomainEvent<T>>
 
 export type DomainEventHandlerImports = {
-  [key: string]: DomainStateCtor | DomainQueryCtor | DomainCommandCtor | DomainEventCtor | DomainArgCtor | DomainArgProviderCtor
-  | AnyDomainCtor | DomainContextCtor
+  [key: string]: DomainQueryCtor<any, any> | DomainCommandCtor<any, any> | DomainEventCtor<any>
+  | DomainContextCtor | DomainInputCtor<any>
 }
 
 export abstract class DomainEventHandler<T = void> extends DomainSchema {
@@ -104,190 +122,245 @@ export abstract class DomainEventHandler<T = void> extends DomainSchema {
   __tag__ = 'DomainEventHandler' as const
   abstract trigger: DomainEventCtor<T>
   imports: DomainEventHandlerImports = {}
+  __for_impl__!: (imports: ImportsType<this['imports']>, event: T) => unknown
 }
 
-type DomainEventHandlerCtor<T = unknown> = CtorTypeOf<typeof DomainEventHandler<T>>
+export type DomainEventHandlerCtor<T = unknown> = CtorType<typeof DomainEventHandler<T>>
 
 /**
  * top-down context
  */
-export abstract class DomainContext<T> extends DomainSchema {
+ export type DomainContextExports = {
+  [key: string]:
+  | DomainQueryCtor<any, any>
+  | DomainCommandCtor<any, any>
+  | DomainEventCtor<any>
+  | DomainInput<any>
+}
+
+export abstract class DomainContext extends DomainSchema {
   static __tag__ = 'DomainContextCtor' as const
   __tag__ = 'DomainContext' as const
-  __type__!: T
-  default?: T
+  __for_import__!: ImportsType<this['exports']>
+  __for_export__!: ExportsType<this['exports']>
+  exports: DomainContextExports = {}
 }
 
-export type DomainContextCtor<T = unknown> = CtorTypeOf<typeof DomainContext<T>>
-
-export type DomainContextProviderImports = {
-  [key: string]:
-  | DomainStateCtor
-  | DomainQueryCtor
-  | DomainCommandCtor
-  | DomainEventCtor
-  | DomainArgCtor
-  | DomainArgProviderCtor
-  | AnyDomainCtor
-  | DomainContextCtor
-}
-
-export abstract class DomainContextProvider<T> extends DomainSchema {
-  static __tag__ = 'DomainContextProviderCtor' as const
-  __tag__ = 'DomainContextProvider' as const
-  abstract Context: DomainContextCtor
-  imports: DomainContextProviderImports = {}
-  default?: T
-}
-
-export type DomainContextProviderCtor<T = unknown> = CtorTypeOf<typeof DomainContextProvider<T>>
-
+export type DomainContextCtor = CtorType<typeof DomainContext>
 /**
  * domain internal state
  */
-abstract class DomainState<T extends Serializable = void> extends DomainSchema {
+export abstract class DomainState<T extends Serializable = void> extends DomainSchema {
   static __tag__ = 'DomainStateCtor' as const
   __tag__ = 'DomainState' as const
-  __type__!: T
+  __for_import__!: () => T
   default?: T
   imports?: `'imports' in DomainState is not supported`
   exports?: `'exports' in DomainState is not supported`
   providers?: `'providers' in DomainState is not supported`
   handlers?: `'handlers' in DomainState is not supported`
+  receivers?: `'receivers' in DomainState is not supported`
 }
 
-type DomainStateCtor<T extends Serializable = Serializable> = CtorTypeOf<typeof DomainState<T>>
+export type DomainStateCtor<T extends Serializable = Serializable> = CtorType<typeof DomainState<T>>
 
+export abstract class DomainStateGetter<T extends Serializable = Serializable> extends DomainSchema {
+  static __tag__ = 'DomainStateGetterCtor' as const
+  __tag__ = 'DomainStateGetter' as const
+  __for_import__!: () => T
+  abstract State: DomainStateCtor<T>
+}
+
+export type DomainStateGetterCtor<T extends Serializable = Serializable> = CtorType<typeof DomainStateGetter<T>>
+
+const getStateWeakMap = new WeakMap<DomainStateCtor, DomainStateGetterCtor>()
+
+export const Get = <T extends Serializable>(State: DomainStateCtor<T>): CtorType<typeof DomainStateGetter<T>> => {
+  if (getStateWeakMap.has(State)) {
+    return getStateWeakMap.get(State)! as CtorType<typeof DomainStateGetter<T>>
+  }
+  
+  class StateGetter extends DomainStateGetter<T> {
+    State = State
+  }
+
+  getStateWeakMap.set(State, StateGetter)
+
+  return StateGetter
+}
+
+export abstract class DomainStateSetter<T extends Serializable = Serializable> extends DomainSchema {
+  static __tag__ = 'DomainStateSetterCtor' as const
+  __tag__ = 'DomainStateSetter' as const
+  __for_import__(newState: T): void {
+    throw new Error('not implemented')
+  }
+  abstract State: DomainStateCtor<T>
+}
+
+export type DomainStateSetterCtor<T extends Serializable = Serializable> = CtorType<typeof DomainStateSetter<T>>
+
+const setStateWeakMap = new WeakMap<DomainStateCtor, DomainStateSetterCtor>()
+
+export const Set = <T extends Serializable>(State: DomainStateCtor<T>): DomainStateSetterCtor<T> => {
+  if (setStateWeakMap.has(State)) {
+    return setStateWeakMap.get(State)! as DomainStateSetterCtor<T>
+  }
+
+  class StateSetter extends DomainStateSetter<T> {
+    State = State
+  }
+
+  setStateWeakMap.set(State, StateSetter)
+
+  return StateSetter
+}
 
 export type DomainQueryImports = {
-  [key: string]: DomainStateCtor | DomainQueryCtor | DomainContextCtor | DomainArgCtor | AnyDomainCtor
+  [key: string]: SchemaCtorType<DomainStateGetterCtor<any> | DomainQueryCtor<any, any> | DomainContextCtor>
 }
 
 abstract class DomainQuery<I extends Serializable, O> extends DomainSchema {
   static __tag__ = 'DomainQueryCtor' as const
   __tag__ = 'DomainQuery' as const
-  __type__!: {
-    input: I
-    output: O
-  }
   imports: DomainQueryImports = {}
+  __for_import__!: (input: I) => O
+  __for_export__!: (input: I) => O
+  __for_impl__(imports: ImportsType<this['imports']>, input: I): O {
+    throw new Error('no impl')
+  }
 }
 
-type DomainQueryCtor<I extends Serializable = Serializable, O = unknown> = CtorTypeOf<typeof DomainQuery<I, O>>
+type DomainQueryCtor<I extends Serializable = Serializable, O = unknown> = CtorType<typeof DomainQuery<I, O>>
 
 export type DomainCommandImports = {
-  [key: string]:
-  | DomainStateCtor
-  | DomainQueryCtor
-  | DomainCommandCtor
-  | DomainContextCtor
-  | DomainArgCtor
-  | AnyDomainCtor
-  | DomainEventCtor
-  | DomainArgProviderCtor
+  [key: string]: SchemaCtorType<
+    | DomainStateGetterCtor<any>
+    | DomainStateSetterCtor<any>
+    | DomainQueryCtor<any, any>
+    | DomainCommandCtor<any, any>
+    | DomainEventCtor<any>
+    | DomainInputCtor<any>
+    | DomainContextCtor
+    >
 }
 
 abstract class DomainCommand<I = void, O = void> extends DomainSchema {
   static __tag__ = 'DomainCommandCtor' as const
   __tag__ = 'DomainCommand' as const
-  __type__!: {
-    input: I
-    output: O
-  }
   imports: DomainCommandImports = {}
+  __for_import__(input: I): O {
+    throw new Error('not implemented')
+  }
+  __for_export__(input: I): O {
+    throw new Error('not implemented')
+  }
+  __for_impl__(imports: ImportsType<this['imports']>, input: I): O {
+    throw new Error('not implemented')
+  }
 }
 
-type DomainCommandCtor<I = unknown, O = unknown> = CtorTypeOf<typeof DomainCommand<I, O>>
+type DomainCommandCtor<I = unknown, O = unknown> = CtorType<typeof DomainCommand<I, O>>
 
-
-abstract class CommandCalledEvent<I, O> extends DomainEvent<I> {
-  abstract Command: DomainCommandCtor<I, O>
+abstract class CommandCalledEvent<T extends DomainCommandCtor> extends DomainEvent<T extends DomainCommandCtor<infer I, unknown> ? I : never> {
+  abstract Command: T
 }
 
-type CommandCalledEventCtor<I = unknown, O = unknown> = CtorTypeOf<typeof CommandCalledEvent<I, O>>
+type CommandCalledEventCtor<T extends DomainCommandCtor> = CtorType<typeof CommandCalledEvent<T>>
 
-const calledEventWeakMap = new WeakMap<DomainCommandCtor, CommandCalledEventCtor>()
+const calledEventWeakMap = new WeakMap<DomainCommandCtor<any, any>, CommandCalledEventCtor<any>>()
 
-export const CommandCalled = <I, O>(Command: DomainCommandCtor<I, O>) => {
+export const Called = <T extends DomainCommandCtor>(Command: T): CommandCalledEventCtor<T> => {
   if (calledEventWeakMap.has(Command)) {
-    return calledEventWeakMap.get(Command)! as CommandCalledEventCtor<I, O>
+    return calledEventWeakMap.get(Command)!
   }
 
-  return class CalledEvent extends CommandCalledEvent<I, O> {
+  return class CalledEvent extends CommandCalledEvent<T> {
     Command = Command
   }
 }
 
-
-type DomainExports = AnyDomainCtor | {
-  [key: string]: DomainQueryCtor | DomainCommandCtor | DomainEventCtor
+export type DomainEffectImports = {
+  [key: string]: SchemaCtorType<
+    | DomainQueryCtor<any, any> 
+    | DomainCommandCtor<any, any> 
+    | DomainContextCtor 
+    | DomainEventCtor<any> 
+    | DomainInputCtor<any>
+  >
 }
+
+export abstract class DomainEffect extends DomainSchema {
+  static __tag__ = 'DomainEffectCtor' as const
+  __tag__ = 'DomainEffect' as const
+  imports: DomainEffectImports = {}
+  __for_impl__!: (imports: ImportsType<this['imports']>) => () => void
+}
+
+export type DomainEffectCtor = CtorType<typeof DomainEffect>
+
+export type DomainExport = DomainQueryCtor<any, any> | DomainCommandCtor<any, any> | DomainEventCtor<any> | DomainInputCtor<any>
+
+export type DomainExports = {
+  [key: string]: SchemaCtorType<DomainExport>
+}
+
 
 abstract class Domain extends DomainSchema {
   static __tag__ = 'DomainCtor' as const
   __tag__ = 'Domain' as const
-  providers: DomainContextProviderCtor[] = []
+  __for_export__!: Prettier<ExportsType<this['exports']>>
+  abstract exports: DomainExports
+  effects: DomainEffectCtor[] = []
+  providers: DomainContextCtor[] = []
   handlers: DomainEventHandlerCtor[] = []
-  arg?: DomainArgCtor
-  abstract exports: OneOrMany<DomainExports>
+  receivers: DomainInputReceiverCtor[] = []
 }
 
-type DomainCtor = CtorTypeOf<typeof Domain>
+export type DomainCtor = CtorType<typeof Domain>
 
-export abstract class OptionalDomain extends DomainSchema {
-  static __tag__ = 'OptionalDomainCtor' as const
-  __tag__ = 'OptionalDomain' as const
-  abstract Domain: AnyDomainCtor
-}
+type AnyDomainCtor = SchemaCtorType<DomainCtor | UnionDomainCtor | StructDomainCtor>
 
-type OptionalDomainCtor = CtorTypeOf<typeof OptionalDomain>
-
-export abstract class ListDomain extends DomainSchema {
-  static __tag__ = 'ListDomainCtor' as const
-  __tag__ = 'ListDomain' as const
-  abstract Domain: AnyDomainCtor
-}
-
-type ListDomainCtor = CtorTypeOf<typeof ListDomain>
-
-type AnyDomainCtor = DomainCtor | UnionDomainCtor | StructDomainCtor | OptionalDomainCtor | ListDomainCtor
-
-type DomainTransitionTrigger = DomainInputCtor | DomainEventCtor
+type DomainTransitionTrigger = DomainInputCtor<any> | DomainEventCtor<any>
 
 export type DomainTransitionImports = {
-  [key: string]: DomainStateCtor | DomainQueryCtor | DomainCommandCtor | DomainEventCtor | DomainArgCtor | DomainArgProviderCtor | AnyDomainCtor | DomainContextCtor
+  [key: string]: SchemaCtorType<DomainStateCtor<any> | DomainQueryCtor<any> | DomainContextCtor>
 }
 
-abstract class DomainTransition extends DomainSchema {
-  static __tag__ = 'DomainTransitionCtor' as const
-  __tag__ = 'DomainTransition' as const
-  scope?: OneOrMany<AnyDomainCtor>
-  abstract trigger: DomainTransitionTrigger | DomainTransitionTrigger[]
-  abstract target: AnyDomainCtor
+export abstract class DomainTransitionGuard extends DomainSchema {
+  static __tag__ = 'DomainTransitionGuardCtor' as const
+  __tag__ = 'DomainTransitionGuard' as const
   imports: DomainTransitionImports = {}
+  __for_impl__(imports: ImportsType<this['imports']>): boolean | Promise<boolean> {
+    throw new Error('not implemented')
+  }
 }
 
-type DomainTransitionCtor = CtorTypeOf<typeof DomainTransition>
+export type DomainTransitionGuardCtor = CtorType<typeof DomainTransitionGuard>
 
-type DomainTransitionConfig = {
+export type DomainTransitionConfig = {
   scope?: OneOrMany<AnyDomainCtor>
-  trigger: DomainTransitionTrigger | DomainTransitionTrigger[]
+  guard?: DomainTransitionGuardCtor
+  trigger: OneOrMany<DomainTransitionTrigger>
   target: AnyDomainCtor
 }
 
 abstract class UnionDomain extends DomainSchema {
   static __tag__ = 'UnionDomainCtor' as const
   __tag__ = 'UnionDomain' as const
-  default?: `'default' is not allowed in UnionDomain, use 'initial' instead`
+  __for_export__!: ExportType<this['initial'] | this['transitions'][number]['target']>
   abstract initial: AnyDomainCtor
-  abstract transitions: (DomainTransitionCtor | DomainTransitionConfig)[]
+  abstract transitions: DomainTransitionConfig[]
+  effects: DomainEffectCtor[] = []
+  providers: DomainContextCtor[] = []
+  handlers: DomainEventHandlerCtor[] = []
+  receivers: DomainInputReceiverCtor[] = []
+  default?: `'default' is not allowed in UnionDomain, use 'initial' instead`
   imports?: `'imports' in UnionDomain is not supported`
   exports?: `'exports' in UnionDomain is not supported`
-  providers?: `'providers' in UnionDomain is not supported`
-  handlers?: `'handlers' in UnionDomain is not supported`
 }
 
-type UnionDomainCtor = CtorTypeOf<typeof UnionDomain>
+type UnionDomainCtor = CtorType<typeof UnionDomain>
 
 type StructDomainExports = {
   [key: string]: AnyDomainCtor
@@ -296,32 +369,48 @@ type StructDomainExports = {
 abstract class StructDomain extends DomainSchema {
   static __tag__ = 'StructDomainCtor' as const
   __tag__ = 'StructDomain' as const
+  __for_export__!: Prettier<ExportsType<this['exports']>>
   exports: StructDomainExports = {}
+  effects: DomainEffectCtor[] = []
+  providers: DomainContextCtor[] = []
+  handlers: DomainEventHandlerCtor[] = []
+  receivers: DomainInputReceiverCtor[] = []
   imports?: `'imports' in UnionDomain is not supported`
-  providers?: `'providers' in UnionDomain is not supported`
-  handlers?: `'handlers' in UnionDomain is not supported`
 }
 
-type StructDomainCtor = CtorTypeOf<typeof StructDomain>
+type StructDomainCtor = CtorType<typeof StructDomain>
 
+type EyeStateType = 'blue' | 'red' | 'blown' | 'violet' | {
+  type: 'pick',
+  color: string
+}
 
-class EyeState extends DomainState {}
+class EyeState extends DomainState<EyeStateType> {
+  default = 'blue' as const
+}
 
-class SwitchCustomColor extends DomainCommand {
+class SwitchCustomColor extends DomainCommand<string> {
   imports = {
-    EyeState
+    getEyeState: Get(EyeState),
+    setEyeState: Set(EyeState)
   }
 }
 
+impl(SwitchCustomColor, ({ getEyeState, setEyeState }, arg) => {
+  const eye = getEyeState()
+})
+
 class ChangeColorPicker extends DomainCommand {
   imports = {
-    EyeState
+    getEyeState: Get(EyeState),
+    setEyeState: Set(EyeState)
   }
 }
 
 class NextColor extends DomainCommand {
   imports = {
-    EyeState
+    getEyeState: Get(EyeState),
+    setEyeState: Set(EyeState)
   }
 }
 
@@ -363,35 +452,41 @@ class EyeColor extends UnionDomain {
     {
       scope: EyeBlue,
       target: EyeGreen,
-      trigger: CommandCalled(NextColor),
+      trigger: Called(NextColor),
     },
     {
       scope: EyeGreen,
       target: EyeBrown,
-      trigger: CommandCalled(NextColor),
+      trigger: Called(NextColor),
     },
     {
       scope: EyeBrown,
       target: EyeViolet,
-      trigger: CommandCalled(NextColor),
+      trigger: Called(NextColor),
     },
     {
       scope: EyeViolet,
       target: EyeBlue,
-      trigger: CommandCalled(NextColor),
+      trigger: Called(NextColor),
     },
     {
       scope: EyeColor,
       target: EyePick,
-      trigger: CommandCalled(SwitchCustomColor),
+      trigger: Called(SwitchCustomColor),
     },
     {
       scope: EyePick,
       target: EyeBlue,
-      trigger: CommandCalled(SwitchCustomColor),
+      trigger: Called(SwitchCustomColor),
     }
   ];
 }
+
+type T3 = ExportType<EyeColor['initial'] | EyeColor['transitions'][number]['target']>
+
+type T0 = ExportType<EyeColor>
+
+type T2 = 123 extends AnyCtor ? true : false
 
 
 class NextHair extends DomainCommand { }
@@ -429,19 +524,19 @@ class HairStyle extends UnionDomain {
     {
       scope: HairStyle1,
       target: HairStyle2,
-      trigger: CommandCalled(NextHair),
+      trigger: Called(NextHair),
     },
 
     {
       scope: HairStyle2,
       target: HairStyle3,
-      trigger: CommandCalled(NextHair),
+      trigger: Called(NextHair),
     },
 
     {
       scope: HairStyle3,
       target: HairStyle1,
-      trigger: CommandCalled(NextHair),
+      trigger: Called(NextHair),
     },
   ]
 }
@@ -475,6 +570,8 @@ class CharacterEditor extends StructDomain {
 }
 
 
+type T5 = ExportType<CharacterEditor>
+
 type GameStateType = {
   time: number
   total_time: number
@@ -493,7 +590,7 @@ class GameState extends DomainState<GameStateType> {
 class Coin extends DomainCommand<number> {
   description = 'Coin command for Reflex Game'
   imports = {
-    GameState
+    getGameState: Get(GameState)
   }
 }
 
@@ -602,80 +699,82 @@ class ReflexGame extends UnionDomain {
 
   transitions = [
     {
-      trigger: CommandCalled(Noop),
+      trigger: Called(Noop),
       target: ReflexQuiet
     },
     {
-      trigger: CommandCalled(Coin),
+      trigger: Called(Coin),
       target: ReflexStart
     },
     {
-      trigger: CommandCalled(Ready),
+      trigger: Called(Ready),
       target: ReflexWait
     },
     {
-      trigger: CommandCalled(Renew),
+      trigger: Called(Renew),
       target: ReflexStart
     },
     {
-      trigger: CommandCalled(Timeout),
+      trigger: Called(Timeout),
       target: ReflexQuiet
     },
     {
-      trigger: CommandCalled(Abort),
+      trigger: Called(Abort),
       target: ReflexQuiet
     },
     {
-      trigger: CommandCalled(Go),
+      trigger: Called(Go),
       target: ReflexQuiet
     },
     {
-      trigger: CommandCalled(Finish),
+      trigger: Called(Finish),
       target: ReflexQuiet
     },
     {
-      trigger: CommandCalled(Tock),
+      trigger: Called(Tock),
       target: ReflexStart
     },
     {
       scope: ReflexStart,
-      trigger: CommandCalled(Warn),
+      trigger: Called(Warn),
       target: ReflexStart,
     },
     {
       scope: ReflexWait,
-      trigger: CommandCalled(Warn),
+      trigger: Called(Warn),
       target: ReflexWait,
     },
     {
       scope: ReflexReact,
-      trigger: CommandCalled(Warn),
+      trigger: Called(Warn),
       target: ReflexReact,
     },
     {
       scope: ReflexEnd,
-      trigger: CommandCalled(Warn),
+      trigger: Called(Warn),
       target: ReflexEnd,
     },
     {
       scope: ReflexEnd,
-      trigger: CommandCalled(Tick),
+      trigger: Called(Tick),
       target: ReflexEnd,
     },
     {
       scope: ReflexEnd,
-      trigger: CommandCalled(Tick),
+      trigger: Called(Tick),
       target: ReflexEnd,
     },
     {
       scope: ReflexEnd,
-      trigger: CommandCalled(Tick),
+      trigger: Called(Tick),
       target: ReflexEnd,
     },
     {
       scope: ReflexEnd,
-      trigger: CommandCalled(Tick),
+      trigger: Called(Tick),
       target: ReflexEnd,
     }
   ]
 }
+
+type T4 = ExportType<ReflexGame>
