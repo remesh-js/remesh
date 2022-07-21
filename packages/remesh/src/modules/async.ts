@@ -157,7 +157,7 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
     inspectable: false
   })
 
-  const LoadCommand = domain.command$({
+  const LoadCommand = domain.effect({
     name: `${options.name}.LoadCommand`,
     impl: (ctx, arg$: Observable<T>) => {
       const handleArg = (arg: T) => {

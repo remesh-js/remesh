@@ -276,7 +276,7 @@ describe('command$', () => {
     const TestDomain = RemeshDomain({
       name: 'TestDomain',
       impl(domain) {
-        const ACommand = domain.command$({
+        const ACommand = domain.effect({
           name: 'ACommand',
           impl: (_, arg$: Observable<number>) => {
             fn0()

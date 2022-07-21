@@ -3,42 +3,34 @@ import shallowEqual from 'shallowequal'
 import { isPlainObject } from 'is-plain-object'
 import { DomainConceptName } from './type'
 
-export type Serializable =
-  | void
-  | undefined
-  | number
-  | string
-  | boolean
-  | null
-  | Serializable[]
-  | { [key: string]: Serializable }
-  | readonly Serializable[]
-  | { readonly [key: string]: Serializable }
+export type SerializablePrimitives = void | undefined | number | string | boolean | null
+
+export type SerializableArray = Serializable[]
+
+export type SerializableObject = { [key: string]: Serializable }
+
+export type Serializable = SerializablePrimitives | SerializableArray | SerializableObject | Serializable[]
 
 export type Args<T = unknown> = [] | [arg: T] | [arg?: T]
 
-export type GetterInput<T extends Args<Serializable>, U> = RemeshStateItem<T, U> | RemeshQueryAction<T, U>
-
-export type SetterInput<T extends Args<Serializable>, U> = RemeshStateItem<T, U>
-
-export const RemeshValuePlaceholder = Symbol('RemeshValuePlaceholder')
-
-export type RemeshValuePlaceholder = typeof RemeshValuePlaceholder
+export type SetterInput<state> = RemeshStateItem<state>
 
 export type RemeshInjectedContext = {
-  get: <T extends Args<Serializable>, U>(input: GetterInput<T, U>) => U
-  peek: <T extends Args<Serializable>, U>(input: GetterInput<T, U>) => U | RemeshValuePlaceholder
-  set: <T extends Args<Serializable>, U>(input: SetterInput<T, U>, value: U) => void
-  send<T extends Args, U>(input: RemeshCommandAction<T, U>): U
-  send<T>(input: RemeshCommand$Action<T>): void
-  emit: <T extends Args, U>(input: RemeshEventAction<T, U>) => void
+  get<T extends Args<Serializable>, U>(input: RemeshQueryAction<T, U>): U
+  get<state>(input: RemeshStateItem<state>): state
+  get<entity extends SerializableObject>(input: RemeshEntityItem<entity>): entity
+  get<T extends Args<Serializable>, U, state, entity extends SerializableObject>(
+    input: RemeshStateItem<state> | RemeshEntityItem<entity> | RemeshQueryAction<T, U>,
+  ): unknown
   fromEvent: <T extends Args, U>(Event: RemeshEvent<T, U> | RemeshSubscribeOnlyEvent<T, U>) => Observable<U>
   fromQuery: <T extends Args<Serializable>, U>(Query: RemeshQueryAction<T, U>) => Observable<U>
+  fromState: <state>(State: RemeshStateItem<state>) => Observable<state>
+  fromEntity: <entity extends SerializableObject>(Entity: RemeshEntityItem<entity>) => Observable<entity>
+  fromCommand: <T extends Args>(Command: RemeshCommand<T>) => Observable<T[0]>
 }
 
 export type RemeshEventContext = {
   get: RemeshInjectedContext['get']
-  peek: RemeshInjectedContext['peek']
 }
 
 export type RemeshEvent<T extends Args, U> = {
@@ -47,7 +39,7 @@ export type RemeshEvent<T extends Args, U> = {
   eventName: DomainConceptName<'Event'>
   impl?: (context: RemeshEventContext, arg: T[0]) => U
   (...args: T): RemeshEventAction<T, U>
-  owner: RemeshDomainAction<any, any>
+  owner: RemeshDomainAction<any>
   inspectable: boolean
   toSubscribeOnlyEvent: () => RemeshSubscribeOnlyEvent<T, U>
 }
@@ -150,64 +142,36 @@ export const internalToOriginalEvent = <T extends Args, U>(
 
 export type CompareFn<T> = (prev: T, curr: T) => boolean
 
-export type RemeshState<T extends Args<Serializable>, U> = {
+export type RemeshState<T> = {
   type: 'RemeshState'
   stateId: number
   stateName: DomainConceptName<'State'>
-  defer: boolean
-  impl: (arg: T[0]) => U
-  (...args: T): RemeshStateItem<T, U>
-  owner: RemeshDomainAction<any, any>
-  compare: CompareFn<U>
+  (key?: string): RemeshStateItem<T>
+  default: T | (() => T)
+  owner: RemeshDomainAction<any>
+  compare: CompareFn<T>
   inspectable: boolean
 }
 
-export type RemeshStateItem<T extends Args<Serializable>, U> = {
+export type RemeshStateItem<T> = {
   type: 'RemeshStateItem'
-  arg: T[0]
-  State: RemeshState<T, U>
+  key?: string
+  State: RemeshState<T>
+  new: (state: T) => RemeshStateItemUpdatePayload<T>
 }
 
-export type RemeshDefaultStateOptions<T> = {
-  name: RemeshState<[], T>['stateName']
+export type RemeshStateItemUpdatePayload<T> = {
+  type: 'RemeshStateItemUpdatePayload'
+  key?: string
+  value: T
+  stateItem: RemeshStateItem<T>
+}
+
+export type RemeshStateOptions<T> = {
+  name: DomainConceptName<'State'>
   default: T
   inspectable?: boolean
-  compare?: RemeshState<[], T>['compare']
-}
-
-export const RemeshDefaultState = <T>(options: RemeshDefaultStateOptions<T>): RemeshState<[], T> => {
-  return RemeshState({
-    name: options.name,
-    impl: () => options.default,
-    inspectable: options.inspectable,
-    compare: options.compare,
-  })
-}
-
-export type RemeshDeferStateOptions<T extends Serializable, U> = {
-  name: RemeshState<[T], U>['stateName']
-  inspectable?: boolean
-  compare?: RemeshState<[T], U>['compare']
-}
-
-export const RemeshDeferState = <T extends Serializable = void, U = T>(options: RemeshDeferStateOptions<T, U>) => {
-  return RemeshState({
-    name: options.name,
-    defer: true,
-    impl: (..._args: [T]): U => {
-      throw new Error(`RemeshDeferState: use ${options.name} before setting state`)
-    },
-    inspectable: options.inspectable,
-    compare: options.compare,
-  })
-}
-
-export type RemeshStateOptions<T extends Args<Serializable>, U> = {
-  name: DomainConceptName<'State'>
-  defer?: boolean
-  impl: (...args: T) => U
-  inspectable?: boolean
-  compare?: CompareFn<U>
+  compare?: CompareFn<T>
 }
 
 let stateUid = 0
@@ -224,46 +188,141 @@ export const defaultCompare = <T>(prev: T, curr: T) => {
   return prev === curr
 }
 
-export const RemeshState = <T extends Args<Serializable>, U>(options: RemeshStateOptions<T, U>): RemeshState<T, U> => {
+export const RemeshState = <T>(options: RemeshStateOptions<T>): RemeshState<T> => {
   const stateId = stateUid++
 
-  type StateItem = RemeshStateItem<T, U>
+  type StateItem = RemeshStateItem<T>
 
   let cacheForNullary = null as StateItem | null
 
-  const State = ((arg: T[0]) => {
-    if (arg === undefined && cacheForNullary) {
+  const State = ((key) => {
+    if (key === undefined && cacheForNullary) {
       return cacheForNullary
     }
 
     const stateItem: StateItem = {
       type: 'RemeshStateItem',
-      arg,
+      key,
       State,
+      new: (newState) => {
+        return {
+          type: 'RemeshStateItemUpdatePayload',
+          key,
+          value: newState,
+          stateItem: stateItem,
+        }
+      },
     }
 
-    if (arg === undefined) {
+    if (key === undefined) {
       cacheForNullary = stateItem
     }
 
     return stateItem
-  }) as unknown as RemeshState<T, U>
+  }) as RemeshState<T>
 
   State.type = 'RemeshState'
   State.stateId = stateId
   State.stateName = options.name
-  State.impl = options.impl as (arg: T[0]) => U
+  State.default = options.default
   State.compare = options.compare ?? defaultCompare
   State.owner = DefaultDomain()
   State.inspectable = options.inspectable ?? true
-  State.defer = options.defer ?? false
 
   return State
 }
 
+export type RemeshEntity<T extends SerializableObject> = {
+  type: 'RemeshEntity'
+  entityId: number
+  entityName: DomainConceptName<'Entity'>
+  key: keyof T | ((entity: T) => string)
+  (key: string): RemeshEntityItem<T>
+  owner: RemeshDomainAction<any>
+  inspectable: boolean
+  compare: CompareFn<T>
+}
+
+export type RemeshEntityItem<T extends SerializableObject> = {
+  type: 'RemeshEntityItem'
+  key: string
+  Entity: RemeshEntity<T>
+  new: (entity: T) => RemeshEntityItemUpdatePayload<T>
+  delete: () => RemeshEntityItemDeletePayload<T>
+}
+
+export type RemeshEntityItemUpdatePayload<T extends SerializableObject> = {
+  type: 'RemeshEntityItemUpdatePayload'
+  value: T
+  entityItem: RemeshEntityItem<T>
+}
+
+export type RemeshEntityItemDeletePayload<T extends SerializableObject> = {
+  type: 'RemeshEntityItemDeletePayload'
+  entityItem: RemeshEntityItem<T>
+}
+
+export type RemeshEntityOptions<T extends SerializableObject> = {
+  name: DomainConceptName<'Entity'>
+  key: keyof T | ((entity: T) => string)
+  inspectable?: boolean
+  compare?: CompareFn<T>
+}
+
+let entityUid = 0
+
+export const RemeshEntity = <T extends SerializableObject>(options: RemeshEntityOptions<T>): RemeshEntity<T> => {
+  const entityId = entityUid++
+
+  type EntityItem = RemeshEntityItem<T>
+
+  let cacheForNullary = null as EntityItem | null
+
+  const Entity = ((key) => {
+    if (key === undefined && cacheForNullary) {
+      return cacheForNullary
+    }
+
+    const entityItem: EntityItem = {
+      type: 'RemeshEntityItem',
+      key,
+      Entity,
+      new: (newEntity) => {
+        return {
+          type: 'RemeshEntityItemUpdatePayload',
+          key,
+          value: newEntity,
+          entityItem,
+        }
+      },
+      delete: () => {
+        return {
+          type: 'RemeshEntityItemDeletePayload',
+          entityItem,
+        }
+      },
+    }
+
+    if (key === undefined) {
+      cacheForNullary = entityItem
+    }
+
+    return entityItem
+  }) as RemeshEntity<T>
+
+  Entity.type = 'RemeshEntity'
+  Entity.entityId = entityId
+  Entity.entityName = options.name
+  Entity.key = options.key
+  Entity.owner = DefaultDomain()
+  Entity.inspectable = options.inspectable ?? true
+  Entity.compare = options.compare ?? defaultCompare
+
+  return Entity
+}
+
 export type RemeshQueryContext = {
   get: RemeshInjectedContext['get']
-  peek: RemeshInjectedContext['peek']
 }
 
 export type RemeshQuery<T extends Args<Serializable>, U> = {
@@ -272,7 +331,7 @@ export type RemeshQuery<T extends Args<Serializable>, U> = {
   queryName: DomainConceptName<'Query'>
   impl: (context: RemeshQueryContext, arg: T[0]) => U
   (...args: T): RemeshQueryAction<T, U>
-  owner: RemeshDomainAction<any, any>
+  owner: RemeshDomainAction<any>
   compare: CompareFn<U>
   inspectable: boolean
 }
@@ -330,41 +389,44 @@ export const RemeshQuery = <T extends Args<Serializable>, U>(options: RemeshQuer
 
 export type RemeshCommandContext = {
   get: RemeshInjectedContext['get']
-  peek: RemeshInjectedContext['peek']
-  set: RemeshInjectedContext['set']
-  send: RemeshInjectedContext['send']
-  emit: RemeshInjectedContext['emit']
-  fromEvent: RemeshInjectedContext['fromEvent']
-  fromQuery: RemeshInjectedContext['fromQuery']
 }
 
-export type RemeshCommandAction<T extends Args, U> = {
+export type RemeshCommandAction<T extends Args> = {
   type: 'RemeshCommandAction'
   arg: T[0]
-  Command: RemeshCommand<T, U>
+  Command: RemeshCommand<T>
 }
 
-export type RemeshCommand<T extends Args, U> = {
+export type RemeshCommandOutput =
+  | RemeshCommandAction<any>
+  | RemeshEventAction<any, any>
+  | RemeshStateItemUpdatePayload<any>
+  | RemeshEntityItemUpdatePayload<any>
+  | RemeshEntityItemDeletePayload<any>
+  | RemeshCommandOutput[]
+  | void
+  | undefined
+  | null
+
+export type RemeshCommand<T extends Args> = {
   type: 'RemeshCommand'
   commandId: number
   commandName: DomainConceptName<'Command'>
-  impl: (context: RemeshCommandContext, ...args: T) => U
-  (...args: T): RemeshCommandAction<T, U>
-  owner: RemeshDomainAction<any, any>
+  impl: (context: RemeshCommandContext, ...args: T) => RemeshCommandOutput
+  (...args: T): RemeshCommandAction<T>
+  owner: RemeshDomainAction<any>
   inspectable: boolean
 }
 
-export type RemeshCommandOptions<T extends Args, U> = {
+export type RemeshCommandOptions<T extends Args> = {
   name: DomainConceptName<'Command'>
   inspectable?: boolean
-  impl: (context: RemeshCommandContext, ...args: T) => U
+  impl: (context: RemeshCommandContext, ...args: T) => RemeshCommandOutput
 }
 
 let commandUid = 0
 
-export const RemeshCommand = <T extends Args = [], U = void>(
-  options: RemeshCommandOptions<T, U>,
-): RemeshCommand<T, U> => {
+export const RemeshCommand = <T extends Args = []>(options: RemeshCommandOptions<T>): RemeshCommand<T> => {
   const commandId = commandUid++
 
   const Command = ((arg: T[0]) => {
@@ -373,7 +435,7 @@ export const RemeshCommand = <T extends Args = [], U = void>(
       arg,
       Command,
     }
-  }) as unknown as RemeshCommand<T, U>
+  }) as unknown as RemeshCommand<T>
 
   Command.type = 'RemeshCommand'
   Command.commandId = commandId
@@ -385,60 +447,6 @@ export const RemeshCommand = <T extends Args = [], U = void>(
   return Command
 }
 
-export type RemeshCommand$Context = {
-  get: RemeshInjectedContext['get']
-  peek: RemeshInjectedContext['peek']
-  set: RemeshInjectedContext['set']
-  send: RemeshInjectedContext['send']
-  emit: RemeshInjectedContext['emit']
-  fromEvent: RemeshInjectedContext['fromEvent']
-  fromQuery: RemeshInjectedContext['fromQuery']
-}
-
-export type RemeshCommand$Action<T> = {
-  type: 'RemeshCommand$Action'
-  arg: T
-  Command$: RemeshCommand$<T>
-}
-
-export type RemeshCommand$<T> = {
-  type: 'RemeshCommand$'
-  command$Id: number
-  command$Name: DomainConceptName<'Command'>
-  impl: (context: RemeshCommand$Context, arg$: Observable<T>) => Observable<unknown>
-  (arg: T): RemeshCommand$Action<T>
-  owner: RemeshDomainAction<any, any>
-  inspectable: boolean
-}
-
-export type RemeshCommand$Options<T> = {
-  name: DomainConceptName<'Command'>
-  inspectable?: boolean
-  impl: RemeshCommand$<T>['impl']
-}
-let command$Uid = 0
-
-export const RemeshCommand$ = <T = void>(options: RemeshCommand$Options<T>): RemeshCommand$<T> => {
-  const command$Id = command$Uid++
-
-  const Command$ = ((arg) => {
-    return {
-      type: 'RemeshCommand$Action',
-      arg,
-      Command$,
-    }
-  }) as RemeshCommand$<T>
-
-  Command$.type = 'RemeshCommand$'
-  Command$.command$Id = command$Id
-  Command$.command$Name = options.name
-  Command$.impl = options.impl
-  Command$.owner = DefaultDomain()
-  Command$.inspectable = options.inspectable ?? true
-
-  return Command$
-}
-
 export type RemeshExternImpl<T> = {
   type: 'RemeshExternImpl'
   Extern: RemeshExtern<T>
@@ -447,14 +455,12 @@ export type RemeshExternImpl<T> = {
 
 export type RemeshExtern<T> = {
   type: 'RemeshExtern'
-  externName: DomainConceptName<'Extern'>
   externId: number
   default: T
   impl(value: T): RemeshExternImpl<T>
 }
 
 export type RemeshExternOptions<T> = {
-  name: RemeshExtern<T>['externName']
   default: RemeshExtern<T>['default']
 }
 
@@ -462,7 +468,6 @@ let externUid = 0
 export const RemeshExtern = <T = void>(options: RemeshExternOptions<T>): RemeshExtern<T> => {
   const Extern: RemeshExtern<T> = {
     type: 'RemeshExtern',
-    externName: options.name,
     externId: externUid++,
     default: options.default,
     impl: (value) => {
@@ -477,41 +482,48 @@ export const RemeshExtern = <T = void>(options: RemeshExternOptions<T>): RemeshE
   return Extern
 }
 
-export type RemeshDomainIgniteContext = {
-  get: RemeshInjectedContext['get']
-  peek: RemeshInjectedContext['peek']
-  send: RemeshInjectedContext['send']
-  emit: RemeshInjectedContext['emit']
-  fromEvent: RemeshInjectedContext['fromEvent']
-  fromQuery: RemeshInjectedContext['fromQuery']
-}
-
-export type RemeshDomainIgniteFn = (context: RemeshDomainIgniteContext) => void | Promise<unknown> | Observable<unknown>
-
 export type RemeshDomainPreloadCommandContext = {
   get: RemeshInjectedContext['get']
-  peek: RemeshInjectedContext['peek']
-  set: RemeshInjectedContext['set']
 }
 
 export type RemeshDomainPreloadOptions<T extends Serializable> = {
   key: string
   query: (context: RemeshQueryContext) => Promise<T>
-  command: (context: RemeshDomainPreloadCommandContext, data: T) => void
+  command: (context: RemeshDomainPreloadCommandContext, data: T) => RemeshCommandOutput
 }
 
+export type RemeshEffectContext = {
+  get: RemeshInjectedContext['get']
+  fromEvent: RemeshInjectedContext['fromEvent']
+  fromQuery: RemeshInjectedContext['fromQuery']
+  fromState: RemeshInjectedContext['fromState']
+  fromEntity: RemeshInjectedContext['fromEntity']
+  fromCommand: RemeshInjectedContext['fromCommand']
+}
+
+export type RemeshEffectOutput =
+  | RemeshEventAction<any, any>
+  | RemeshCommandAction<any>
+  | null
+  | void
+  | undefined
+  | RemeshEffectOutput[]
+
+export type RemeshEffect = (context: RemeshEffectContext) => Observable<RemeshEffectOutput>
+
 export type RemeshDomainContext = {
+  key?: string
   // definitions
-  state: typeof RemeshState & typeof RemeshDefaultState & typeof RemeshDeferState
+  state: typeof RemeshState
+  entity: typeof RemeshEntity
   event: typeof RemeshEvent
   query: typeof RemeshQuery
   command: typeof RemeshCommand
-  command$: typeof RemeshCommand$
-  ignite: (fn: RemeshDomainIgniteFn) => void
+  effect: (effect: RemeshEffect) => void
   preload: <T extends Serializable>(options: RemeshDomainPreloadOptions<T>) => void
   // methods
-  getDomain: <T extends RemeshDomainDefinition, U extends Args<Serializable>>(
-    domainAction: RemeshDomainAction<T, U>,
+  getDomain: <T extends RemeshDomainDefinition>(
+    domainAction: RemeshDomainAction<T>,
   ) => {
     [key in keyof VerifiedRemeshDomainDefinition<T>]: VerifiedRemeshDomainDefinition<T>[key]
   }
@@ -526,54 +538,27 @@ export type RemeshQueries = {
   [key: string]: RemeshQuery<any, any>
 }
 
-export type RemeshCommands = {
-  [key: string]: RemeshCommand<any, any> | RemeshCommand$<any>
-}
-
 export type RemeshDomainOutput = {
   event: RemeshEvents
   query: RemeshQueries
-  command: RemeshCommands
-  commandQuery: RemeshQuery<[], any>
 }
 
 export type RemeshDomainDefinition = Partial<RemeshDomainOutput>
-
-type ShowKey<T> = T extends string ? T : 'key'
 
 export type VerifiedRemeshDomainDefinition<T extends RemeshDomainDefinition> = Pick<
   {
     event: {
       [key in keyof T['event']]: key extends DomainConceptName<'Event'>
         ? T['event'][key]
-        : `${ShowKey<key>} is not a valid event name`
+        : `${key & string} is not a valid event name`
     }
     query: {
       [key in keyof T['query']]: key extends DomainConceptName<'Query'>
         ? T['query'][key]
-        : `${ShowKey<key>} is not a valid query name`
+        : `${key & string} is not a valid query name`
     }
-    command: {
-      [key in keyof T['command']]: key extends DomainConceptName<'Command'>
-        ? T['command'][key]
-        : `${ShowKey<key>} is not a valid command name`
-    }
-    commandQuery: T['commandQuery'] extends RemeshQuery<[], infer Commands>
-      ? RemeshQuery<
-          [],
-          {
-            [key in keyof Commands as Commands[key] extends undefined ? never : key]: key extends 'status'
-              ? Commands[key]
-              : Commands[key] extends RemeshCommand<any, any>
-              ? key extends DomainConceptName<'Command'>
-                ? Commands[key]
-                : `${ShowKey<key>} is not a valid command name`
-              : `${ShowKey<key>} is not a command`
-          }
-        >
-      : never
   },
-  ('event' | 'query' | 'command' | 'commandQuery') & keyof T
+  ('event' | 'query') & keyof T
 >
 
 export const toValidRemeshDomainDefinition = <T extends RemeshDomainDefinition>(
@@ -589,14 +574,6 @@ export const toValidRemeshDomainDefinition = <T extends RemeshDomainDefinition>(
     result.query = domainDefinition.query as unknown as typeof result.query
   }
 
-  if (domainDefinition.command) {
-    result.command = domainDefinition.command as unknown as typeof result.command
-  }
-
-  if (domainDefinition.commandQuery) {
-    result.commandQuery = domainDefinition.commandQuery as unknown as typeof result.commandQuery
-  }
-
   return result
 }
 
@@ -608,65 +585,63 @@ export const RemeshModule = <T extends RemeshDomainDefinition>(
   return toValidRemeshDomainDefinition(module)
 }
 
-export type RemeshDomain<T extends RemeshDomainDefinition, U extends Args<Serializable>> = {
+export type RemeshDomain<T extends RemeshDomainDefinition> = {
   type: 'RemeshDomain'
   domainName: DomainConceptName<'Domain'>
   domainId: number
-  impl: (context: RemeshDomainContext, arg: U[0]) => T
-  (...args: U): RemeshDomainAction<T, U>
+  impl: (context: RemeshDomainContext) => T
+  (key?: string): RemeshDomainAction<T>
   inspectable: boolean
 }
 
-export type RemeshDomainAction<T extends RemeshDomainDefinition, U extends Args<Serializable>> = {
+export type RemeshDomainAction<T extends RemeshDomainDefinition> = {
   type: 'RemeshDomainAction'
-  Domain: RemeshDomain<T, U>
-  arg: U[0]
+  key?: string
+  Domain: RemeshDomain<T>
 }
 
-export type RemeshDomainOptions<T extends RemeshDomainDefinition, U extends Args<Serializable>> = {
+export type RemeshDomainOptions<T extends RemeshDomainDefinition> = {
   name: DomainConceptName<'Domain'>
   inspectable?: boolean
-  impl: (context: RemeshDomainContext, ...args: U) => T
+  impl: (context: RemeshDomainContext) => T
 }
 
 let domainUid = 0
 
-export const RemeshDomain = <T extends RemeshDomainDefinition, U extends Args<Serializable>>(
-  options: RemeshDomainOptions<T, U>,
-): RemeshDomain<T, U> => {
+export const RemeshDomain = <T extends RemeshDomainDefinition>(options: RemeshDomainOptions<T>): RemeshDomain<T> => {
   /**
    * optimize for nullary domain
    */
-  let cacheForNullary: RemeshDomainAction<T, U> | null = null
+  let cacheForNullary: RemeshDomainAction<T> | null = null
 
-  const Domain: RemeshDomain<T, U> = ((arg: U[0]) => {
-    if (arg === undefined && cacheForNullary) {
+  const Domain: RemeshDomain<T> = ((key) => {
+    if (key === undefined && cacheForNullary) {
       return cacheForNullary
     }
 
-    const result: RemeshDomainAction<T, U> = {
+    const result: RemeshDomainAction<T> = {
       type: 'RemeshDomainAction',
       Domain,
-      arg,
+      key,
     }
 
-    if (arg === undefined) {
+    if (key === undefined) {
       cacheForNullary = result
     }
 
     return result
-  }) as unknown as RemeshDomain<T, U>
+  }) as RemeshDomain<T>
 
   Domain.type = 'RemeshDomain'
   Domain.domainId = domainUid++
   Domain.domainName = options.name
-  Domain.impl = options.impl as (context: RemeshDomainContext, arg: U[0]) => T
+  Domain.impl = options.impl
   Domain.inspectable = options.inspectable ?? true
 
   return Domain
 }
 
-export const DefaultDomain: RemeshDomain<any, []> = RemeshDomain({
+export const DefaultDomain: RemeshDomain<{}> = RemeshDomain({
   name: 'DefaultDomain',
   impl: () => {
     return {}
