@@ -1,18 +1,18 @@
 import {
-  DefaultDomain,
   RemeshCommand,
-  RemeshCommand$,
-  RemeshDefaultState,
+  RemeshCommandOutput,
   RemeshDomain,
   RemeshEvent,
   RemeshQuery,
+  RemeshState,
   RemeshStore,
 } from '../src'
-import { delay, Observable, switchMap, timer } from 'rxjs'
-import { map, mergeMap, tap } from 'rxjs/operators'
+import { of, switchMap } from 'rxjs'
+import { map } from 'rxjs/operators'
 import * as utils from './utils'
 
-let store: ReturnType<typeof RemeshStore>
+let store: RemeshStore
+
 beforeEach(() => {
   store = RemeshStore({
     name: 'store',
@@ -24,7 +24,7 @@ afterEach(() => {
 })
 
 describe('command', () => {
-  const NameState = RemeshDefaultState({
+  const NameState = RemeshState({
     name: 'NameState',
     default: 'remesh',
   })
@@ -40,7 +40,7 @@ describe('command', () => {
     name: 'NameChangeEvent',
   })
 
-  const AgeState = RemeshDefaultState({
+  const AgeState = RemeshState({
     name: 'AgeState',
     default: 0,
   })
@@ -52,30 +52,30 @@ describe('command', () => {
     },
   })
 
-  it('use RemeshCommand + store.sendCommand to drive update state', () => {
+  it('use RemeshCommand + store.send to drive update state', () => {
     expect(store.query(NameQuery())).toBe('remesh')
 
-    const NameChangeCommand = RemeshCommand({
-      name: 'NameChangeCommand',
-      impl({ set }) {
-        set(NameState(), 'ddd')
+    const ChangeNameCommand = RemeshCommand({
+      name: 'ChangeNameCommand',
+      impl({}) {
+        return NameState().new('ddd')
       },
     })
 
-    store.sendCommand(NameChangeCommand())
+    store.send(ChangeNameCommand())
 
     expect(store.query(NameQuery())).toBe('ddd')
   })
 
   it('get state with RemeshCommandContext.get, and can receive data with the second arg', () => {
-    const NameChangeCommand = RemeshCommand({
-      name: 'NameChangeCommand',
-      impl({ get, set }, hi: string) {
-        set(NameState(), `${hi},${get(NameState())}`)
+    const ChangeNameCommand = RemeshCommand({
+      name: 'ChangeNameCommand',
+      impl({ get }, hi: string) {
+        return NameState().new(`${hi},${get(NameState())}`)
       },
     })
 
-    store.sendCommand(NameChangeCommand('hello'))
+    store.send(ChangeNameCommand('hello'))
 
     expect(store.query(NameQuery())).toBe('hello,remesh')
   })
@@ -83,45 +83,26 @@ describe('command', () => {
   it('can set state, send command and emit event in any times', () => {
     const UpdateAgeCommand = RemeshCommand({
       name: 'UpdateAgeCommand',
-      impl({ set }, age: number) {
-        set(AgeState(), age)
+      impl({}, age: number) {
+        return AgeState().new(age)
       },
     })
 
-    const TimerUpdateAgeCommand = RemeshCommand({
-      name: 'TimerUpdateAgeCommand',
-      impl({ get, send }) {
-        return timer(2000).pipe(
-          tap(() => {
-            send(UpdateAgeCommand(get(AgeState()) + 1))
-          }),
-        )
+    const ChangeNameCommand = RemeshCommand({
+      name: 'ChangeNameCommand',
+      impl({}) {
+        return [NameState().new('ddd'), NameChangeEvent(), UpdateAgeCommand(1)]
       },
     })
 
-    const NameChangeCommand = RemeshCommand({
-      name: 'NameChangeCommand',
-      impl({ set, send, emit }) {
-        set(NameState(), 'ddd')
-        emit(NameChangeEvent())
-        send(UpdateAgeCommand(1))
-        return send(TimerUpdateAgeCommand())
-      },
-    })
-
-    jest.useFakeTimers()
     const changed = jest.fn()
     store.subscribeEvent(NameChangeEvent, changed)
 
-    store.sendCommand(NameChangeCommand())
+    store.send(ChangeNameCommand())
 
     expect(changed).toHaveBeenCalled()
+    expect(store.query(NameQuery())).toBe('ddd')
     expect(store.query(AgeQuery())).toBe(1)
-    const ageChanged = jest.fn()
-    store.subscribeQuery(AgeQuery(), ageChanged)
-    expect(ageChanged).not.toHaveBeenCalled()
-    jest.runOnlyPendingTimers()
-    expect(ageChanged).toHaveBeenCalledWith(2)
   })
 
   it('ignite', () => {
@@ -142,65 +123,80 @@ describe('command', () => {
 
         const RankingUpdateCommand = domain.command({
           name: 'RankingUpdateCommand',
-          impl({ set }, ranking: number) {
-            set(RankingState(), ranking)
+          impl({}, ranking: number) {
+            return RankingState().new(ranking)
           },
         })
 
-        domain.ignite(({ send }) => {
-          send(RankingUpdateCommand(99))
+        domain.effect({
+          name: 'RankingUpdateEffect',
+          impl: () => {
+            return of(RankingUpdateCommand(99))
+          },
         })
 
-        return { query: { RankingQuery }, command: { RankingUpdateCommand } }
+        return { query: { RankingQuery } }
       },
     })
 
     const testDomain = store.getDomain(TestDomain())
-    store.subscribeDomain(TestDomain())
+
+    store.igniteDomain(TestDomain())
 
     expect(store.query(testDomain.query.RankingQuery())).toBe(99)
   })
 })
 
-describe('command$', () => {
+describe('effect', () => {
   it('basic', async () => {
     const getFeatures = () => utils.delay(1000).then(() => Promise.resolve(['ddd', 'cqrs', 'event-driven']))
 
-    const FeaturesState = RemeshDefaultState<string[]>({
-      name: 'FeaturesState',
-      default: [],
-    })
+    const FeaturesDomain = RemeshDomain({
+      name: 'FeaturesDomain',
+      impl(domain) {
+        const FeaturesState = domain.state({
+          name: 'FeaturesState',
+          default: [] as string[],
+        })
 
-    const FeaturesQuery = RemeshQuery({
-      name: 'FeaturesQuery',
-      impl({ get }) {
-        return get(FeaturesState())
+        const FeaturesQuery = domain.query({
+          name: 'FeaturesQuery',
+          impl: ({ get }) => {
+            return get(FeaturesState())
+          },
+        })
+
+        const FeaturesUpdateCommand = domain.command({
+          name: 'FeaturesUpdateCommand',
+          impl({}, features: string[]) {
+            return FeaturesState().new(features)
+          },
+        })
+
+        const FetchFeaturesEvent = domain.event({
+          name: 'FetchFeaturesEvent',
+        })
+
+        domain.effect({
+          name: 'FetchFeaturesEffect',
+          impl: ({ fromEvent }) => {
+            return fromEvent(FetchFeaturesEvent).pipe(
+              switchMap(() => getFeatures()),
+              map(FeaturesUpdateCommand),
+            )
+          },
+        })
+
+        return { query: { FeaturesQuery }, event: { FetchFeaturesEvent } }
       },
     })
 
-    const FetchFeaturesEvent = RemeshEvent({
-      name: 'FetchFeaturesEvent',
-    })
-
-    const FetchFeaturesCommand = RemeshCommand({
-      name: 'FetchFeaturesCommand',
-      impl({ set, fromEvent }) {
-        return fromEvent(FetchFeaturesEvent).pipe(
-          switchMap(() => getFeatures()),
-          tap((features) => {
-            set(FeaturesState(), features)
-          }),
-        )
-      },
-    })
-
-    expect(FetchFeaturesCommand.owner).toBe(DefaultDomain())
-
+    const featuresDomain = store.getDomain(FeaturesDomain())
+    store.igniteDomain(FeaturesDomain())
     jest.useFakeTimers()
     const changed = jest.fn()
-    store.subscribeQuery(FeaturesQuery(), changed)
-    store.sendCommand(FetchFeaturesCommand())
-    store.emitEvent(FetchFeaturesEvent())
+    store.subscribeQuery(featuresDomain.query.FeaturesQuery(), changed)
+    store.send(featuresDomain.event.FetchFeaturesEvent())
     jest.runOnlyPendingTimers()
 
     jest.useRealTimers()
@@ -208,119 +204,88 @@ describe('command$', () => {
     expect(changed).toHaveBeenCalledWith(['ddd', 'cqrs', 'event-driven'])
   })
 
-  it('fromQuery/fromEvent', () => {
-    const CountState = RemeshDefaultState({
-      name: 'CountState',
-      default: 0,
-    })
-
-    const CountQuery = RemeshQuery({
-      name: 'CountQuery',
-      impl({ get }) {
-        return get(CountState())
-      },
-    })
-
-    const UpdateCountCommand = RemeshCommand({
-      name: 'UpdateCountCommand',
-      impl({ set }, count: number) {
-        set(CountState(), count)
-      },
-    })
-
-    const CountChangedEvent = RemeshEvent<number>({
-      name: 'CountChangedEvent',
-    })
-
-    const CountIncreaseEvent = RemeshEvent({
-      name: 'CountIncreaseEvent',
-    })
-
-    const FromEventToUpdateCommand = RemeshCommand({
-      name: 'FromEventToUpdateCommand',
-      impl({ fromEvent, get, send }) {
-        return fromEvent(CountIncreaseEvent).pipe(
-          map(() => get(CountState()) + 1),
-          tap((count) => {
-            send(UpdateCountCommand(count))
-          }),
-        )
-      },
-    })
-
-    const FromQueryToEventCommand = RemeshCommand({
-      name: 'FromQueryToEventCommand',
-      impl({ fromQuery, emit }) {
-        return fromQuery(CountQuery()).pipe(
-          tap((count) => {
-            emit(CountChangedEvent(count))
-          }),
-        )
-      },
-    })
-
-    const changed = jest.fn()
-    store.sendCommand(FromEventToUpdateCommand())
-    store.sendCommand(FromQueryToEventCommand())
-
-    store.subscribeEvent(CountChangedEvent, changed)
-    store.emitEvent(CountIncreaseEvent())
-
-    expect(changed).toHaveBeenCalledWith(1)
-    expect(store.query(CountQuery())).toBe(1)
-  })
-
-  it('support command$', () => {
-    const fn0 = jest.fn()
-    const fn1 = jest.fn()
-    const TestDomain = RemeshDomain({
-      name: 'TestDomain',
+  it('fromQuery/fromEvent/fromCommand', async () => {
+    const CountDomain = RemeshDomain({
+      name: 'CountDomain',
       impl(domain) {
-        const ACommand = domain.effect({
-          name: 'ACommand',
-          impl: (_, arg$: Observable<number>) => {
-            fn0()
-            return arg$.pipe(
-              mergeMap((arg) => {
-                return timer(arg)
-              }),
-              tap((value) => {
-                fn1(value)
+        const CountState = domain.state({
+          name: 'CountState',
+          default: 0,
+        })
+
+        const CountQuery = domain.query({
+          name: 'CountQuery',
+          impl: ({ get }) => {
+            return get(CountState())
+          },
+        })
+
+        const UpdateCountCommand = domain.command({
+          name: 'UpdateCountCommand',
+          impl({}, count: number) {
+            return CountState().new(count)
+          },
+        })
+
+        const CountChangedEvent = domain.event<number>({
+          name: 'CountChangedEvent',
+        })
+
+        const CountIncreaseEvent = domain.event({
+          name: 'CountIncreaseEvent',
+        })
+
+        domain.effect({
+          name: 'FromEventToUpdateEffect',
+          impl({ fromEvent, get }) {
+            return fromEvent(CountIncreaseEvent).pipe(
+              map(() => get(CountState()) + 1),
+              map(UpdateCountCommand),
+            )
+          },
+        })
+
+        domain.effect({
+          name: 'FromQueryToEventEffect',
+          impl({ fromQuery }) {
+            return fromQuery(CountQuery()).pipe(
+              map((value) => {
+                return CountChangedEvent(value)
               }),
             )
           },
         })
 
-        return {
-          command: {
-            ACommand,
+        domain.effect({
+          name: 'FromCommandToEventEffect',
+          impl({ fromCommand }) {
+            return fromCommand(UpdateCountCommand).pipe(
+              map((value) => {
+                return CountChangedEvent(value)
+              }),
+            )
           },
-        }
+        })
+
+        return { query: { CountQuery }, event: { CountChangedEvent, CountIncreaseEvent } }
       },
     })
 
-    const testDomain = store.getDomain(TestDomain())
-    store.subscribeDomain(TestDomain())
+    const countDomain = store.getDomain(CountDomain())
+    const changed = jest.fn()
 
-    // should not call command$.impl when domain is subscribed
-    expect(fn0).not.toHaveBeenCalled()
-    expect(fn1).not.toHaveBeenCalled()
+    store.igniteDomain(CountDomain())
+    store.subscribeEvent(countDomain.event.CountChangedEvent, changed)
+    store.send(countDomain.event.CountIncreaseEvent())
 
-    jest.useFakeTimers()
+    await utils.delay(1)
 
-    store.sendCommand(testDomain.command.ACommand(1))
-
-    // should call command$.impl when command was sended
-    expect(fn0).toHaveBeenCalled()
-    expect(fn1).not.toHaveBeenCalled()
-
-    jest.runOnlyPendingTimers()
-
-    expect(fn1).toHaveBeenCalledWith(0)
+    expect(changed).toHaveBeenCalledTimes(2)
+    expect(store.query(countDomain.query.CountQuery())).toBe(1)
   })
 
-  it('supports commandQuery', () => {
-    type AccountState = {
+  it('supports commandQuery', async () => {
+    type Account = {
       id: number
       status: 'active' | 'inactive'
       balance: number
@@ -329,58 +294,71 @@ describe('command$', () => {
     const AccountDomain = RemeshDomain({
       name: 'AccountDomain',
       impl(domain, accountId: number) {
-        const AccountState = domain.state({
-          name: 'AccountState',
-          default: {
-            status: 'active',
-            id: accountId,
-            balance: 0,
-          } as AccountState,
+        const AccountEntity = domain.entity<Account>({
+          name: 'AccountEntity',
+          key: (account) => `${account.id}`,
+        })
+
+        const UpdateAccountCommand = domain.command({
+          name: 'UpdateAccountCommand',
+          impl({}, account: Account) {
+            return AccountEntity(account.id).new(account)
+          },
+        })
+
+        domain.effect({
+          name: 'AccountEntityEffect',
+          impl({}) {
+            return [UpdateAccountCommand({ id: accountId, status: 'inactive', balance: 0 }), ActivateAccountCommand()]
+          },
         })
 
         const AccountQuery = domain.query({
           name: 'AccountQuery',
           impl: ({ get }) => {
-            return get(AccountState())
+            return get(AccountEntity(accountId))
           },
         })
 
         const DebtQuery = domain.query({
           name: 'DebtQuery',
           impl: ({ get }) => {
-            return get(AccountState()).balance < 0
+            const account = get(AccountQuery())
+            return account.balance < 0
           },
         })
 
         const CloseAccountCommand = domain.command({
           name: 'CloseAccountCommand',
-          impl: ({ get, set }) => {
-            const newAccountState = {
-              ...get(AccountState()),
+          impl: ({ get }) => {
+            const account = get(AccountQuery())
+            const newAccountState: Account = {
+              ...account,
               status: 'inactive',
-            } as AccountState
+            }
 
-            set(AccountState(), newAccountState)
+            return AccountEntity(accountId).new(newAccountState)
           },
         })
 
         const ActivateAccountCommand = domain.command({
           name: 'ActivateAccountCommand',
-          impl: ({ get, set }) => {
+          impl: ({ get }) => {
+            const account = get(AccountQuery())
             const newAccountState = {
-              ...get(AccountState()),
+              ...account,
               status: 'active',
-            } as AccountState
+            } as Account
 
-            set(AccountState(), newAccountState)
+            return AccountEntity(accountId).new(newAccountState)
           },
         })
 
         const DepositCommand = domain.command({
           name: 'DepositCommand',
-          impl({ get, set }, amount: number) {
-            const account = get(AccountState())
-            set(AccountState(), { ...account, balance: account.balance + amount })
+          impl({ get }, amount: number) {
+            const account = get(AccountQuery())
+            return AccountEntity(accountId).new({ ...account, balance: account.balance + amount })
           },
         })
 
@@ -390,20 +368,20 @@ describe('command$', () => {
 
         const WithdrawCommand = domain.command({
           name: 'WithdrawCommand',
-          impl({ get, set, emit }, amount: number) {
+          impl({ get }, amount: number) {
             const isDebt = get(DebtQuery())
 
             if (isDebt) {
-              return emit(WithdrawFailedEvent('debt'))
+              return WithdrawFailedEvent('debt')
             }
 
-            const account = get(AccountState())
+            const account = get(AccountQuery())
 
             if (account.balance < amount) {
-              return emit(WithdrawFailedEvent('insufficient'))
+              return WithdrawFailedEvent('insufficient')
             }
 
-            set(AccountState(), { ...account, balance: account.balance - amount })
+            return AccountEntity(accountId).new({ ...account, balance: account.balance - amount })
           },
         })
 
@@ -413,20 +391,19 @@ describe('command$', () => {
 
         const TransferCommand = domain.command({
           name: 'TransferCommand',
-          impl({ get, send, emit }, { to, amount }: { to: number; amount: number }) {
-            const toAccountDomain = store.getDomain(AccountDomain(to))
-            const toAccountCommand = get(toAccountDomain.commandQuery())
+          impl({ get }, { to, amount }: { to: number; amount: number }): RemeshCommandOutput {
+            const toAccountDomain = domain.getDomain(AccountDomain(to))
+            const toAccountCommand = get(toAccountDomain.query.CommandQuery())
 
-            const fromAccountState = get(AccountState())
+            const fromAccountState = get(AccountQuery())
 
             if (toAccountCommand.status !== 'inactive') {
               if (fromAccountState.balance < amount) {
-                return emit(TransferFailedEvent('insufficient'))
+                return TransferFailedEvent('insufficient')
               }
-              send(toAccountCommand.DepositCommand(amount))
-              send(WithdrawCommand(amount))
+              return [toAccountCommand.DepositCommand(amount), WithdrawCommand(amount)]
             } else {
-              return emit(TransferFailedEvent(`account ${to} is inactive`))
+              return TransferFailedEvent(`account ${to} is inactive`)
             }
           },
         })
@@ -458,7 +435,7 @@ describe('command$', () => {
               return DebtCommands
             }
 
-            const account = get(AccountState())
+            const account = get(AccountQuery())
 
             if (account.status === 'inactive') {
               return InactiveCommands
@@ -472,8 +449,8 @@ describe('command$', () => {
           query: {
             AccountQuery,
             DebtQuery,
+            CommandQuery,
           },
-          commandQuery: CommandQuery,
           event: {
             WithdrawFailedEvent,
           },
@@ -484,8 +461,8 @@ describe('command$', () => {
     const aAccountDomain = store.getDomain(AccountDomain(1))
     const bAccountDomain = store.getDomain(AccountDomain(2))
 
-    store.subscribeDomain(AccountDomain(1))
-    store.subscribeDomain(AccountDomain(2))
+    store.igniteDomain(AccountDomain(1))
+    store.igniteDomain(AccountDomain(2))
 
     expect(store.query(aAccountDomain.query.AccountQuery())).toEqual({
       status: 'active',
@@ -499,10 +476,11 @@ describe('command$', () => {
       balance: 0,
     })
 
-    let aAccountCommand = store.query(aAccountDomain.commandQuery())
+    let aAccountCommand = store.query(aAccountDomain.query.CommandQuery())
 
     if (aAccountCommand.status === 'active') {
-      store.sendCommand(aAccountCommand.DepositCommand(100))
+
+      store.send(aAccountCommand.DepositCommand(100))
 
       expect(store.query(aAccountDomain.query.AccountQuery())).toEqual({
         status: 'active',
@@ -517,10 +495,10 @@ describe('command$', () => {
       balance: 0,
     })
 
-    aAccountCommand = store.query(aAccountDomain.commandQuery())
+    aAccountCommand = store.query(aAccountDomain.query.CommandQuery())
 
     if (aAccountCommand.status === 'active') {
-      store.sendCommand(aAccountCommand.WithdrawCommand(50))
+      store.send(aAccountCommand.WithdrawCommand(50))
 
       expect(store.query(aAccountDomain.query.AccountQuery())).toEqual({
         status: 'active',
@@ -535,10 +513,10 @@ describe('command$', () => {
       balance: 0,
     })
 
-    aAccountCommand = store.query(aAccountDomain.commandQuery())
+    aAccountCommand = store.query(aAccountDomain.query.CommandQuery())
 
     if (aAccountCommand.status === 'active') {
-      store.sendCommand(aAccountCommand.TransferCommand({ to: 2, amount: 50 }))
+      store.send(aAccountCommand.TransferCommand({ to: 2, amount: 50 }))
 
       expect(store.query(aAccountDomain.query.AccountQuery())).toEqual({
         status: 'active',
@@ -552,7 +530,7 @@ describe('command$', () => {
         balance: 50,
       })
 
-      store.sendCommand(aAccountCommand.CloseAccountCommand())
+      store.send(aAccountCommand.CloseAccountCommand())
 
       expect(store.query(aAccountDomain.query.AccountQuery())).toEqual({
         status: 'inactive',
@@ -567,10 +545,10 @@ describe('command$', () => {
       })
     }
 
-    aAccountCommand = store.query(aAccountDomain.commandQuery())
+    aAccountCommand = store.query(aAccountDomain.query.CommandQuery())
 
     if (aAccountCommand.status === 'inactive') {
-      store.sendCommand(aAccountCommand.ActivateAccountCommand())
+      store.send(aAccountCommand.ActivateAccountCommand())
 
       expect(store.query(aAccountDomain.query.AccountQuery())).toEqual({
         status: 'active',

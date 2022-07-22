@@ -1,8 +1,9 @@
-import { RemeshDefaultState, RemeshStore, RemeshCommand, DefaultDomain } from '../src'
+import { RemeshState, RemeshStore, RemeshCommand, DefaultDomain } from '../src'
 import { RemeshQuery } from '../src'
 import * as utils from './utils'
 
-let store: ReturnType<typeof RemeshStore>
+let store: RemeshStore
+
 beforeEach(() => {
   store = RemeshStore({
     name: 'store',
@@ -15,12 +16,12 @@ afterEach(() => {
 
 describe('query', () => {
   it('use RemeshQuery to compute derived state and store.subscribeQuery to subscribe to changes', () => {
-    const AState = RemeshDefaultState({
+    const AState = RemeshState({
       name: 'AState',
       default: 1,
     })
 
-    const BState = RemeshDefaultState({
+    const BState = RemeshState({
       name: 'BState',
       default: 2,
     })
@@ -36,21 +37,21 @@ describe('query', () => {
 
     const UpdateACommand = RemeshCommand({
       name: 'UpdateACommand',
-      impl({ set }, a: number) {
-        set(AState(), a)
+      impl({}, a: number) {
+        return AState().new(a)
       },
     })
 
     const changed = jest.fn()
     const subscription = store.subscribeQuery(CQuery(), changed)
-    store.sendCommand(UpdateACommand(2))
+    store.send(UpdateACommand(2))
     expect(changed).toHaveBeenLastCalledWith(4)
 
-    store.sendCommand(UpdateACommand(3))
+    store.send(UpdateACommand(3))
     expect(changed).toHaveBeenLastCalledWith(5)
 
     subscription.unsubscribe()
-    store.sendCommand(UpdateACommand(4))
+    store.send(UpdateACommand(4))
     expect(changed).toHaveBeenLastCalledWith(5)
     expect(store.query(CQuery())).toBe(6)
   })
@@ -72,7 +73,7 @@ describe('query', () => {
 
     const sports = [...swimmingSports, ...jumpingSports]
 
-    const SportsState = RemeshDefaultState<Sport[]>({
+    const SportsState = RemeshState<Sport[]>({
       name: 'SportsState',
       default: sports,
     })
@@ -90,7 +91,7 @@ describe('query', () => {
   })
 
   it('declare custom comparator using options.compare', () => {
-    const NestedState = RemeshDefaultState({
+    const NestedState = RemeshState({
       name: 'NestedState',
       default: { bar: { foo: 1 } },
     })
@@ -107,13 +108,13 @@ describe('query', () => {
 
     const UpdateNestedStateCommand = RemeshCommand({
       name: 'UpdateNestedStateCommand',
-      impl({ set }) {
-        set(NestedState(), { bar: { foo: 1 } })
+      impl({}) {
+        return NestedState().new({ bar: { foo: 1 } })
       },
     })
 
     const a = store.query(NestedQuery())
-    store.sendCommand(UpdateNestedStateCommand())
+    store.send(UpdateNestedStateCommand())
     const b = store.query(NestedQuery())
 
     expect(a).toBe(b)
@@ -143,15 +144,15 @@ describe('query', () => {
         throw new Error('framework does not exist')
       })
 
-    const FrameworkNameState = RemeshDefaultState({
+    const FrameworkNameState = RemeshState({
       name: 'FrameworkNameState',
       default: '',
     })
 
     const UpdateFrameworkNameCommand = RemeshCommand({
       name: 'UpdateFrameworkNameCommand',
-      impl({ set }, frameworkName: string) {
-        set(FrameworkNameState(), frameworkName)
+      impl({}, frameworkName: string) {
+        return FrameworkNameState().new(frameworkName)
       },
     })
 
@@ -169,69 +170,14 @@ describe('query', () => {
     jest.runOnlyPendingTimers()
     await expect(promise).rejects.toThrow('framework does not exist')
 
-    store.sendCommand(UpdateFrameworkNameCommand('react'))
+    store.send(UpdateFrameworkNameCommand('react'))
     promise = store.query(FrameworkFeaturesQuery())
     jest.runOnlyPendingTimers()
     await expect(promise).resolves.toStrictEqual(['declarative', 'component-based', 'state-driven'])
 
-    store.sendCommand(UpdateFrameworkNameCommand('remesh'))
+    store.send(UpdateFrameworkNameCommand('remesh'))
     promise = store.query(FrameworkFeaturesQuery())
     jest.runOnlyPendingTimers()
     await expect(promise).resolves.toStrictEqual(['ddd', 'cqrs', 'event-driven'])
-  })
-
-  it('use peek to read state but not collected by dependencies', () => {
-    const AState = RemeshDefaultState({
-      name: 'AState',
-      default: 1,
-    })
-
-    const BState = RemeshDefaultState({
-      name: 'BState',
-      default: 2,
-    })
-
-    const CQuery = RemeshQuery({
-      name: 'CQuery',
-      impl({ peek }) {
-        return [peek(AState()) as number, peek(BState()) as number]
-      },
-    })
-
-    const UpdateACommand = RemeshCommand({
-      name: 'UpdateACommand',
-      impl({ set }, num: number) {
-        set(AState(), num)
-      },
-    })
-
-    const UpdateBCommand = RemeshCommand({
-      name: 'UpdateBCommand',
-      impl({ set }, num: number) {
-        set(BState(), num)
-      },
-    })
-
-    const DQuery = RemeshQuery({
-      name: 'DQuery',
-      impl({ peek, get }) {
-        return [get(AState()), peek(BState()) as number, peek(CQuery()) as number[]]
-      },
-    })
-
-    expect(store.query(CQuery())).toEqual([1, 2])
-    expect(store.query(DQuery())).toEqual([1, 2, [1, 2]])
-
-    store.sendCommand(UpdateBCommand(3))
-    // using peek won't update
-    expect(store.query(CQuery())).toEqual([1, 2])
-    // only update b, d won't update
-    expect(store.query(DQuery())).toEqual([1, 2, [1, 2]])
-
-    store.sendCommand(UpdateACommand(2))
-    // using peek won't update
-    expect(store.query(CQuery())).toEqual([1, 2])
-    // c has cache
-    expect(store.query(DQuery())).toEqual([2, 3, [1, 2]])
   })
 })

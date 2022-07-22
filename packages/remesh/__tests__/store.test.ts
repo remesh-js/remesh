@@ -1,7 +1,7 @@
 import {
   InspectorType,
   RemeshCommandReceivedEventData,
-  RemeshDefaultState,
+  RemeshState,
   RemeshDomain,
   RemeshDomainStorageEventData,
   RemeshEventEmittedEventData,
@@ -13,11 +13,11 @@ import {
   RemeshStore,
   RemeshStoreOptions,
 } from '../src'
-import { delay, tap, Observable, timer } from 'rxjs'
+import { map, timer } from 'rxjs'
 
 import * as utils from './utils'
 
-let store: ReturnType<typeof RemeshStore>
+let store: RemeshStore
 beforeEach(() => {
   store = RemeshStore({
     name: 'store',
@@ -46,17 +46,17 @@ describe('store', () => {
           default: 1,
         })
 
+        const UpdateACommand = domain.command({
+          name: 'UpdateACommand',
+          impl({}, num: number) {
+            return AState().new(num)
+          },
+        })
+
         const AQuery = domain.query({
           name: 'AQuery',
           impl: ({ get }) => {
             return get(AState())
-          },
-        })
-
-        const UpdateACommand = domain.command({
-          name: 'UpdateACommand',
-          impl({ set }, num: number) {
-            set(AState(), num)
           },
         })
 
@@ -88,25 +88,38 @@ describe('store', () => {
 
         const EmitTestEventCommand = domain.command({
           name: 'EmitTestEventCommand',
-          impl({ emit }, arg?: string) {
-            emit(TestEvent(arg))
+          impl({}, arg?: string) {
+            return TestEvent(arg)
           },
         })
 
-        domain.ignite(() => {
-          igniteCallback()
+        const CommandQuery = domain.query({
+          name: 'CommandQuery',
+          impl({}) {
+            return { EmitTestEventCommand, UpdateACommand }
+          },
+        })
+
+        domain.effect({
+          name: 'TestEffect',
+          impl: () => {
+            igniteCallback()
+            return []
+          },
         })
 
         return {
-          query: { AQuery, BQuery, JoinQuery },
+          query: { AQuery, BQuery, JoinQuery, CommandQuery },
           event: { TestEvent },
-          command: { UpdateACommand, EmitTestEventCommand },
         }
       },
     })
 
     const testDomain = store.getDomain(TestDomain())
-    store.subscribeDomain(TestDomain())
+
+    const { EmitTestEventCommand, UpdateACommand } = store.query(testDomain.query.CommandQuery())
+
+    store.igniteDomain(TestDomain())
     expect(igniteCallback).toHaveBeenCalled()
 
     expect(store.getKey(testDomain.query.AQuery())).toMatch(testDomain.query.AQuery.queryName)
@@ -118,16 +131,16 @@ describe('store', () => {
     const queryCalled = jest.fn()
     store.subscribeQuery(testDomain.query.JoinQuery('-'), queryCalled)
 
-    store.sendCommand(testDomain.command.UpdateACommand(2))
+    store.send(UpdateACommand(2))
 
     expect(store.query(testDomain.query.JoinQuery('-'))).toBe('2-2')
     expect(queryCalled).toHaveBeenCalledWith('2-2')
 
     const eventCalled = jest.fn()
     store.subscribeEvent(testDomain.event.TestEvent, eventCalled)
-    store.sendCommand(testDomain.command.EmitTestEventCommand())
+    store.send(EmitTestEventCommand())
     expect(eventCalled).toHaveBeenCalled()
-    store.sendCommand(testDomain.command.EmitTestEventCommand('test'))
+    store.send(EmitTestEventCommand('test'))
     expect(eventCalled).toHaveBeenCalledWith('test')
   })
 
@@ -138,7 +151,7 @@ describe('store', () => {
 
     expect(store.name).toBe('store')
 
-    const AState = RemeshDefaultState({
+    const AState = RemeshState({
       name: 'AState',
       default: 1,
     })
@@ -150,7 +163,7 @@ describe('store', () => {
       },
     })
 
-    const BState = RemeshDefaultState({
+    const BState = RemeshState({
       name: 'BState',
       default: 2,
     })
@@ -175,7 +188,6 @@ describe('store', () => {
     }
 
     const StorageExtern = RemeshExtern<IStorage>({
-      name: 'StorageExtern',
       default: {
         get() {
           throw new Error('Not implemented')
@@ -237,10 +249,10 @@ describe('store', () => {
       storageEventHandler: (
         data:
           | RemeshDomainStorageEventData<any, any>
-          | RemeshStateStorageEventData<any, any>
+          | RemeshStateStorageEventData<any>
           | RemeshQueryStorageEventData<any, any>
           | RemeshEventEmittedEventData<any, any>
-          | RemeshCommandReceivedEventData<any, any>,
+          | RemeshCommandReceivedEventData<any>,
       ) => void
     }) => {
       return (storeOptions?: RemeshStoreOptions) => {
@@ -284,7 +296,7 @@ describe('store', () => {
         const NameQuery = domain.query({
           name: 'NameQuery',
           impl({ get }) {
-            return get(NameState())
+            return [get(NameState()), { UpdateNameCommand }] as const
           },
         })
 
@@ -294,15 +306,13 @@ describe('store', () => {
 
         const UpdateNameCommand = domain.command({
           name: 'UpdateNameCommand',
-          impl({ set, emit }, name: string) {
-            set(NameState(), name)
-            emit(NameChangedEvent(name))
+          impl({}, name: string) {
+            return [NameState().new(name), NameChangedEvent(name)]
           },
         })
 
         return {
           query: { NameQuery },
-          command: { UpdateNameCommand },
           event: { NameChangedEvent },
         }
       },
@@ -316,23 +326,25 @@ describe('store', () => {
         const HelloQuery = domain.query({
           name: 'HelloQuery',
           impl({ get }) {
-            return `hello~${get(nameDomain.query.NameQuery())}`
+            const [name] = get(nameDomain.query.NameQuery())
+            return `hello~${name}`
           },
         })
 
-        const RemoteUpdateNameCommand = domain.command({
-          name: 'RemoteUpdateNameCommand',
-          impl({ send }, name: string) {
-            return timer(1).pipe(
-              tap(() => {
-                send(nameDomain.command.UpdateNameCommand(name))
+        const HelloEvent = domain.event<string>({
+          name: 'HelloEvent',
+        })
+
+        domain.effect({
+          name: 'RemoteUpdateNameEffect',
+          impl({ get, fromEvent }) {
+            return fromEvent(HelloEvent).pipe(
+              map((name) => {
+                const [, { UpdateNameCommand }] = get(nameDomain.query.NameQuery())
+                return UpdateNameCommand(name)
               }),
             )
           },
-        })
-
-        domain.ignite(({ send }) => {
-          return send(RemoteUpdateNameCommand('bar'))
         })
 
         return {
@@ -340,8 +352,10 @@ describe('store', () => {
             ...nameDomain.query,
             HelloQuery,
           },
-          command: nameDomain.command,
-          event: nameDomain.event,
+          event: {
+            ...nameDomain.event,
+            HelloEvent,
+          },
         }
       },
     })
@@ -350,21 +364,26 @@ describe('store', () => {
       jest.useFakeTimers()
 
       const testDomain = store.getDomain(TestDomain())
-      store.subscribeDomain(TestDomain())
+      store.igniteDomain(TestDomain())
 
       const changed = jest.fn()
       store.subscribeEvent(testDomain.event.NameChangedEvent, changed)
 
+      store.send(testDomain.event.HelloEvent('bar'))
       jest.runOnlyPendingTimers()
 
       expect(changed).toHaveBeenCalledWith('bar')
 
-      expect(store.query(testDomain.query.NameQuery())).toBe('bar')
+      let [name, { UpdateNameCommand }] = store.query(testDomain.query.NameQuery())
+
+      expect(name).toBe('bar')
       expect(store.query(testDomain.query.HelloQuery())).toBe('hello~bar')
-      store.sendCommand(testDomain.command.UpdateNameCommand('foo'))
+      store.send(UpdateNameCommand('foo'))
 
       expect(changed).toHaveBeenCalledWith('foo')
-      expect(store.query(testDomain.query.NameQuery())).toBe('foo')
+      ;[name] = store.query(testDomain.query.NameQuery())
+
+      expect(name).toBe('foo')
       expect(store.query(testDomain.query.HelloQuery())).toBe('hello~foo')
 
       store.discard()
@@ -373,53 +392,73 @@ describe('store', () => {
     execute()
 
     const expectedHistory: string[] = [
-      InspectorType.DomainCreated,
-      InspectorType.DomainCreated,
-      InspectorType.CommandReceived,
-      InspectorType.CommandReceived,
-      InspectorType.StateCreated,
-      InspectorType.EventEmitted,
-      InspectorType.QueryCreated,
-      InspectorType.QueryCreated,
-      InspectorType.CommandReceived,
-      InspectorType.StateUpdated,
-      InspectorType.EventEmitted,
-      InspectorType.QueryUpdated,
-      InspectorType.QueryUpdated,
-      InspectorType.DomainDiscarded,
-      InspectorType.QueryDiscarded,
-      InspectorType.StateDiscarded,
-      InspectorType.DomainDiscarded,
-      InspectorType.QueryDiscarded,
-      InspectorType.DomainReused,
+      'Domain::Created',
+      'Domain::Created',
+      'Event::Emitted',
+      'State::Created',
+      'Query::Created',
+      'Command::Received',
+      'Event::Emitted',
+      'Query::Created',
+      'Command::Received',
+      'State::Updated',
+      'Query::Updated',
+      'Query::Updated',
+      'Event::Emitted',
+      'Domain::Discarded',
+      'Query::Discarded',
+      'State::Discarded',
+      'Domain::Discarded',
+      'Query::Discarded',
+      'Domain::Reused',
     ]
 
     expect(history).toStrictEqual(expectedHistory)
 
     execute()
 
-    const restoreExpectedHistory = expectedHistory.concat([
-      InspectorType.DomainReused,
-      InspectorType.DomainReused,
-      InspectorType.CommandReceived,
-      InspectorType.CommandReceived,
-      InspectorType.StateReused,
-      InspectorType.EventEmitted,
-      InspectorType.QueryUpdated,
-      InspectorType.QueryReused,
-      InspectorType.QueryUpdated,
-      InspectorType.QueryReused,
-      InspectorType.CommandReceived,
-      InspectorType.StateUpdated,
-      InspectorType.EventEmitted,
-      InspectorType.QueryUpdated,
-      InspectorType.QueryUpdated,
-      InspectorType.DomainDiscarded,
-      InspectorType.QueryDiscarded,
-      InspectorType.QueryDiscarded,
-      InspectorType.StateDiscarded,
-      InspectorType.DomainDiscarded,
-    ])
+    const restoreExpectedHistory = [
+      'Domain::Created',
+      'Domain::Created',
+      'Event::Emitted',
+      'State::Created',
+      'Query::Created',
+      'Command::Received',
+      'Event::Emitted',
+      'Query::Created',
+      'Command::Received',
+      'State::Updated',
+      'Query::Updated',
+      'Query::Updated',
+      'Event::Emitted',
+      'Domain::Discarded',
+      'Query::Discarded',
+      'State::Discarded',
+      'Domain::Discarded',
+      'Query::Discarded',
+      'Domain::Reused',
+      'Domain::Reused',
+      'Domain::Reused',
+      'Event::Emitted',
+      'State::Reused',
+      'Query::Updated',
+      'Query::Reused',
+      'Command::Received',
+      'Event::Emitted',
+      'Query::Updated',
+      'Query::Reused',
+      'Command::Received',
+      'State::Updated',
+      'Query::Updated',
+      'Query::Updated',
+      'Event::Emitted',
+      'Domain::Discarded',
+      'Query::Discarded',
+      'Query::Discarded',
+      'Domain::Discarded',
+      'State::Discarded',
+    ]
+
     expect(history).toStrictEqual(restoreExpectedHistory)
   })
 
@@ -445,8 +484,8 @@ describe('store', () => {
             await utils.delay(100)
             return 10
           },
-          command: ({ set }, count) => {
-            set(CountState(), count)
+          command: ({}, count) => {
+            return CountState().new(count)
           },
         })
 
@@ -472,25 +511,5 @@ describe('store', () => {
     const counterDomain = store.getDomain(CounterDomain())
 
     expect(store.query(counterDomain.query.CountQuery())).toBe(10)
-  })
-
-  it('store expose api', () => {
-    const apiKey = [
-      'discard',
-      'emitEvent',
-      'getDomain',
-      'getDomainPreloadedState',
-      'getKey',
-      'getPreloadedState',
-      'name',
-      'preload',
-      'query',
-      'sendCommand',
-      'subscribeDomain',
-      'subscribeEvent',
-      'subscribeQuery',
-    ]
-
-    expect(Object.keys(store).sort()).toEqual(apiKey.sort())
   })
 })

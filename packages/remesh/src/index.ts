@@ -2,10 +2,10 @@ import {
   RemeshDomain,
   RemeshExtern,
   RemeshState,
+  RemeshEntity,
   RemeshQuery,
   RemeshEvent,
   RemeshCommand,
-  RemeshCommand$,
   RemeshModule,
 } from './remesh'
 
@@ -21,9 +21,9 @@ export const Remesh = {
   extern: RemeshExtern,
   store: RemeshStore,
   state: RemeshState,
+  entity: RemeshEntity,
   query: RemeshQuery,
   command: RemeshCommand,
-  command$: RemeshCommand$,
   event: RemeshEvent,
   module: RemeshModule,
 }

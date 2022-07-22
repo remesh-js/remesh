@@ -18,9 +18,9 @@ import type {
   RemeshEntityStorage,
 } from './store'
 
-export type RemeshDomainStorageEventData<T extends RemeshDomainDefinition> = {
+export type RemeshDomainStorageEventData<T extends RemeshDomainDefinition, U extends Args<Serializable>> = {
   type: 'Domain::Created' | 'Domain::Discarded' | 'Domain::Reused'
-  storage: RemeshDomainStorage<T>
+  storage: RemeshDomainStorage<T, U>
 }
 
 export type RemeshStateStorageEventData<T> = {
@@ -71,7 +71,7 @@ export const InspectorType = {
 export const RemeshInspectorDomain = RemeshDomain({
   name: 'RemeshInspectorDomain',
   impl: (domain) => {
-    const RemeshDomainStorageEvent = domain.event<RemeshDomainStorageEventData<any>>({
+    const RemeshDomainStorageEvent = domain.event<RemeshDomainStorageEventData<any, any>>({
       name: 'RemeshDomainStorageEvent',
     })
 
@@ -154,9 +154,9 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
     }
   }
 
-  const inspectDomainStorage = <T extends RemeshDomainDefinition>(
-    type: RemeshDomainStorageEventData<T>['type'],
-    domainStorage: RemeshDomainStorage<T>,
+  const inspectDomainStorage = <T extends RemeshDomainDefinition, U extends Args<Serializable>>(
+    type: RemeshDomainStorageEventData<T, U>['type'],
+    domainStorage: RemeshDomainStorage<T, U>,
   ) => {
     if (isInspectable(domainStorage.Domain)) {
       for (const inspector of getInspectors()) {

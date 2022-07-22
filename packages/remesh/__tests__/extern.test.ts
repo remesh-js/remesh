@@ -16,7 +16,6 @@ describe('extern', () => {
     })()
 
     const StorageExtern = RemeshExtern({
-      name: 'StorageExtern',
       default: memoryCache,
     })
 
@@ -30,10 +29,17 @@ describe('extern', () => {
           default: (storage.get('counter') as number) ?? 0,
         })
 
+        const UpdateCounterCommand = domain.command({
+          name: 'UpdateCounterCommand',
+          impl({}, value: number) {
+            return [CountState().new(value), UpdateCounterEvent()]
+          },
+        })
+
         const CountQuery = domain.query({
           name: 'CountQuery',
           impl: ({ get }) => {
-            return get(CountState())
+            return [get(CountState()), { UpdateCounterCommand }] as const
           },
         })
 
@@ -44,54 +50,43 @@ describe('extern', () => {
           },
         })
 
-        const UpdateCounterCommand = domain.command({
-          name: 'UpdateCounterCommand',
-          impl({ set, emit }, value: number) {
-            set(CountState(), value)
-            emit(UpdateCounterEvent())
-          },
-        })
-
-        const FromStateToStorageCommand = domain.effect({
-          name: 'FromStateToStorageCommand',
+        domain.effect({
+          name: 'FromStateToStorageEffect',
           impl({ fromEvent }) {
             return fromEvent(UpdateCounterEvent).pipe(
               tap((value) => {
                 const storage = domain.getExtern(StorageExtern)
                 storage.set('counter', value)
               }),
+              map(() => null),
             )
           },
         })
 
-        domain.ignite(({ send }) => {
-          return send(FromStateToStorageCommand())
-        })
-
         return {
           query: { CountQuery },
-          command: {
-            UpdateCounterCommand,
-          },
           event: { UpdateCounterEvent },
         }
       },
     })
 
-    const store1 = RemeshStore({
+    const store = RemeshStore({
       name: 'store',
     })
 
-    const counter = store1.getDomain(CounterDomain())
+    const counter = store.getDomain(CounterDomain())
 
     const changed = jest.fn()
 
-    store1.subscribeDomain(CounterDomain())
+    store.igniteDomain(CounterDomain())
 
-    store1.subscribeEvent(counter.event.UpdateCounterEvent, changed)
-    store1.sendCommand(counter.command.UpdateCounterCommand(1))
+    const [, commands] = store.query(counter.query.CountQuery())
+
+    store.subscribeEvent(counter.event.UpdateCounterEvent, changed)
+    store.send(commands.UpdateCounterCommand(1))
 
     expect(changed).toBeCalled()
-    expect(store1.query(counter.query.CountQuery())).toBe(memoryCache.get('counter'))
+    const [count] = store.query(counter.query.CountQuery())
+    expect(count).toBe(memoryCache.get('counter'))
   })
 })
