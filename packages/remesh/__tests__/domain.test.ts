@@ -1,5 +1,4 @@
 import { RemeshDomain, RemeshStore } from '../src'
-import { switchMap } from 'rxjs'
 import * as utils from './utils'
 
 let store: ReturnType<typeof RemeshStore>
@@ -26,13 +25,42 @@ describe('domain', () => {
           },
         })
 
-        return { query: { CountQuery } }
+        const CountCommand = domain.command({
+          name: 'CountCommand',
+          impl: ({}, count: number) => {
+            return [CountState().new(count), CountEvent(count)]
+          },
+        })
+
+        const CountEvent = domain.event<number>({
+          name: 'CountEvent',
+        })
+
+        return { query: { CountQuery }, command: { CountCommand }, event: { CountEvent } }
       },
     })
 
     const counter = store.getDomain(CounterDomain())
 
+    const eventCallback = jest.fn()
+    const queryCallback = jest.fn()
+
+    store.subscribeEvent(counter.event.CountEvent, eventCallback)
+    store.subscribeQuery(counter.query.CountQuery(), queryCallback)
+
     expect(store.query(counter.query.CountQuery())).toBe(0)
+
+    store.send(counter.command.CountCommand(1))
+
+    expect(store.query(counter.query.CountQuery())).toBe(1)
+    expect(eventCallback).toHaveBeenCalledWith(1)
+    expect(queryCallback).toHaveBeenCalledWith(1)
+
+    store.send(counter.command.CountCommand(2))
+
+    expect(store.query(counter.query.CountQuery())).toBe(2)
+    expect(eventCallback).toHaveBeenCalledWith(2)
+    expect(queryCallback).toHaveBeenCalledWith(2)
   })
 
   it('multi-domain with a store', () => {

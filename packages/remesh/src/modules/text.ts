@@ -18,22 +18,22 @@ export const TextModule = (domain: RemeshDomainContext, options: TextModuleOptio
 
   const SetTextCommand = domain.command({
     name: `${options.name}.SetTextCommand`,
-    impl: ({ set }, current: string) => {
-      set(TextState(), current)
+    impl: ({}, current: string) => {
+      return TextState().new(current)
     },
   })
 
   const ClearTextCommand = domain.command({
     name: `${options.name}.ClearTextCommand`,
-    impl: ({ set }) => {
-      set(TextState(), '')
+    impl: ({}) => {
+      return TextState().new('')
     },
   })
 
   const ResetCommand = domain.command({
     name: `${options.name}.ResetCommand`,
-    impl: ({ set }) => {
-      set(TextState(), options.default ?? '')
+    impl: ({}) => {
+      return TextState().new(options.default ?? '')
     },
   })
 

@@ -493,15 +493,11 @@ export type RemeshEffectContext = {
   fromCommand: RemeshInjectedContext['fromCommand']
 }
 
-export type RemeshEffectOutput =
-  | RemeshEventAction<any, any>
-  | RemeshCommandAction<any>
-  | null
-  | RemeshEffectOutput[]
+export type RemeshAction = RemeshEventAction<any, any> | RemeshCommandAction<any> | null | RemeshAction[]
 
 export type RemeshEffect = {
   name: DomainConceptName<'Effect'>
-  impl: (context: RemeshEffectContext) => ObservableInput<RemeshEffectOutput>
+  impl: (context: RemeshEffectContext) => ObservableInput<RemeshAction>
 }
 
 export type RemeshDomainContext = {
@@ -530,9 +526,14 @@ export type RemeshQueries = {
   [key: string]: RemeshQuery<any, any>
 }
 
+export type RemeshCommands = {
+  [key: string]: RemeshCommand<any>
+}
+
 export type RemeshDomainOutput = {
   event: RemeshEvents
   query: RemeshQueries
+  command: RemeshCommands
 }
 
 export type RemeshDomainDefinition = Partial<RemeshDomainOutput>
@@ -549,8 +550,13 @@ export type VerifiedRemeshDomainDefinition<T extends RemeshDomainDefinition> = P
         ? T['query'][key]
         : `${key & string} is not a valid query name`
     }
+    command: {
+      [key in keyof T['command']]: key extends DomainConceptName<'Command'>
+        ? T['command'][key]
+        : `${key & string} is not a valid command name`
+    }
   },
-  ('event' | 'query') & keyof T
+  ('event' | 'query' | 'command') & keyof T
 >
 
 export const toValidRemeshDomainDefinition = <T extends RemeshDomainDefinition>(
@@ -564,6 +570,10 @@ export const toValidRemeshDomainDefinition = <T extends RemeshDomainDefinition>(
 
   if (domainDefinition.query) {
     result.query = domainDefinition.query as unknown as typeof result.query
+  }
+
+  if (domainDefinition.command) {
+    result.command = domainDefinition.command as unknown as typeof result.command
   }
 
   return result

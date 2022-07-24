@@ -15,7 +15,7 @@ import {
   RemeshDomainPreloadOptions,
   RemeshEffect,
   RemeshEffectContext,
-  RemeshEffectOutput,
+  RemeshAction,
   RemeshEntity,
   RemeshEntityItem,
   RemeshEntityItemDeletePayload,
@@ -1366,7 +1366,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     fromCommand: remeshInjectedContext.fromCommand,
   }
 
-  const handleEffectOutput = (output: RemeshEffectOutput) => {
+  const handleEffectOutput = (output: RemeshAction) => {
     handleCommandOutput(output)
     commit()
   }
@@ -1488,7 +1488,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     return domainStorage.preloadedState
   }
 
-  const send = (output: RemeshCommandOutput) => {
+  const send = (output: RemeshAction) => {
     handleCommandOutput(output)
     commit()
   }
