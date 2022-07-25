@@ -16,7 +16,7 @@ beforeEach(() => {
   })
 })
 
-describe('state', () => {
+describe('atom', () => {
   const NameState = RemeshState({
     name: 'NameState',
     default: 'remesh',
@@ -203,5 +203,36 @@ describe('state', () => {
     ;[age, { UpdateAgeCommand }] = store.query(domain.query.AgeQuery())
 
     expect(age).toBe(20)
+  })
+
+  it('supports injectEntities', () => {
+    type Entity = {
+      key: string
+      value: number
+    }
+    const TestEntity = RemeshEntity<Entity>({
+      name: 'TestEntity',
+      key: (entity) => entity.key,
+      injectEntities: [
+        {
+          key: '0',
+          value: 123,
+        },
+        {
+          key: '1',
+          value: 456,
+        },
+      ],
+    })
+
+    const TestQuery = RemeshQuery({
+      name: 'TestQuery',
+      impl({ get }, key: string) {
+        return get(TestEntity(key)).value
+      },
+    })
+
+    expect(store.query(TestQuery('0'))).toBe(123)
+    expect(store.query(TestQuery('1'))).toBe(456)
   })
 })

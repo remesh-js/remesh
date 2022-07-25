@@ -25,6 +25,7 @@ export const ListModule = <T extends SerializableObject>(
   const ItemEntity = domain.entity<T>({
     name: `${options.name}.ItemEntity`,
     key: options.key,
+    injectEntities: options.default,
   })
 
   const ItemQuery = domain.query({

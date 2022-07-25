@@ -359,6 +359,13 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     domainStorage.entityMap.set(key, newEntityStorage)
     entityStorageWeakMap.set(entityItem, newEntityStorage)
 
+    const Entity = entityItem.Entity
+    if (Entity.injectEntities) {
+      for (const entity of Entity.injectEntities) {
+        updateEntityItem(Entity(Entity.key(entity)), entity)
+      }
+    }
+
     inspectorManager.inspectEntityStorage(InspectorType.EntityCreated, newEntityStorage)
 
     return newEntityStorage
@@ -979,9 +986,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
   }
 
   const remeshInjectedContext: RemeshInjectedContext = {
-    get: (
-      input: RemeshStateItem<any> | RemeshEntityItem<any> | RemeshQueryAction<any, any>
-    ) => {
+    get: (input: RemeshStateItem<any> | RemeshEntityItem<any> | RemeshQueryAction<any, any>) => {
       if (input.type === 'RemeshStateItem') {
         return getCurrentState(input)
       }

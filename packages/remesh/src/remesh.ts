@@ -233,6 +233,7 @@ export type RemeshEntity<T extends SerializableObject> = {
   entityId: number
   entityName: DomainConceptName<'Entity'>
   key: (entity: T) => string
+  injectEntities?: T[]
   (key: string | number): RemeshEntityItem<T>
   owner: RemeshDomainAction<any, any>
   inspectable: boolean
@@ -261,6 +262,7 @@ export type RemeshEntityItemDeletePayload<T extends SerializableObject> = {
 export type RemeshEntityOptions<T extends SerializableObject> = {
   name: DomainConceptName<'Entity'>
   key: (entity: T) => string
+  injectEntities?: T[]
   inspectable?: boolean
   compare?: CompareFn<T>
 }
@@ -310,6 +312,7 @@ export const RemeshEntity = <T extends SerializableObject>(options: RemeshEntity
   Entity.entityId = entityId
   Entity.entityName = options.name
   Entity.key = options.key
+  Entity.injectEntities = options.injectEntities
   Entity.owner = DefaultDomain()
   Entity.inspectable = options.inspectable ?? true
   Entity.compare = options.compare ?? defaultCompare
