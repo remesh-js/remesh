@@ -1,9 +1,10 @@
 import React from 'react'
-import { useRemeshDomain, useRemeshQuery } from 'remesh-react'
+import { useRemeshDomain, useRemeshQuery, useRemeshSend } from 'remesh-react'
 
 import { TimerDomain } from 'remesh-domains-for-demos/dist/7guis/Timer'
 
 export const TimerApp = () => {
+  const send = useRemeshSend()
   const timerDomain = useRemeshDomain(TimerDomain())
   const elapsed = useRemeshQuery(timerDomain.query.ElapsedQuery())
   const duration = useRemeshQuery(timerDomain.query.DurationQuery())
@@ -11,12 +12,12 @@ export const TimerApp = () => {
   const handleDurationChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const duration = parseInt(event.target.value, 10)
     if (!isNaN(duration)) {
-      timerDomain.command.UpdateDurationCommand(duration)
+      send(timerDomain.command.UpdateDurationCommand(duration))
     }
   }
 
   const handleResetElapsed = () => {
-    timerDomain.command.ResetElapsedCommand()
+    send(timerDomain.command.ResetElapsedCommand())
   }
 
   return (

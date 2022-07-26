@@ -42,45 +42,41 @@ export const TimerDomain = Remesh.domain({
 
     const UpdateElapsedCommand = domain.command({
       name: 'UpdateElapsedCommand',
-      impl: ({ get, set, emit }, increment: number) => {
+      impl: ({ get }, increment: number) => {
         const duration = get(DurationState())
         const elapsed = get(ElapsedState())
 
         if (elapsed > duration) {
-          emit(StopEvent())
-          return
+          return StopEvent()
         }
 
-        set(ElapsedState(), elapsed + increment)
+        return ElapsedState().new(elapsed + increment)
       },
     })
 
     const UpdateDurationCommand = domain.command({
       name: 'UpdateDurationCommand',
-      impl: ({ get, set, emit }, newDuration: number) => {
+      impl: ({ get }, newDuration: number) => {
         const elapsed = get(ElapsedState())
 
         if (newDuration > elapsed) {
-          set(DurationState(), newDuration)
-          emit(StartEvent())
-          return
+          return [DurationState().new(newDuration), StartEvent()]
         }
 
-        set(DurationState(), newDuration)
+        return DurationState().new(newDuration)
       },
     })
 
     const ResetElapsedCommand = domain.command({
       name: 'ResetElapsedCommand',
-      impl: ({ set, emit }) => {
-        set(ElapsedState(), 0)
-        emit(StartEvent())
+      impl: ({}) => {
+        return [ElapsedState().new(0), StartEvent()]
       },
     })
 
-    const UpdateElapsedByAnimationCommand = domain.command$({
-      name: 'UpdateElapsedByAnimationCommand',
-      impl: ({ fromEvent, send }) => {
+    domain.effect({
+      name: 'UpdateElapsedByAnimationEffect',
+      impl: ({ fromEvent }) => {
         const startEvent$ = fromEvent(StartEvent).pipe(
           startWith(StartEvent()),
           map(() => 1),
@@ -95,19 +91,12 @@ export const TimerDomain = Remesh.domain({
             }
             return animationFrames().pipe(
               pairwise(),
-              map(([a, b]) => b.elapsed - a.elapsed),
-              tap((increment) => {
-                send(UpdateElapsedCommand(increment))
-              }),
+              map(([a, b]) => UpdateElapsedCommand(b.elapsed - a.elapsed)),
               takeUntil(fromEvent(StopEvent)),
             )
           }),
         )
       },
-    })
-
-    domain.ignite(({ send }) => {
-      send(UpdateElapsedByAnimationCommand())
     })
 
     return {

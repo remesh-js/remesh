@@ -204,14 +204,14 @@ export const TodoDomain = Remesh.domain({
       },
     })
 
-    const FromRepoToStateCommand = domain.command$({
+    const FromRepoToStateCommand = domain.effect({
       name: 'FromRepoToStateCommand',
       impl() {
         return from(repo.getTodoList()).pipe(map((todos) => SetTodoListCommand(todos)))
       },
     })
 
-    const FromStateToRepoCommand = domain.command$({
+    const FromStateToRepoCommand = domain.effect({
       name: 'FromStateToRepoCommand',
       impl: ({ fromEvent }) => {
         const addTodo$ = fromEvent(TodoAddedEvent).pipe(tap((todo) => repo.addTodo(todo)))

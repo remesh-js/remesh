@@ -617,7 +617,7 @@ export const GameDomain = Remesh.domain({
       },
     })
 
-    const CheckGameStatusCommand = domain.command$({
+    const CheckGameStatusCommand = domain.effect({
       name: 'CheckGameStatusCommand',
       impl: ({ fromQuery }) => {
         return fromQuery(GameStatusQuery()).pipe(

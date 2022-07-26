@@ -1,5 +1,5 @@
 import React from 'react'
-import { useRemeshDomain, useRemeshQuery } from 'remesh-react'
+import { useRemeshDomain, useRemeshQuery, useRemeshSend } from 'remesh-react'
 
 import { CellsDomain } from 'remesh-domains-for-demos/dist/7guis/Cells'
 
@@ -58,6 +58,7 @@ type RowViewProps = {
 }
 
 const RowView = ({ columnKeyList, rowKey }: RowViewProps) => {
+  const send = useRemeshSend()
   const cells = useRemeshDomain(CellsDomain())
 
   return (
@@ -86,7 +87,7 @@ const RowView = ({ columnKeyList, rowKey }: RowViewProps) => {
               if (event.target instanceof HTMLInputElement) {
                 return
               }
-              cells.command.SelectCellCommand(cellKey)
+              send(cells.command.SelectCellCommand(cellKey))
             }}
           >
             <CellView cellKey={cellKey} />
@@ -98,11 +99,12 @@ const RowView = ({ columnKeyList, rowKey }: RowViewProps) => {
 }
 
 const CellView = ({ cellKey }: { cellKey: string }) => {
+  const send = useRemeshSend()
   const cellsDomain = useRemeshDomain(CellsDomain())
   const cell = useRemeshQuery(cellsDomain.query.CellQuery(cellKey))
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    cellsDomain.command.SetCellContentCommand({ key: cellKey, input: e.target.value })
+    send(cellsDomain.command.SetCellContentCommand({ key: cellKey, input: e.target.value }))
   }
 
   return (
@@ -120,7 +122,7 @@ const CellView = ({ cellKey }: { cellKey: string }) => {
           onChange={handleChange}
           onBlur={() => {
             if (cell.isEditing) {
-              cellsDomain.command.UnselectCellCommand(cellKey)
+              send(cellsDomain.command.UnselectCellCommand(cellKey))
             }
           }}
           autoFocus

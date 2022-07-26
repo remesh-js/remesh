@@ -99,22 +99,22 @@ export const FlightBookerDomain = Remesh.domain({
 
     const UpdateOptionCommand = domain.command({
       name: 'UpdateOptionCommand',
-      impl: ({ set }, option: FlightBookerOption) => {
-        set(OptionState(), option)
+      impl: ({}, option: FlightBookerOption) => {
+        return OptionState().new(option)
       },
     })
 
     const UpdateStartDateCommand = domain.command({
       name: 'UpdateStartDateCommand',
-      impl: ({ set }, dateInput: string) => {
-        set(StartDateInputState(), dateInput)
+      impl: ({}, dateInput: string) => {
+        return StartDateInputState().new(dateInput)
       },
     })
 
     const UpdateEndDateCommand = domain.command({
       name: 'UpdateEndDateCommand',
-      impl: ({ set }, dateInput: string) => {
-        set(EndDateInputState(), dateInput)
+      impl: ({}, dateInput: string) => {
+        return EndDateInputState().new(dateInput)
       },
     })
 

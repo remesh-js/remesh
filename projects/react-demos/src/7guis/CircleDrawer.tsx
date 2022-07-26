@@ -1,12 +1,13 @@
 import React from 'react'
 
-import { useRemeshDomain, useRemeshQuery } from 'remesh-react'
+import { useRemeshDomain, useRemeshQuery, useRemeshSend } from 'remesh-react'
 
 import { CircleDrawerDomain, positionInCircle, Position } from 'remesh-domains-for-demos/dist/7guis/CircleDrawer'
 
 import { OuterClickWrapper } from './OuterClickWrapper'
 
 export const CircleDrawerApp = () => {
+  const send = useRemeshSend()
   const domain = useRemeshDomain(CircleDrawerDomain())
   const drawState = useRemeshQuery(domain.query.DrawQuery())
   const tooltipsState = useRemeshQuery(domain.query.TooltipsQuery())
@@ -38,14 +39,16 @@ export const CircleDrawerApp = () => {
     const circleInfo = getCircleInfo(position)
 
     if (circleInfo) {
-      domain.command.SetSelectedIndexCommand(circleInfo.index)
-      domain.command.UpdateTooltipsCommand({
-        type: 'show-tips',
-        index: circleInfo.index,
-        circle: circleInfo.circle,
-        pageX: e.pageX,
-        pageY: e.pageY,
-      })
+      send([
+        domain.command.SetSelectedIndexCommand(circleInfo.index),
+        domain.command.UpdateTooltipsCommand({
+          type: 'show-tips',
+          index: circleInfo.index,
+          circle: circleInfo.circle,
+          pageX: e.pageX,
+          pageY: e.pageY,
+        }),
+      ])
     }
   }
 
@@ -58,7 +61,7 @@ export const CircleDrawerApp = () => {
     const circleInfo = getCircleInfo(position)
 
     if (!circleInfo) {
-      domain.command.DrawCommand({ position, diameter: 30 })
+      send(domain.command.DrawCommand({ position, diameter: 30 }))
     }
   }
 
@@ -71,38 +74,44 @@ export const CircleDrawerApp = () => {
     const circleInfo = getCircleInfo(position)
 
     if (circleInfo) {
-      domain.command.SetSelectedIndexCommand(circleInfo.index)
+      send(domain.command.SetSelectedIndexCommand(circleInfo.index))
     } else {
-      domain.command.SetSelectedIndexCommand(-1)
+      send(domain.command.SetSelectedIndexCommand(-1))
     }
   }
 
   const handleOpenSlider = () => {
     if (tooltipsState.type === 'show-tips') {
-      domain.command.UpdateTooltipsCommand({
-        type: 'open-slider',
-        index: tooltipsState.index,
-        circle: tooltipsState.circle,
-        pageX: tooltipsState.pageX,
-        pageY: tooltipsState.pageY,
-      })
+      send(
+        domain.command.UpdateTooltipsCommand({
+          type: 'open-slider',
+          index: tooltipsState.index,
+          circle: tooltipsState.circle,
+          pageX: tooltipsState.pageX,
+          pageY: tooltipsState.pageY,
+        }),
+      )
     }
   }
 
   const handleCloseSlider = () => {
-    domain.command.UpdateTooltipsCommand({
-      type: 'default',
-    })
+    send(
+      domain.command.UpdateTooltipsCommand({
+        type: 'default',
+      }),
+    )
   }
 
   const handleAdust = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(event.target.value, 10)
 
     if (selectedCircleInfo && !isNaN(value)) {
-      domain.command.AdjustCommand({
-        index: selectedCircleInfo.index,
-        diameter: value,
-      })
+      send(
+        domain.command.AdjustCommand({
+          index: selectedCircleInfo.index,
+          diameter: value,
+        }),
+      )
     }
   }
 
@@ -123,7 +132,7 @@ export const CircleDrawerApp = () => {
         }}
       >
         <button
-          onClick={() => domain.command.UndoCommand()}
+          onClick={() => send(domain.command.UndoCommand())}
           style={{
             margin: '0 10px',
           }}
@@ -132,7 +141,7 @@ export const CircleDrawerApp = () => {
           Undo
         </button>
         <button
-          onClick={() => domain.command.RedoCommand()}
+          onClick={() => send(domain.command.RedoCommand())}
           style={{
             margin: '0 10px',
           }}

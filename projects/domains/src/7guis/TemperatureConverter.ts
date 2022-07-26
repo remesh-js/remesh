@@ -29,37 +29,33 @@ export const TemperatureConverterDomain = Remesh.domain({
 
     const ResetBothCommand = domain.command({
       name: 'ResetBothCommand',
-      impl: ({ set }) => {
-        set(CelsiusState(), '')
-        set(FahrenheitState(), '')
+      impl: ({}) => {
+        return [CelsiusState().new(''), FahrenheitState().new('')]
       },
     })
 
     const UpdateCelsiusCommand = domain.command({
       name: 'UpdateCelsiusCommand',
-      impl: ({ set, send }, input: string) => {
+      impl: ({}, input: string) => {
         if (input === '') {
-          send(ResetBothCommand())
-          return
+          return ResetBothCommand()
         }
 
         const celsius = parseFloat(input)
 
         if (Number.isNaN(celsius)) {
-          set(CelsiusState(), input)
-          return
+          return CelsiusState().new(input)
         }
 
         const fahrenheit = celsius * (9 / 5) + 32
 
-        set(CelsiusState(), input)
-        set(FahrenheitState(), fahrenheit.toString())
+        return [CelsiusState().new(input), FahrenheitState().new(fahrenheit.toString())]
       },
     })
 
     const UpdateFahrenheitCommand = domain.command({
       name: 'UpdateFahrenheitCommand',
-      impl: ({ set }, input: string) => {
+      impl: ({}, input: string) => {
         if (input === '') {
           return ResetBothCommand()
         }
@@ -67,14 +63,12 @@ export const TemperatureConverterDomain = Remesh.domain({
         const fahrenheit = parseFloat(input)
 
         if (Number.isNaN(fahrenheit)) {
-          set(FahrenheitState(), input)
-          return
+          return FahrenheitState().new(input)
         }
 
         const celsius = (fahrenheit - 32) * (5 / 9)
 
-        set(CelsiusState(), celsius.toString())
-        set(FahrenheitState(), input)
+        return [CelsiusState().new(celsius.toString()), FahrenheitState().new(input)]
       },
     })
 

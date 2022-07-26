@@ -1,12 +1,13 @@
 import React from 'react'
 
-import { useRemeshDomain, useRemeshQuery } from 'remesh-react'
+import { useRemeshDomain, useRemeshQuery, useRemeshSend } from 'remesh-react'
 
 import { CRUDDomain } from 'remesh-domains-for-demos/dist/7guis/CRUD'
 
 import { OuterClickWrapper } from './OuterClickWrapper'
 
 export const CRUDApp = () => {
+  const send = useRemeshSend()
   const domain = useRemeshDomain(CRUDDomain())
   const filteredList = useRemeshQuery(domain.query.FilteredListQuery())
   const filter = useRemeshQuery(domain.query.FilterPrefixQuery())
@@ -14,49 +15,52 @@ export const CRUDApp = () => {
   const selected = useRemeshQuery(domain.query.SelectedQuery())
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    domain.command.UpdateFilterPrefixCommand(e.target.value)
+    send(domain.command.UpdateFilterPrefixCommand(e.target.value))
   }
 
   const handleSelect = (itemId: string | null) => {
-    domain.command.SelectItemCommand(itemId)
+    send(domain.command.SelectItemCommand(itemId))
   }
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (selected) {
-      domain.command.UpdateSelectedNameCommand({
-        name: e.target.value,
-      })
+      send(
+        domain.command.UpdateSelectedNameCommand({
+          name: e.target.value,
+        }),
+      )
     } else {
-      domain.command.UpdateCreatedCommand({ name: e.target.value })
+      send(domain.command.UpdateCreatedCommand({ name: e.target.value }))
     }
   }
 
   const handleSurnameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (selected) {
-      domain.command.UpdateSelectedNameCommand({
-        surname: e.target.value,
-      })
+      send(
+        domain.command.UpdateSelectedNameCommand({
+          surname: e.target.value,
+        }),
+      )
     } else {
-      domain.command.UpdateCreatedCommand({ surname: e.target.value })
+      send(domain.command.UpdateCreatedCommand({ surname: e.target.value }))
     }
   }
 
   const handleCreate = () => {
     if (selected === null) {
-      domain.command.CreateNameItemCommand()
+      send(domain.command.CreateNameItemCommand())
     }
   }
 
   const handleSync = () => {
     if (selected) {
-      domain.command.SyncSelectedCommand()
+      send(domain.command.SyncSelectedCommand())
     }
   }
 
   const handleDelete = () => {
     if (selected) {
-      domain.command.DeleteItemCommand(selected.id)
-      domain.command.SelectItemCommand(null)
+      send([domain.command.DeleteItemCommand(selected.id), domain.command.SelectItemCommand(null)])
     }
   }
 

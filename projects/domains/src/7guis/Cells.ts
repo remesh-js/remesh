@@ -43,16 +43,14 @@ export const CellsDomain = Remesh.domain({
       },
     })
 
-    const CellState = domain.state({
+    const CellState = domain.state<CellState>({
       name: 'CellState',
-      impl: (_: string): CellState => {
-        return {
-          content: {
-            type: 'text',
-            text: '',
-          },
-          isEditing: false,
-        }
+      default: {
+        content: {
+          type: 'text',
+          text: '',
+        },
+        isEditing: false,
       },
     })
 
@@ -90,10 +88,10 @@ export const CellsDomain = Remesh.domain({
 
     const SelectCellCommand = domain.command({
       name: 'SelectCellCommand',
-      impl: ({ get, set }, key: string) => {
+      impl: ({ get }, key: string) => {
         const state = get(CellState(key))
 
-        set(CellState(key), {
+        return CellState(key).new({
           content: state.content,
           isEditing: true,
         })
@@ -102,10 +100,10 @@ export const CellsDomain = Remesh.domain({
 
     const UnselectCellCommand = domain.command({
       name: 'UnselectCellCommand',
-      impl: ({ get, set }, key: string) => {
+      impl: ({ get }, key: string) => {
         const state = get(CellState(key))
 
-        set(CellState(key), {
+        return CellState(key).new({
           content: state.content,
           isEditing: false,
         })
@@ -114,11 +112,11 @@ export const CellsDomain = Remesh.domain({
 
     const SetCellContentCommand = domain.command({
       name: 'SetCellContentCommand',
-      impl: ({ get, set }, { key, input }: { key: string; input: string }) => {
+      impl: ({ get }, { key, input }: { key: string; input: string }) => {
         const state = get(CellState(key))
 
         if (input.startsWith('=')) {
-          set(CellState(key), {
+          return CellState(key).new({
             content: {
               type: 'formula',
               formula: input,
@@ -126,7 +124,7 @@ export const CellsDomain = Remesh.domain({
             isEditing: state.isEditing,
           })
         } else {
-          set(CellState(key), {
+          return CellState(key).new({
             content: {
               type: 'text',
               text: input,

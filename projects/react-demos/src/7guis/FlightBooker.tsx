@@ -1,9 +1,10 @@
 import React from 'react'
-import { useRemeshDomain, useRemeshQuery } from 'remesh-react'
+import { useRemeshDomain, useRemeshQuery, useRemeshSend } from 'remesh-react'
 
 import { FlightBookerDomain, FlightBookerOption } from 'remesh-domains-for-demos/dist/7guis/FlightBooker'
 
 export const FlightBookerApp = () => {
+  const send = useRemeshSend()
   const flightBooker = useRemeshDomain(FlightBookerDomain())
   const option = useRemeshQuery(flightBooker.query.OptionQuery())
   const status = useRemeshQuery(flightBooker.query.StatusQuery())
@@ -12,15 +13,15 @@ export const FlightBookerApp = () => {
   const endDateInput = useRemeshQuery(flightBooker.query.EndDateInputQuery())
 
   const handleOptionChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    flightBooker.command.UpdateOptionCommand(event.target.value as FlightBookerOption)
+    send(flightBooker.command.UpdateOptionCommand(event.target.value as FlightBookerOption))
   }
 
   const handleStartDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    flightBooker.command.UpdateStartDateCommand(event.target.value)
+    send(flightBooker.command.UpdateStartDateCommand(event.target.value))
   }
 
   const handleEndDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    flightBooker.command.UpdateEndDateCommand(event.target.value)
+    send(flightBooker.command.UpdateEndDateCommand(event.target.value))
   }
 
   const handleBookButtonClick = () => {

@@ -34,8 +34,8 @@ export const CRUDDomain = Remesh.domain({
 
     const UpdateFilterPrefixCommand = domain.command({
       name: 'UpdateFilterPrefixCommand',
-      impl: ({ set }, prefix: string) => {
-        set(FilterPrefixState(), prefix)
+      impl: ({}, prefix: string) => {
+        return FilterPrefixState().new(prefix)
       },
     })
 
@@ -56,10 +56,10 @@ export const CRUDDomain = Remesh.domain({
 
     const UpdateCreatedCommand = domain.command({
       name: 'UpdateCreatedCommand',
-      impl: ({ get, set }, name: Partial<Name>) => {
+      impl: ({ get }, name: Partial<Name>) => {
         const currentName = get(CreatedState())
 
-        set(CreatedState(), {
+        return CreatedState().new({
           ...currentName,
           ...name,
         })
@@ -80,39 +80,37 @@ export const CRUDDomain = Remesh.domain({
 
     const SelectItemCommand = domain.command({
       name: 'SelectItemCommand',
-      impl: ({ get, set }, targetItemId: string | null) => {
+      impl: ({ get }, targetItemId: string | null) => {
         const currentSelected = get(SelectedState())
 
         if (targetItemId === null) {
           if (currentSelected === null) {
             return null
           } else {
-            set(SelectedState(), null)
-            return
+            return SelectedState().new(null)
           }
         }
 
         if (currentSelected && currentSelected.id === targetItemId) {
-          set(SelectedState(), null)
-          return
+          return SelectedState().new(null)
         }
 
         const targetItem = get(nameListModule.query.ItemQuery(targetItemId))
 
-        set(SelectedState(), targetItem)
+        return SelectedState().new(targetItem)
       },
     })
 
     const UpdateSelectedNameCommand = domain.command({
       name: 'UpdateSelectedNameCommand',
-      impl: ({ get, set }, name: Partial<Name>) => {
+      impl: ({ get }, name: Partial<Name>) => {
         const selected = get(SelectedState())
 
         if (selected === null) {
-          return
+          return null
         }
 
-        set(SelectedState(), {
+        return SelectedState().new({
           ...selected,
           ...name,
         })
@@ -135,28 +133,27 @@ export const CRUDDomain = Remesh.domain({
 
     const SyncSelectedCommand = domain.command({
       name: 'SyncSelectedCommand',
-      impl: ({ get, send }) => {
+      impl: ({ get }) => {
         const selected = get(SelectedState())
 
         if (selected === null) {
-          return
+          return null
         }
 
-        send(nameListModule.command.UpdateItemCommand(selected))
+        return nameListModule.command.UpdateItemCommand(selected)
       },
     })
 
     const CreateNameItemCommand = domain.command({
       name: 'CreateNameItemCommand',
-      impl: ({ get, send }) => {
+      impl: ({ get }) => {
         const created = get(CreatedState())
         const newItem = {
           id: `${nameUid++}`,
           ...created,
         }
 
-        send(nameListModule.command.AddItemCommand(newItem))
-        send(UpdateCreatedCommand({ name: '', surname: '' }))
+        return [nameListModule.command.AddItemCommand(newItem), UpdateCreatedCommand({ name: '', surname: '' })]
       },
     })
 
