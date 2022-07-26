@@ -245,17 +245,11 @@ export type RemeshEntityItem<T extends SerializableObject> = {
   key: string
   Entity: RemeshEntity<T>
   new: (entity: T) => RemeshEntityItemUpdatePayload<T>
-  delete: () => RemeshEntityItemDeletePayload<T>
 }
 
 export type RemeshEntityItemUpdatePayload<T extends SerializableObject> = {
   type: 'RemeshEntityItemUpdatePayload'
   value: T
-  entityItem: RemeshEntityItem<T>
-}
-
-export type RemeshEntityItemDeletePayload<T extends SerializableObject> = {
-  type: 'RemeshEntityItemDeletePayload'
   entityItem: RemeshEntityItem<T>
 }
 
@@ -401,7 +395,6 @@ export type RemeshCommandOutput =
   | RemeshEventAction<any, any>
   | RemeshStateItemUpdatePayload<any>
   | RemeshEntityItemUpdatePayload<any>
-  | RemeshEntityItemDeletePayload<any>
   | RemeshCommandOutput[]
   | null
 

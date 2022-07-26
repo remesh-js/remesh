@@ -71,11 +71,6 @@ export const RemeshRoot = (props: RemeshRootProps) => {
 }
 
 export const useRemeshQuery = function <T extends Args<Serializable>, U>(queryAction: RemeshQueryAction<T, U>): U {
-  /**
-   * initial domain if needed
-   */
-  useRemeshDomain(queryAction.Query.owner)
-
   const store = useRemeshStore()
 
   const triggerRef = useRef<(() => void) | null>(null)
@@ -117,24 +112,6 @@ export const useRemeshQuery = function <T extends Args<Serializable>, U>(queryAc
   return state
 }
 
-export const useRemeshSuspense = function <T extends Args<Serializable>, U>(
-  queryAction: RemeshQueryAction<T, AsyncData<U>>,
-) {
-  const state = useRemeshQuery(queryAction)
-
-  if (state.type === 'loading') {
-    throw state.promise
-  }
-
-  if (state.type === 'failed') {
-    throw state.error
-  }
-
-  if (state.type === 'success') {
-    return state.value
-  }
-}
-
 export const useRemeshEvent = function <T extends Args, U>(
   Event: RemeshEvent<T, U> | RemeshSubscribeOnlyEvent<T, U>,
   callback: (data: U) => unknown,
@@ -156,38 +133,20 @@ export const useRemeshEvent = function <T extends Args, U>(
   }, [Event, store])
 }
 
-export const useRemeshEmit = function () {
-  const store = useRemeshStore()
-
-  return store.emitEvent
-}
-
 export const useRemeshSend = function () {
   const store = useRemeshStore()
 
-  return store.sendCommand
+  return store.send
 }
 
 export const useRemeshDomain = function <T extends RemeshDomainDefinition, U extends Args<Serializable>>(
   domainAction: RemeshDomainAction<T, U>,
 ) {
   const store = useRemeshStore()
-  const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null)
   const domain = store.getDomain(domainAction)
-  const domainKey = store.getKey(domainAction)
 
   useEffect(() => {
-    return () => {
-      subscriptionRef.current?.unsubscribe()
-      subscriptionRef.current = null
-    }
-  }, [store, domainKey])
-
-  useEffect(() => {
-    if (subscriptionRef.current !== null) {
-      return
-    }
-    subscriptionRef.current = store.subscribeDomain(domainAction)
+    store.igniteDomain(domainAction)
   }, [store, domainAction])
 
   return domain

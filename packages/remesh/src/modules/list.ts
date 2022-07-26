@@ -111,7 +111,7 @@ export const ListModule = <T extends SerializableObject>(
         return null
       }
 
-      return SetListCommand(newList)
+      return [SetListCommand(newList)]
     },
   })
 

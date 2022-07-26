@@ -105,14 +105,30 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
           stateValue: event.storage.currentState,
         }
 
-        if (event.storage.arg !== undefined) {
+        if (event.storage.key !== undefined) {
           send(info.type, {
             ...info,
-            stateArg: event.storage.arg,
+            stateArg: event.storage.key,
           })
         } else {
           send(info.type, info)
         }
+      })
+    })
+
+    helper.onActive('entity', () => {
+      store.subscribeEvent(inspectorDomain.event.RemeshEntityStorageEvent, (event) => {
+        const Entity = event.storage.Entity
+        const info = {
+          type: `${event.type}::${Entity.entityName}`,
+          owner: getOwnerInfo(Entity.owner),
+          entityId: Entity.entityId,
+          entityName: Entity.entityName,
+          entityValue: event.storage.currentEntity,
+          entityKey: event.storage.key,
+        }
+
+        send(info.type, info)
       })
     })
 
@@ -151,27 +167,6 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
           send(info.type, {
             ...info,
             commandArg: event.action.arg,
-          })
-        } else {
-          send(info.type, info)
-        }
-      })
-    })
-
-    helper.onActive('command$', () => {
-      store.subscribeEvent(inspectorDomain.event.RemeshCommand$ReceivedEvent, (event) => {
-        const Command$ = event.action.Command$
-        const info = {
-          type: `${event.type}::${Command$.command$Name}`,
-          owner: getOwnerInfo(Command$.owner),
-          command$Id: Command$.command$Id,
-          command$Name: Command$.command$Name,
-        }
-
-        if (event.action.arg !== undefined) {
-          send(info.type, {
-            ...info,
-            command$Arg: event.action.arg,
           })
         } else {
           send(info.type, info)

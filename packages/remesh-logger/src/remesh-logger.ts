@@ -19,9 +19,9 @@ const colors = {
   domain: '#bfb1cc',
   event: '#aec6d4',
   state: '#adc7af',
+  entity: '#d9bdc5',
   query: '#d6c9ad',
   command: '#debdb6',
-  command$: '#d9bdc5',
 }
 
 export const RemeshLogger = (options?: RemeshLoggerOptions): RemeshStoreInspector => {
@@ -110,18 +110,34 @@ export const RemeshLogger = (options?: RemeshLoggerOptions): RemeshStoreInspecto
           stateValue: event.storage.currentState,
         }
 
-        if (event.storage.arg !== undefined) {
+        if (event.storage.key !== undefined) {
           log(
             info.type,
             {
               ...info,
-              stateArg: event.storage.arg,
+              stateKey: event.storage.key,
             },
             config.colors.state,
           )
         } else {
           log(info.type, info, config.colors.state)
         }
+      })
+    })
+
+    helper.onActive('entity', () => {
+      store.subscribeEvent(inspectorDomain.event.RemeshEntityStorageEvent, (event) => {
+        const Entity = event.storage.Entity
+        const info = {
+          type: `${event.type}::${Entity.entityName}`,
+          owner: getOwnerInfo(Entity.owner),
+          entityId: Entity.entityId,
+          entityName: Entity.entityName,
+          entityValue: event.storage.currentEntity,
+          entityKey: event.storage.key,
+        }
+
+        log(info.type, info, config.colors.entity)
       })
     })
 
@@ -172,31 +188,6 @@ export const RemeshLogger = (options?: RemeshLoggerOptions): RemeshStoreInspecto
           )
         } else {
           log(info.type, info, config.colors.command)
-        }
-      })
-    })
-
-    helper.onActive('command$', () => {
-      store.subscribeEvent(inspectorDomain.event.RemeshCommand$ReceivedEvent, (event) => {
-        const Command$ = event.action.Command$
-        const info = {
-          type: `${event.type}::${Command$.command$Name}`,
-          owner: getOwnerInfo(Command$.owner),
-          command$Id: Command$.command$Id,
-          command$Name: Command$.command$Name,
-        }
-
-        if (event.action.arg !== undefined) {
-          log(
-            info.type,
-            {
-              ...info,
-              command$Arg: event.action.arg,
-            },
-            config.colors.command$,
-          )
-        } else {
-          log(info.type, info, config.colors.command$)
         }
       })
     })
