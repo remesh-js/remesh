@@ -37,6 +37,7 @@ import {
   SerializableObject,
   toValidRemeshDomainDefinition,
   VerifiedRemeshDomainDefinition,
+  RemeshDomainPreloadQueryContext,
 } from './remesh'
 
 import { createInspectorManager, InspectorType } from './inspector'
@@ -1507,7 +1508,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     get: remeshInjectedContext.get,
   }
 
-  const domainPreloadQueryContext: RemeshQueryContext = {
+  const domainPreloadQueryContext: RemeshDomainPreloadQueryContext = {
     get: remeshInjectedContext.get,
   }
 
@@ -1538,7 +1539,8 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
         domainStorage.preloadedState[preloadOptions.key] = data
 
-        preloadOptions.command(domainPreloadCommandContext, data)
+        const commandOutput = preloadOptions.command(domainPreloadCommandContext, data)
+        handleCommandOutput(commandOutput)
       }),
     )
   }

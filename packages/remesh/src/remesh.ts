@@ -284,7 +284,7 @@ export const RemeshEntity = <T extends SerializableObject>(options: RemeshEntity
           value: newEntity,
           entityItem,
         }
-      }
+      },
     }
 
     if (key === undefined) {
@@ -464,14 +464,24 @@ export const RemeshExtern = <T = void>(options: RemeshExternOptions<T>): RemeshE
   return Extern
 }
 
+export type RemeshDomainPreloadQueryContext = {
+  get: RemeshInjectedContext['get']
+}
+
 export type RemeshDomainPreloadCommandContext = {
   get: RemeshInjectedContext['get']
 }
 
+export type RemeshDomainPreloadCommandOutput =
+  | RemeshStateItemUpdatePayload<any>
+  | RemeshEntityItemUpdatePayload<any>
+  | RemeshDomainPreloadCommandOutput[]
+  | null
+
 export type RemeshDomainPreloadOptions<T extends Serializable> = {
   key: string
-  query: (context: RemeshQueryContext) => Promise<T>
-  command: (context: RemeshDomainPreloadCommandContext, data: T) => RemeshCommandOutput
+  query: (context: RemeshDomainPreloadQueryContext) => Promise<T>
+  command: (context: RemeshDomainPreloadCommandContext, data: T) => RemeshDomainPreloadCommandOutput
 }
 
 export type RemeshEffectContext = {

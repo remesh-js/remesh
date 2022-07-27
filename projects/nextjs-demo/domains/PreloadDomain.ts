@@ -20,9 +20,8 @@ export const PreloadDomain = Remesh.domain({
       name: 'CountQuery',
       impl: ({ get }) => {
         return get(CountState())
-      }
+      },
     })
-
 
     const SetCountCommand = domain.command({
       name: 'SetCountCommand',
@@ -56,13 +55,13 @@ export const PreloadDomain = Remesh.domain({
         }
       },
       command: ({}, data) => {
-        return SetCountCommand(data.count)
+        return CountState().new({ count: data.count })
       },
     })
 
     return {
       query: {
-        CountQuery
+        CountQuery,
       },
       command: {
         SetCountCommand: SetCountCommand,

@@ -33,9 +33,7 @@ export const useRemeshStore = () => {
   return store
 }
 
-export const useRemeshQuery = function <T extends Args<Serializable>, U>(
-  queryAction: RemeshQueryAction<T, U>,
-): Ref<U> {
+export const useRemeshQuery = function <T extends Args<Serializable>, U>(queryAction: RemeshQueryAction<T, U>): Ref<U> {
   const store = useRemeshStore()
 
   const queryRef = ref(store.query(queryAction)) as Ref<U>
@@ -72,16 +70,10 @@ export const useRemeshEvent = function <T extends Args, U>(
   })
 }
 
-export const useRemeshEmit = function () {
-  const store = useRemeshStore()
-
-  return store.emitEvent
-}
-
 export const useRemeshSend = function () {
   const store = useRemeshStore()
 
-  return store.sendCommand
+  return store.send
 }
 
 export const useRemeshDomain = function <T extends RemeshDomainDefinition, U extends Args<Serializable>>(
@@ -91,14 +83,8 @@ export const useRemeshDomain = function <T extends RemeshDomainDefinition, U ext
 
   const domain = store.getDomain(domainAction)
 
-  let subscription: ReturnType<typeof store.subscribeDomain> | null = null
-
   onMounted(() => {
-    subscription = store.subscribeDomain(domainAction)
-  })
-
-  onBeforeUnmount(() => {
-    subscription?.unsubscribe()
+    store.igniteDomain(domainAction)
   })
 
   return domain

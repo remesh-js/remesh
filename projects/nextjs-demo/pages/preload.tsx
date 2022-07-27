@@ -1,7 +1,7 @@
 import { NextPageContext } from 'next'
 
 import { Remesh, PreloadedState } from 'remesh'
-import { RemeshRoot, useRemeshDomain, useRemeshQuery } from 'remesh-react'
+import { RemeshRoot, useRemeshDomain, useRemeshQuery, useRemeshSend } from 'remesh-react'
 import { RemeshReduxDevtools } from 'remesh-redux-devtools'
 import { RemeshLogger } from 'remesh-logger'
 
@@ -41,15 +41,16 @@ export default (props: Props) => {
 }
 
 const Counter = () => {
+  const send = useRemeshSend()
   const domain = useRemeshDomain(PreloadDomain())
   const state = useRemeshQuery(domain.query.CountQuery())
 
   const incre = () => {
-    domain.command.IncreCommand()
+    send(domain.command.IncreCommand())
   }
 
   const decre = () => {
-    domain.command.DecreCommand()
+    send(domain.command.DecreCommand())
   }
 
   return (
@@ -64,7 +65,7 @@ const Counter = () => {
 }
 
 export type ButtonProps = {
-  children: React.ReactNode,
+  children: React.ReactNode
   onClick: () => unknown
 }
 
