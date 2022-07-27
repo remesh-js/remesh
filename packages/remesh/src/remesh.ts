@@ -13,8 +13,6 @@ export type Serializable = SerializablePrimitives | SerializableArray | Serializ
 
 export type Args<T = unknown> = [] | [arg: T] | [arg?: T]
 
-export type SetterInput<state> = RemeshStateItem<state>
-
 export type RemeshInjectedContext = {
   get<T extends Args<Serializable>, U>(input: RemeshQueryAction<T, U>): U
   get<state>(input: RemeshStateItem<state>): state
@@ -286,13 +284,7 @@ export const RemeshEntity = <T extends SerializableObject>(options: RemeshEntity
           value: newEntity,
           entityItem,
         }
-      },
-      delete: () => {
-        return {
-          type: 'RemeshEntityItemDeletePayload',
-          entityItem,
-        }
-      },
+      }
     }
 
     if (key === undefined) {

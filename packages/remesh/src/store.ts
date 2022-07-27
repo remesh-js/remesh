@@ -491,34 +491,14 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
   const queryStorageWeakMap = new WeakMap<RemeshQueryAction<any, any>, RemeshQueryStorage<any, any>>()
 
-  const createQuery$ = <T extends Args<Serializable>, U>(get: () => RemeshQueryStorage<T, U>) => {
-    const subject = new Subject<U>()
-
-    const observable = new Observable<U>((subscriber) => {
-      const subscription = subject.subscribe(subscriber)
-      const queryStorage = get()
-      queryStorage.refCount += 1
-
-      return () => {
-        queryStorage.refCount -= 1
-        subscription.unsubscribe()
-        clearQueryStorageIfNeeded(queryStorage)
-      }
-    })
-
-    return {
-      subject,
-      observable,
-    }
-  }
-
   const createQueryStorage = <T extends Args<Serializable>, U>(
     queryAction: RemeshQueryAction<T, U>,
   ): RemeshQueryStorage<T, U> => {
     const domainStorage = getDomainStorage(queryAction.Query.owner)
     const key = getQueryStorageKey(queryAction)
 
-    const { subject, observable } = createQuery$(() => currentQueryStorage)
+    const subject = new Subject<U>()
+    const observable = subject.asObservable()
     const upstreamSet: RemeshQueryStorage<T, U>['upstreamSet'] = new Set()
 
     const currentQueryStorage = {
@@ -594,7 +574,8 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       return
     }
 
-    const { subject, observable } = createQuery$(() => queryStorage)
+    const subject = new Subject<U>()
+    const observable = subject.asObservable()
 
     queryStorage.status = 'default'
     queryStorage.subject = subject
@@ -652,7 +633,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       Command,
       subject,
       observable,
-      refCount: 0,
     }
 
     domainStorage.commandMap.set(Command, currentCommandStorage)
@@ -754,7 +734,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       commandMap: new Map(),
       preloadOptionsList: [],
       preloadedState: {},
-      refCount: 0,
       ignited: false,
       hasBeenPreloaded: false,
       isDiscarding: false,
@@ -1395,12 +1374,25 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     subscriber: ((data: U) => unknown) | Partial<Observer<U>>,
   ): Subscription => {
     const queryStorage = getQueryStorage(queryAction)
-    const subscription =
-      typeof subscriber === 'function'
-        ? queryStorage.observable.subscribe(subscriber)
-        : queryStorage.observable.subscribe(subscriber)
 
-    return subscription
+    const observable = new Observable<U>((subscriber) => {
+      const subscription = queryStorage.subject.subscribe(subscriber)
+      queryStorage.refCount += 1
+
+      return () => {
+        queryStorage.refCount -= 1
+        subscription.unsubscribe()
+        if (queryStorage.refCount === 0) {
+          clearQueryStorageIfNeeded(queryStorage)
+        }
+      }
+    })
+
+    if (typeof subscriber === 'function') {
+      return observable.subscribe(subscriber)
+    }
+
+    return observable.subscribe(subscriber)
   }
 
   const subscribeEvent = <T extends Args, U>(
@@ -1416,7 +1408,9 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
         return () => {
           eventStorage.refCount -= 1
           subscription.unsubscribe()
-          clearEventStorageIfNeeded(eventStorage)
+          if (eventStorage.refCount === 0) {
+            clearEventStorageIfNeeded(eventStorage)
+          }
         }
       })
 
