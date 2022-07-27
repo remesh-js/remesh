@@ -1,5 +1,7 @@
 import { from, Observable, Observer, Subject, Subscription } from 'rxjs'
 
+import { map } from 'rxjs/operators'
+
 import {
   Args,
   internalToOriginalEvent,
@@ -119,6 +121,7 @@ export type RemeshDomainStorage<T extends RemeshDomainDefinition, U extends Args
   commandMap: Map<RemeshCommand<any>, RemeshCommandStorage<any>>
   ignited: boolean
   hasBeenPreloaded: boolean
+  isDiscarding: boolean
 }
 
 export type RemeshExternStorage<T> = {
@@ -151,7 +154,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
    * Leaf means that the query storage has no downstream query storages
    */
   const pendingLeafSet = new Set<RemeshQueryStorage<any, any>>()
-  const pendingClearSet = new Set<RemeshQueryStorage<any, any> | RemeshEntityStorage<any>>()
+  const pendingClearSet = new Set<RemeshQueryStorage<any, any> | RemeshEntityStorage<any> | RemeshStateStorage<any>>()
 
   const domainStorageMap = new Map<string, RemeshDomainStorage<any, any>>()
 
@@ -408,6 +411,17 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
   const getWithCheck: RemeshInjectedContext['get'] = (
     input: RemeshStateItem<any> | RemeshEntityItem<any> | RemeshQueryAction<any, any>,
   ) => {
+    if (input.type === 'RemeshStateItem') {
+      const result = remeshInjectedContext.get(input)
+      const stateStorage = getStateStorage(input)
+
+      if (stateStorage.downstreamSet.size === 0) {
+        pendingClearSet.add(stateStorage)
+      }
+
+      return result
+    }
+
     if (input.type === 'RemeshEntityItem') {
       const result = remeshInjectedContext.get(input)
       const entityStorage = getEntityStorage(input)
@@ -442,24 +456,15 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
     const subject = new Subject<T>()
 
-    const observable = new Observable<U>((subscriber) => {
-      const subscription = subject.subscribe((arg) => {
+    const observable = subject.pipe(
+      map((arg) => {
         if (Event.impl) {
-          subscriber.next(Event.impl(eventContext, arg))
+          return Event.impl(eventContext, arg)
         } else {
-          subscriber.next(arg as unknown as U)
+          return arg as unknown as U
         }
-      })
-
-      eventStorage.refCount += 1
-
-      return () => {
-        eventStorage.refCount -= 1
-        clearEventStorageIfNeeded(eventStorage)
-        subscription.unsubscribe()
-      }
-    })
-
+      }),
+    )
     const cachedStorage = eventStorageWeakMap.get(Event)
 
     const eventStorage = Object.assign(cachedStorage ?? {}, {
@@ -495,8 +500,8 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       queryStorage.refCount += 1
 
       return () => {
-        subscription.unsubscribe()
         queryStorage.refCount -= 1
+        subscription.unsubscribe()
         clearQueryStorageIfNeeded(queryStorage)
       }
     })
@@ -752,6 +757,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       refCount: 0,
       ignited: false,
       hasBeenPreloaded: false,
+      isDiscarding: false,
     }
 
     const domain = toValidRemeshDomainDefinition(domainAction.Domain.impl(domainContext, domainAction.arg))
@@ -799,6 +805,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
     if (cachedStorage) {
       cachedStorage.ignited = false
+      cachedStorage.isDiscarding = false
       domainStorageMap.set(cachedStorage.key, cachedStorage)
 
       for (const upstreamDomainStorage of cachedStorage.upstreamSet) {
@@ -820,20 +827,23 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     }
 
     domainStorage.queryMap.delete(queryStorage.key)
-
+    queryStorage.subject.complete()
     inspectorManager.inspectQueryStorage(InspectorType.QueryDiscarded, queryStorage)
 
     for (const upstreamStorage of queryStorage.upstreamSet) {
+      if (!upstreamStorage.downstreamSet.has(queryStorage)) {
+        continue
+      }
       upstreamStorage.downstreamSet.delete(queryStorage)
 
       if (upstreamStorage.type === 'RemeshQueryStorage') {
         clearQueryStorageIfNeeded(upstreamStorage)
       } else if (upstreamStorage.type === 'RemeshEntityStorage') {
         clearEntityStorageIfNeeded(upstreamStorage)
+      } else {
+        clearStateStorageIfNeeded(upstreamStorage)
       }
     }
-
-    queryStorage.subject.complete()
 
     clearDomainStorageIfNeeded(domainStorage)
   }
@@ -865,9 +875,23 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       return
     }
 
-    inspectorManager.inspectStateStorage(InspectorType.StateDiscarded, stateStorage)
     domainStorage.stateMap.delete(stateStorage.key)
     stateStorage.downstreamSet.clear()
+    inspectorManager.inspectStateStorage(InspectorType.StateDiscarded, stateStorage)
+  }
+
+  const shouldClearStateStorage = <T>(stateStorage: RemeshStateStorage<T>) => {
+    if (stateStorage.downstreamSet.size !== 0) {
+      return false
+    }
+
+    return true
+  }
+
+  const clearStateStorageIfNeeded = <T>(stateStorage: RemeshStateStorage<T>) => {
+    if (shouldClearStateStorage(stateStorage)) {
+      clearStateStorage(stateStorage)
+    }
   }
 
   const shouldClearEntityStorage = <T extends SerializableObject>(entityStorage: RemeshEntityStorage<T>) => {
@@ -891,11 +915,11 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       return
     }
 
-    inspectorManager.inspectEntityStorage(InspectorType.EntityDiscarded, entityStorage)
     domainStorage.entityMap.delete(entityStorage.key)
 
     entityStorage.downstreamSet.clear()
     entityStorage.currentEntity = null
+    inspectorManager.inspectEntityStorage(InspectorType.EntityDiscarded, entityStorage)
   }
 
   const clearEventStorage = <T extends Args, U>(eventStorage: RemeshEventStorage<T, U>) => {
@@ -923,13 +947,16 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
   const clearDomainStorage = <T extends RemeshDomainDefinition, U extends Args<Serializable>>(
     domainStorage: RemeshDomainStorage<T, U>,
   ) => {
-    if (!domainStorage.ignited) {
+    if (domainStorage.isDiscarding) {
       return
     }
 
+    domainStorage.isDiscarding = true
     domainStorage.ignited = false
 
-    inspectorManager.inspectDomainStorage(InspectorType.DomainDiscarded, domainStorage)
+    for (const subscription of domainStorage.effectMap.values()) {
+      subscription.unsubscribe()
+    }
 
     for (const eventStorage of domainStorage.eventMap.values()) {
       clearEventStorage(eventStorage)
@@ -947,19 +974,21 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       clearEntityStorage(entityStorage)
     }
 
-    for (const subscription of domainStorage.effectMap.values()) {
-      subscription.unsubscribe()
-    }
-
     domainStorage.downstreamSet.clear()
     domainStorage.stateMap.clear()
     domainStorage.queryMap.clear()
     domainStorage.eventMap.clear()
     domainStorage.effectMap.clear()
+    domainStorage.commandMap.clear()
 
     domainStorageMap.delete(domainStorage.key)
 
+    inspectorManager.inspectDomainStorage(InspectorType.DomainDiscarded, domainStorage)
+
     for (const upstreamDomainStorage of domainStorage.upstreamSet) {
+      if (!upstreamDomainStorage.downstreamSet.has(domainStorage)) {
+        continue
+      }
       upstreamDomainStorage.downstreamSet.delete(domainStorage)
       clearDomainStorageIfNeeded(upstreamDomainStorage)
     }
@@ -968,6 +997,10 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
   const shouldClearDomainStorage = <T extends RemeshDomainDefinition, U extends Args<Serializable>>(
     domainStorage: RemeshDomainStorage<T, U>,
   ): boolean => {
+    if (domainStorage.isDiscarding) {
+      return false
+    }
+
     if (domainStorage.downstreamSet.size !== 0) {
       return false
     }
@@ -1110,13 +1143,12 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     const { Query } = queryStorage
 
     for (const upstream of queryStorage.upstreamSet) {
+      if (!upstream.downstreamSet.has(queryStorage)) {
+        continue
+      }
       upstream.downstreamSet.delete(queryStorage)
       if (upstream.downstreamSet.size === 0) {
-        if (upstream.type === 'RemeshQueryStorage') {
-          pendingClearSet.add(upstream)
-        } else if (upstream.type === 'RemeshEntityStorage') {
-          pendingClearSet.add(upstream)
-        }
+        pendingClearSet.add(upstream)
       }
     }
 
@@ -1189,6 +1221,8 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     for (const storage of storageList) {
       if (storage.type === 'RemeshQueryStorage') {
         clearQueryStorageIfNeeded(storage)
+      } else if (storage.type === 'RemeshStateStorage') {
+        clearStateStorageIfNeeded(storage)
       } else {
         clearEntityStorageIfNeeded(storage)
       }
@@ -1375,7 +1409,18 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
   ): Subscription => {
     if (Event.type === 'RemeshEvent') {
       const eventStorage = getEventStorage(Event)
-      const subscription = eventStorage.observable.subscribe(subscriber)
+
+      const observable = new Observable<U>((subscriber) => {
+        const subscription = eventStorage.observable.subscribe(subscriber)
+        eventStorage.refCount += 1
+        return () => {
+          eventStorage.refCount -= 1
+          subscription.unsubscribe()
+          clearEventStorageIfNeeded(eventStorage)
+        }
+      })
+
+      const subscription = observable.subscribe(subscriber)
 
       return subscription
     } else if (Event.type === 'RemeshSubscribeOnlyEvent') {

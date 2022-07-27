@@ -14,8 +14,6 @@ import {
   RemeshSubscribeOnlyEvent,
 } from 'remesh'
 
-import { AsyncData } from 'remesh/modules/async'
-
 export type RemeshReactContext = {
   remeshStore: RemeshStore
 }
