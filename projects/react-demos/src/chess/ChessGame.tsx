@@ -1,5 +1,5 @@
 import React, { useContext } from 'react'
-import { useRemeshDomain, useRemeshEvent, useRemeshQuery } from 'remesh-react'
+import { useRemeshDomain, useRemeshEvent, useRemeshQuery, useRemeshSend } from 'remesh-react'
 import { BoardRender } from './components/Board'
 import { ChessRender } from './components/Chess'
 import { MarkerRender } from './components/Marker'
@@ -8,6 +8,7 @@ import { GameConfigContext } from './context/game'
 import { GameDomain } from 'remesh-domains-for-demos/dist/chess'
 
 export const ChessGame = () => {
+  const send = useRemeshSend()
   const { left, top, gridSize } = useContext(GameConfigContext)
 
   const domain = useRemeshDomain(GameDomain())
@@ -20,7 +21,7 @@ export const ChessGame = () => {
   useRemeshEvent(domain.event.GameOverEvent, () => {
     const shouldRestart = window.confirm('游戏结束，是否重新开始？')
     if (shouldRestart) {
-      domain.command.ResetGameStateCommand()
+      send(domain.command.ResetGameStateCommand())
     }
   })
 
@@ -36,11 +37,11 @@ export const ChessGame = () => {
       <BoardRender />
 
       {situation.map((chess, i) => (
-        <ChessRender key={i} chess={chess} onClick={() => domain.command.SelectChessCommand(chess)} />
+        <ChessRender key={i} chess={chess} onClick={() => send(domain.command.SelectChessCommand(chess))} />
       ))}
 
       {markers.map((marker, i) => (
-        <MarkerRender key={i} marker={marker} onClick={() => domain.command.MoveChessCommand(marker)} />
+        <MarkerRender key={i} marker={marker} onClick={() => send(domain.command.MoveChessCommand(marker))} />
       ))}
     </div>
   )

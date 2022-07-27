@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { useRemeshDomain } from 'remesh-react'
+import { useRemeshDomain, useRemeshSend } from 'remesh-react'
 
 import { Todo, TodoDomain } from 'remesh-domains-for-demos/dist/todo-mvc'
 import { useInputHandler, useKeyPressHandler } from './hooks'
 
 export function TodoItem({ todo }: { todo: Todo }) {
+  const send = useRemeshSend()
   const domain = useRemeshDomain(TodoDomain())
 
   const [editing, setEditing] = useState(false)
@@ -14,7 +15,7 @@ export function TodoItem({ todo }: { todo: Todo }) {
   const [todoName, handleTodoNameChange] = useInputHandler(todo.name)
 
   const handlePressEnter = useKeyPressHandler('Enter', () => {
-    domain.command.UpdateTodoCommand({ ...todo, name: todoName })
+    send(domain.command.UpdateTodoCommand({ ...todo, name: todoName }))
     setEditing(false)
   })
 
@@ -23,11 +24,11 @@ export function TodoItem({ todo }: { todo: Todo }) {
   }
 
   const handleSave = () => {
-    domain.command.ToggleTodoCompletedCommand(todo.id)
+    send(domain.command.ToggleTodoCompletedCommand(todo.id))
   }
 
   const handleDelete = () => {
-    domain.command.RemoveTodoCommand(todo.id)
+    send(domain.command.RemoveTodoCommand(todo.id))
   }
 
   useEffect(() => {

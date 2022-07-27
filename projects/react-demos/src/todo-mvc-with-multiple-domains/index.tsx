@@ -32,4 +32,7 @@ if (container) {
       </RemeshRoot>
     </StrictMode>,
   )
+
+  // @ts-ignore
+  window.root = root
 }

@@ -57,43 +57,53 @@ export const PaginationDomain = Remesh.domain({
       },
     })
 
-    const UserFetcher = AsyncModule<Pagination, UserList>(domain, {
-      name: 'UserFetcher',
-      query: async ({}, pagination) => {
-        const newUserList = await getUserList(pagination)
-        return newUserList
-      },
-      command: ({ get, set }, result) => {
-        if (!AsyncData.isSuccess(result)) {
-          return null
-        }
-
-        const nextPagination = get(NextPaginationQuery())
-        const currentUserList = get(UserListState())
-
-        set(PaginationState(), nextPagination)
-        set(UserListState(), currentUserList.concat(result.value))
+    const SetPaginationCommand = domain.command({
+      name: 'SetPaginationCommand',
+      impl: ({ get }, pagination: Pagination) => {
+        return PaginationState().new(pagination)
       },
     })
 
-    domain.ignite(({ send }) => {
-      send(UserFetcher.command.LoadCommand(defaultPagination))
+    const SetUserListCommand = domain.command({
+      name: 'SetUserListCommand',
+      impl: ({ get }, userList: UserList) => {
+        return UserListState().new(userList)
+      },
+    })
+
+    const UserFetcher = AsyncModule<Pagination, UserList>(domain, {
+      name: 'UserFetcher',
+      load: async ({}, pagination) => {
+        const newUserList = await getUserList(pagination)
+        return newUserList
+      },
+      onSuccess: ({ get }, result) => {
+        const nextPagination = get(NextPaginationQuery())
+        const currentUserList = get(UserListState())
+
+        return [SetPaginationCommand(nextPagination), SetUserListCommand([...currentUserList, ...result])]
+      },
+    })
+
+    domain.effect({
+      name: 'UserFetcherEffect',
+      impl: ({}) => {
+        return [UserFetcher.command.LoadCommand(defaultPagination)]
+      },
     })
 
     const LoadMoreCommand = domain.command({
       name: 'LoadMoreCommand',
-      impl: ({ get, send }) => {
+      impl: ({ get }) => {
         const nextPagination = get(NextPaginationQuery())
-        send(UserFetcher.command.LoadCommand(nextPagination))
+        return UserFetcher.command.LoadCommand(nextPagination)
       },
     })
 
     const ResetCommand = domain.command({
       name: 'ResetCommand',
-      impl: ({ set, send }) => {
-        set(PaginationState(), defaultPagination)
-        set(UserListState(), [])
-        send(LoadMoreCommand())
+      impl: ({}) => {
+        return [SetPaginationCommand(defaultPagination), SetUserListCommand([]), LoadMoreCommand()]
       },
     })
 

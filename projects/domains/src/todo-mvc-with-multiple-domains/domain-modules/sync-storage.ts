@@ -1,7 +1,6 @@
-import { RemeshDomainContext, RemeshCommandContext, RemeshEvent } from 'remesh'
+import { RemeshDomainContext, RemeshCommandContext, RemeshEvent, RemeshAction } from 'remesh'
 
-import { from, merge } from 'rxjs'
-import { filter, map, tap } from 'rxjs/operators'
+import { map } from 'rxjs/operators'
 
 import { Storage } from '../domain-externs/storage'
 
@@ -9,7 +8,7 @@ export type SyncStorageOptions<T, U = T> = {
   storageKey: string
   TriggerEvent: RemeshEvent<any, T>
   get: (event: T) => U
-  set: (ctx: RemeshCommandContext, value: U) => unknown
+  set: (ctx: RemeshCommandContext, value: U) => RemeshAction
 }
 
 const createOptions = <R>(storageKey: string, callback: <T, U>(options: SyncStorageOptions<T, U>) => R) => {
@@ -44,31 +43,29 @@ const createOptions = <R>(storageKey: string, callback: <T, U>(options: SyncStor
 const createSyncStorage = <T, U = T>(domain: RemeshDomainContext, options: SyncStorageOptions<T, U>) => {
   const storage = domain.getExtern(Storage)
 
-  const ReadStorageCommand = domain.command({
-    name: 'ReadStorageCommand',
+  domain.effect({
+    name: 'ReadStorageEffect',
     impl: async (ctx) => {
       const value = await storage.get<U>(options.storageKey)
 
       if (value) {
-        options.set(ctx, value)
+        return options.set(ctx, value)
       }
+
+      return null
     },
   })
 
-  const WriteStorageCommand = domain.effect({
-    name: 'WriteStorageCommand',
+  domain.effect({
+    name: 'WriteStorageEffect',
     impl: ({ fromEvent }) => {
       return fromEvent(options.TriggerEvent).pipe(
-        tap((value) => {
+        map((value) => {
           storage.set(options.storageKey, options.get(value))
+          return null
         }),
       )
     },
-  })
-
-  domain.ignite(({ send }) => {
-    send(ReadStorageCommand())
-    send(WriteStorageCommand())
   })
 }
 

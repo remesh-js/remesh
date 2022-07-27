@@ -17,12 +17,7 @@ if (container) {
   const root = ReactDOMClient.createRoot(container)
   const store = Remesh.store({
     externs: [TodoRepoExternImpl],
-    inspectors: [
-      RemeshReduxDevtools(),
-      RemeshLogger({
-        include: ['command', 'query', 'event', 'domain', 'command$', 'state'],
-      }),
-    ],
+    inspectors: [RemeshReduxDevtools(), RemeshLogger()],
   })
 
   root.render(

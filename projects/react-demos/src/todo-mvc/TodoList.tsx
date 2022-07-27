@@ -1,4 +1,4 @@
-import { useRemeshDomain, useRemeshEvent, useRemeshQuery } from 'remesh-react'
+import { useRemeshDomain, useRemeshEvent, useRemeshQuery, useRemeshSend } from 'remesh-react'
 import { NavLink, useParams } from 'react-router-dom'
 
 import { TodoDomain } from 'remesh-domains-for-demos/dist/todo-mvc'
@@ -8,6 +8,7 @@ import { TodoItem } from './TodoItem'
 type FilterType = 'completed' | 'active' | undefined
 
 export const TodoList = () => {
+  const send = useRemeshSend()
   const { filter } = useParams()
 
   const domain = useRemeshDomain(TodoDomain())
@@ -20,16 +21,16 @@ export const TodoList = () => {
   const [newTodo, handleTodoNameInput, setNewTodo] = useInputHandler('')
 
   const handlePressEnter = useKeyPressHandler('Enter', () => {
-    domain.command.AddTodoCommand(newTodo)
+    send(domain.command.AddTodoCommand(newTodo))
     setNewTodo('')
   })
 
   const handleToggleAll = () => {
-    domain.command.ToggleAllTodoCompletedCommand(!allCompleted)
+    send(domain.command.ToggleAllTodoCompletedCommand(!allCompleted))
   }
 
   const handleClearCompleted = () => {
-    domain.command.ClearCompletedCommand()
+    send(domain.command.ClearCompletedCommand())
   }
 
   useRemeshEvent(domain.event.AddTodoFailedEvent, (message) => {

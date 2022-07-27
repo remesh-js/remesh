@@ -1,8 +1,6 @@
 import React, { StrictMode, useState, useEffect, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 
-import { Remesh } from 'remesh'
-
 import { RemeshRoot } from 'remesh-react'
 import { RemeshReduxDevtools } from 'remesh-redux-devtools'
 import { RemeshLogger } from 'remesh-logger'
@@ -60,12 +58,7 @@ const App = () => {
 }
 
 const storeOptions = {
-  inspectors: [
-    RemeshReduxDevtools(),
-    RemeshLogger({
-      include: ['command', 'query', 'event', 'domain', 'command$', 'state'],
-    }),
-  ],
+  inspectors: [RemeshReduxDevtools(), RemeshLogger({})],
 }
 
 const rootElem = document.getElementById('root')

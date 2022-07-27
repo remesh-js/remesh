@@ -1,6 +1,6 @@
 import { Remesh } from 'remesh'
 
-import { filter, tap } from 'rxjs/operators'
+import { filter, map } from 'rxjs/operators'
 
 import { TodoInputDomain } from './TodoInput'
 import { TodoListDomain, getTodoId } from './TodoList'
@@ -34,23 +34,19 @@ export const TodoAppDomain = Remesh.domain({
       },
     })
 
-    const ClearTodoInputWhenTodoAddedCommand = domain.effect({
-      name: 'ClearTodoInputWhenTodoAddedCommand',
-      impl: ({ fromEvent, get, send }) => {
+    domain.effect({
+      name: 'ClearTodoInputWhenTodoAddedEffect',
+      impl: ({ fromEvent, get }) => {
         return fromEvent(todoList.event.TodoItemAddedEvent).pipe(
           filter((todo) => {
             const todoInput = get(todoHeader.query.TodoInputQuery())
             return todoInput === todo.title
           }),
-          tap(() => {
-            send(todoHeader.command.ClearTodoInputCommand())
+          map(() => {
+            return todoHeader.command.ClearTodoInputCommand()
           }),
         )
       },
-    })
-
-    domain.ignite(({ send }) => {
-      send(ClearTodoInputWhenTodoAddedCommand())
     })
 
     return {

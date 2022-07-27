@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { useRemeshDomain, useRemeshQuery } from 'remesh-react'
+import { useRemeshDomain, useRemeshQuery, useRemeshSend } from 'remesh-react'
 
 import { TodoListDomain, Todo } from 'remesh-domains-for-demos/dist/todo-mvc-with-multiple-domains/domains/TodoList'
 
@@ -11,6 +11,7 @@ export type TodoItemProps = {
 }
 
 export function TodoItem(props: TodoItemProps) {
+  const send = useRemeshSend()
   const todoListDomain = useRemeshDomain(TodoListDomain())
 
   const todo = useRemeshQuery(todoListDomain.query.TodoQuery(props.id))
@@ -20,7 +21,7 @@ export function TodoItem(props: TodoItemProps) {
   const [title, handleTitleChange] = useInputHandler(todo.title)
 
   const save = () => {
-    todoListDomain.command.UpdateTodoCommand({ ...todo, title })
+    send(todoListDomain.command.UpdateTodoCommand({ ...todo, title }))
     setEditing(false)
   }
 
@@ -33,11 +34,11 @@ export function TodoItem(props: TodoItemProps) {
   }
 
   const handleSave = () => {
-    todoListDomain.command.ToggleTodoCommand(todo.id)
+    send(todoListDomain.command.ToggleTodoCommand(todo.id))
   }
 
   const handleDelete = () => {
-    todoListDomain.command.DeleteTodoCommand(todo.id)
+    send(todoListDomain.command.DeleteTodoCommand(todo.id))
   }
 
   const handleBlur = () => {
