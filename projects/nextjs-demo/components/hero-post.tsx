@@ -13,14 +13,7 @@ type Props = {
   slug: string
 }
 
-const HeroPost = ({
-  title,
-  coverImage,
-  date,
-  excerpt,
-  author,
-  slug,
-}: Props) => {
+const HeroPost = ({ title, coverImage, date, excerpt, author, slug }: Props) => {
   return (
     <section>
       <div className="mb-8 md:mb-16">

@@ -284,7 +284,7 @@ describe('effect', () => {
     expect(store.query(countDomain.query.CountQuery())).toBe(1)
   })
 
-  it('supports commandQuery', async () => {
+  it('supports commandQuery', () => {
     type Account = {
       id: number
       status: 'active' | 'inactive'
@@ -402,9 +402,8 @@ describe('effect', () => {
                 return TransferFailedEvent('insufficient')
               }
               return [toAccountCommand.DepositCommand(amount), WithdrawCommand(amount)]
-            } else {
-              return TransferFailedEvent(`account ${to} is inactive`)
             }
+            return TransferFailedEvent(`account ${to} is inactive`)
           },
         })
 
@@ -479,7 +478,6 @@ describe('effect', () => {
     let aAccountCommand = store.query(aAccountDomain.query.CommandQuery())
 
     if (aAccountCommand.status === 'active') {
-
       store.send(aAccountCommand.DepositCommand(100))
 
       expect(store.query(aAccountDomain.query.AccountQuery())).toEqual({

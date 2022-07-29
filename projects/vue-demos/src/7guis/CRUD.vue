@@ -25,9 +25,11 @@ const handleSelect = (itemId: string | null) => {
 
 const handleNameChange = (e: Event) => {
   if (selected.value) {
-    send(domain.command.UpdateSelectedNameCommand({
-      name: (e.target as HTMLInputElement).value,
-    }))
+    send(
+      domain.command.UpdateSelectedNameCommand({
+        name: (e.target as HTMLInputElement).value,
+      }),
+    )
   } else {
     send(domain.command.UpdateCreatedCommand({ name: (e.target as HTMLInputElement).value }))
   }
@@ -35,9 +37,11 @@ const handleNameChange = (e: Event) => {
 
 const handleSurnameChange = (e: Event) => {
   if (selected.value) {
-    send(domain.command.UpdateSelectedNameCommand({
-      surname: (e.target as HTMLInputElement).value,
-    }))
+    send(
+      domain.command.UpdateSelectedNameCommand({
+        surname: (e.target as HTMLInputElement).value,
+      }),
+    )
   } else {
     send(domain.command.UpdateCreatedCommand({ surname: (e.target as HTMLInputElement).value }))
   }
@@ -57,9 +61,7 @@ const handleSync = () => {
 
 const handleDelete = () => {
   if (selected.value) {
-    send([domain.command.DeleteItemCommand(selected.value.id),
-    domain.command.SelectItemCommand(null)]
-    )
+    send([domain.command.DeleteItemCommand(selected.value.id), domain.command.SelectItemCommand(null)])
   }
 }
 

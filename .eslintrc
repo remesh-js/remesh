@@ -14,6 +14,8 @@
   "plugins": ["jest", "prefer-let", "prettier", "@typescript-eslint"],
   "rules": {
     "react/prop-types": "off",
+    "react/react-in-jsx-scope": "off",
+    "jest/no-conditional-expect": "warn",
     "no-var": "error",
     "for-direction": "error",
     "getter-return": "error",
@@ -56,7 +58,7 @@
     "no-div-regex": "error",
     "no-else-return": "error",
     "no-empty-function": "warn",
-    "no-empty-pattern": "error",
+    "no-empty-pattern": "off",
     "no-eq-null": "error",
     "no-extend-native": "error",
     "no-extra-bind": "error",
@@ -142,7 +144,7 @@
         "@typescript-eslint/await-thenable": "error",
         "@typescript-eslint/adjacent-overload-signatures": "error",
         "@typescript-eslint/ban-ts-comment": [
-          "error",
+          "warn",
           {
             "ts-expect-error": true,
             "ts-ignore": "allow-with-description"

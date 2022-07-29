@@ -1,5 +1,5 @@
 import { Observable } from 'rxjs'
-import { concatMap, exhaustMap, mergeMap, switchMap, takeUntil, tap } from 'rxjs/operators'
+import { concatMap, exhaustMap, mergeMap, switchMap, takeUntil } from 'rxjs/operators'
 
 import {
   Capitalize,

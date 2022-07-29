@@ -38,14 +38,14 @@ describe('modules', () => {
 
         const TestAsync = AsyncModule(domain, {
           name: 'TestAsyncModule',
-          load: async ({ get }, arg: number) => {
-            return await load(get(ArgState()), arg)
+          load: ({ get }, arg: number) => {
+            return load(get(ArgState()), arg)
           },
-          onSuccess: onSuccess,
-          onFailed: onFailed,
-          onCanceled: onCanceled,
-          onChanged: onChanged,
-          onLoading: onLoading,
+          onSuccess,
+          onFailed,
+          onCanceled,
+          onChanged,
+          onLoading,
         })
 
         return TestAsync
@@ -90,7 +90,7 @@ describe('modules', () => {
     expect(loadingEventListener).toHaveBeenCalledTimes(1)
     expect(changedEventListener).toHaveBeenCalledTimes(2)
 
-    load = async (arg, arg1) => {
+    load = (arg, arg1) => {
       throw new Error('error')
     }
 

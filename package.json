@@ -32,7 +32,8 @@
     "version": "pnpm changeset version",
     "release": "pnpm run version && pnpm run publish",
     "prerelease": "pnpm run format && git add -A && pnpm run build",
-    "change": "pnpm changeset"
+    "change": "pnpm changeset",
+    "fix": "eslint --fix ./packages"
   },
   "devDependencies": {
     "@changesets/cli": "^2.22.0",

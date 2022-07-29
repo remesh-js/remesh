@@ -226,7 +226,7 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
     }
   }
 
-  const inspectCommandReceived = <T extends Args, U>(
+  const inspectCommandReceived = <T extends Args>(
     type: RemeshCommandReceivedEventData<T>['type'],
     commandAction: RemeshCommandAction<T>,
   ) => {

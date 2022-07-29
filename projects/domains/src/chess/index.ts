@@ -546,7 +546,7 @@ export const GameDomain = Remesh.domain({
       name: 'GameQuery',
       impl: ({ get }) => {
         return get(GameState())
-      }
+      },
     })
 
     const GameStatusQuery = domain.query({
@@ -616,7 +616,7 @@ export const GameDomain = Remesh.domain({
         }
       },
     })
-    
+
     domain.effect({
       name: 'CheckGameStatusEffect',
       impl: ({ fromQuery }) => {

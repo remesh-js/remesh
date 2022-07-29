@@ -7,7 +7,7 @@ import { Remesh } from 'remesh'
 import { RemeshRoot, useRemeshDomain, useRemeshEvent, useRemeshQuery, useRemeshSend } from '../src/index'
 
 // @ts-ignore config react testing environment
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
 describe('remesh-react', () => {
   let container!: HTMLDivElement

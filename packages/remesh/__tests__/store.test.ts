@@ -1,5 +1,4 @@
 import {
-  InspectorType,
   RemeshCommandReceivedEventData,
   RemeshState,
   RemeshDomain,
@@ -13,7 +12,7 @@ import {
   RemeshStore,
   RemeshStoreOptions,
 } from '../src'
-import { map, timer } from 'rxjs'
+import { map } from 'rxjs'
 
 import * as utils from './utils'
 
@@ -374,6 +373,7 @@ describe('store', () => {
 
       expect(changed).toHaveBeenCalledWith('bar')
 
+      // @eslint-disable-next-line @typescript-eslint/no-explicit-any
       let [name, { UpdateNameCommand }] = store.query(testDomain.query.NameQuery())
 
       expect(name).toBe('bar')

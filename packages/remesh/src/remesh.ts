@@ -63,7 +63,7 @@ export function RemeshEvent<T extends Args, U>(
     return {
       type: 'RemeshEventAction',
       arg,
-      Event: Event,
+      Event,
     }
   }) as unknown as RemeshEvent<T, U>
 
@@ -203,7 +203,7 @@ export const RemeshState = <T>(options: RemeshStateOptions<T>): RemeshState<T> =
           type: 'RemeshStateItemUpdatePayload',
           key,
           value: newState,
-          stateItem: stateItem,
+          stateItem,
         }
       },
     }

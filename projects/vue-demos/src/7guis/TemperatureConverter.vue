@@ -8,7 +8,7 @@ const celsius = useRemeshQuery(domain.query.CelsiusQuery())
 const fahrenheit = useRemeshQuery(domain.query.FahrenheitQuery())
 
 const handleCelsius = (event: Event) => {
- send(domain.command.UpdateCelsiusCommand((event.target as HTMLInputElement).value))
+  send(domain.command.UpdateCelsiusCommand((event.target as HTMLInputElement).value))
 }
 
 const handleFahrenheit = (event: Event) => {

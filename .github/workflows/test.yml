@@ -39,5 +39,5 @@ jobs:
       - name: Init
         run: pnpm run init
 
-      - name: Format & Lint & Build & Test
-        run: pnpm run format && pnpm run lint && pnpm run build && pnpm run test
+      - name: Build & Test
+        run: pnpm run build && pnpm run test

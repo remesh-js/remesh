@@ -13,14 +13,7 @@ type Props = {
   slug: string
 }
 
-const PostPreview = ({
-  title,
-  coverImage,
-  date,
-  excerpt,
-  author,
-  slug,
-}: Props) => {
+const PostPreview = ({ title, coverImage, date, excerpt, author, slug }: Props) => {
   return (
     <div>
       <div className="mb-5">

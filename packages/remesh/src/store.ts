@@ -430,9 +430,8 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       map((arg) => {
         if (Event.impl) {
           return Event.impl(eventContext, arg)
-        } else {
-          return arg as unknown as U
         }
+        return arg as unknown as U
       }),
     )
     const cachedStorage = eventStorageWeakMap.get(Event)
@@ -1324,7 +1323,9 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
   const handleCommandOutput = (output: RemeshCommandOutput) => {
     if (!output) {
       return
-    } else if (Array.isArray(output)) {
+    }
+
+    if (Array.isArray(output)) {
       for (const item of output) {
         handleCommandOutput(item)
       }
