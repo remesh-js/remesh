@@ -238,6 +238,7 @@ root.render(
 - [How to connect redux-devtools?](#how-to-connect-redux-devtools)
 - [How to fetch async resources in domain?](#how-to-fetch-async-resources-in-domain)
 - [How to management a list in domain?](#how-to-management-a-list-in-domain)
+- [How to define a custom module for reusing logic between domains?](#how-to-define-a-custom-module-for-reusing-logic-between-domains)
 
 ### How to define a domain?
 
@@ -696,7 +697,7 @@ const TodoListDomain = Remesh.domain({
   impl: (domain) => {
     const TodoList = ListModule(domain, {
       name: 'TodoList',
-      key: (todo) => todo.id.toString()
+      key: (todo) => todo.id.toString(),
     })
 
     return {
@@ -716,7 +717,100 @@ const TodoListDomain = Remesh.domain({
 })
 ```
 
+### How to define a custom module for reusing logic between domains?
+
+```typescript
+import { Remesh, RemeshDomainContext, Capitalize } from 'Remesh'
+
+/**
+ * Capitalize is a helper type to constraint the name should start with upper case.
+ */
+export type TextModuleOptions = {
+  name: Capitalize
+  default?: string
+}
+
+/**
+ * TextModule is a module for text.
+ * Receiving a domain as fixed argument, you can use it in any domain by passing domain as argument.
+ * The second argument is your custom options.
+ */
+export const TextModule = (domain: RemeshDomainContext, options: TextModuleOptions) => {
+  const TextState = domain.state({
+    name: `${options.name}.TextState`,
+    default: options.default ?? '',
+  })
+
+  const TextQuery = domain.query({
+    name: `${options.name}.TextQuery`,
+    impl: ({ get }) => get(TextState()),
+  })
+
+  const SetTextCommand = domain.command({
+    name: `${options.name}.SetTextCommand`,
+    impl: ({}, current: string) => {
+      return TextState().new(current)
+    },
+  })
+
+  const ClearTextCommand = domain.command({
+    name: `${options.name}.ClearTextCommand`,
+    impl: ({}) => {
+      return TextState().new('')
+    },
+  })
+
+  const ResetCommand = domain.command({
+    name: `${options.name}.ResetCommand`,
+    impl: ({}) => {
+      return TextState().new(options.default ?? '')
+    },
+  })
+
+  return Remesh.module({
+    query: {
+      TextQuery,
+    },
+    command: {
+      SetTextCommand,
+      ClearTextCommand,
+      ResetCommand,
+    },
+  })
+}
+```
+
+Using your custom remesh module in any domains like below:
+
+```typescript
+import { Remesh } from 'Remesh'
+
+import { TextModule } from 'my-custom-module'
+
+const MyDomain = Remesh.domain({
+  name: 'MyDomain',
+  impl: (domain) => {
+    /**
+     * Passing domain as fixed argument.
+     */
+    const Text = TextModule(domain, {
+      name: 'Text',
+      default: 'Hello, world!',
+    })
+
+    return {
+      command: {
+        SetTextCommand: Text.command.SetTextCommand,
+        ClearTextCommand: Text.command.ClearTextCommand,
+        ResetCommand: Text.command.ResetCommand,
+      },
+      event: {
+        TextChangedEvent: Text.event.TextChangedEvent,
+      },
+    }
+  },
 })
+```
 
 ## Packages
 
@@ -735,7 +829,3 @@ const TodoListDomain = Remesh.domain({
 - [Rxjs](https://github.com/ReactiveX/rxjs) inspired the implementation of the event model
 
 ## Pull requests are welcome
-
-```
-
-```
