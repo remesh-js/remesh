@@ -224,7 +224,6 @@ root.render(
 - [How to read the state in command?](#how-to-read-the-state-in-command)
 - [How to define a query?](#how-to-define-a-query)
 - [How to update the state?](#how-to-update-the-state)
-- [How to define a query?](#how-to-define-a-query)
 - [How to define an event?](#how-to-define-an-event)
 - [How to emit an event in command?](#how-to-emit-an-event-in-command)
 - [How to update multiple states?](#how-to-update-multiple-states)
