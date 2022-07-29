@@ -239,6 +239,9 @@ root.render(
 - [How to fetch async resources in domain?](#how-to-fetch-async-resources-in-domain)
 - [How to management a list in domain?](#how-to-management-a-list-in-domain)
 - [How to define a custom module for reusing logic between domains?](#how-to-define-a-custom-module-for-reusing-logic-between-domains)
+- [How to access other domains?](#how-to-access-other-domains)
+- [How to subscribe to events or queries or commands in domain-effect?](#how-to-subscribe-to-events-or-queries-or-commands-in-domain-effect)
+- [How to create and use remesh store directly?](#how-to-create-and-use-remesh-store-directly)
 
 ### How to define a domain?
 
@@ -810,6 +813,195 @@ const MyDomain = Remesh.domain({
     }
   },
 })
+```
+
+### How to access other domains?
+
+```typescript
+import { Remesh } from 'Remesh'
+
+const ADomain = Remesh.domain({
+  name: 'ADomain',
+  impl: (domain) => {
+    return {
+      query: {
+        AQuery,
+      }
+      command: {
+        ACommand,
+      },
+      event: {
+        AEvent
+      }
+    }
+  },
+})
+
+const BDomain = Remesh.domain({
+  name: 'BDomain',
+  impl: (domain) => {
+    return {
+      query: {
+        BQuery,
+      }
+      command: {
+        BCommand,
+      },
+      event: {
+        BEvent
+      }
+    }
+  },
+})
+
+
+const MainDomain = Remesh.domain({
+  name: 'MainDomain',
+  impl: (domain) => {
+    /**
+     * Accessing other domains via domain.getDomain(..)
+    */
+    const aDomain = domain.getDomain(ADomain())
+    const bDomain = domain.getDomain(BDomain())
+
+    return {
+      query: {
+        AQuery: A.query.AQuery,
+        BQuery: B.query.BQuery,
+      }
+      command: {
+        ACommand: A.command.ACommand,
+        BCommand: B.command.BCommand,
+      },
+      event: {
+        AEvent: A.event.AEvent,
+        BEvent: B.event.BEvent,
+      },
+    }
+  },
+})
+```
+
+### How to subscribe to events or queries or commands in domain-effect?
+
+```typescript
+import { Remesh } from 'Remesh'
+
+import { merge } from 'rxjs'
+import { map } from 'rxjs/operators'
+
+const YourDomain = Remesh.domain({
+  name: 'YourDomain',
+  impl: (domain) => {
+    const YourQuery = domain.query({
+      name: 'YourQuery',
+      impl: ({ get }) => get(YourState()),
+    })
+
+    const YourCommand = domain.command({
+      name: 'YourCommand',
+      impl: ({}, current: string) => {
+        return YourState().new(current)
+      },
+    })
+
+    const YourEvent = domain.event({
+      name: 'YourEvent',
+      impl: ({ get }) => get(YourState()),
+    })
+
+    domain.effect({
+      name: 'YourEffect',
+      impl: ({ get, fromEvent, fromQuery, fromCommand }) => {
+        /**
+         * Subscribe to events via fromEvent(..)
+         * The observable it returned will emit next value when the event is emitted.
+         */
+         */
+        const event$ = fromEvent(YourEvent())
+        /**
+         * Subscribe to queries via fromQuery(..)
+         * The observable it returned will emit next value when the query is re-computed.
+         */
+        const query$ = fromQuery(YourQuery())
+        /**
+         * Subscribe to commands via fromCommand(..)
+         * The observable it returned will emit next value when the command is called.
+         */
+        const command$ = fromCommand(YourCommand)
+
+        return merge(event$, query$, command$).pipe(map(() => [ACommand(), BCommand()]))
+      }
+    })
+
+    return {
+      query: {
+        YourQuery,
+      },
+      command: {
+        YourCommand,
+      },
+      event: {
+        YourEvent,
+      },
+    }
+  },
+})
+```
+
+### How to create and use remesh store directly?
+
+```typescript
+import { Remesh } from 'Remesh'
+
+import YourDomain from 'your-domain'
+
+/**
+ * Create a remesh store.
+ */
+const store = Remesh.store()
+
+/**
+ * get domain from store.
+ */
+const yourDomain = store.getDomain(YourDomain())
+
+/**
+ * ignite domain for activating domain-effect if needed
+ */
+store.igniteDomain(YourDomain())
+
+/**
+ * subscribe the domain event
+ */
+ */
+store.subscribeEvent(yourDomain.event.YourEvent, (event) => {
+  console.log(event)
+}
+
+/**
+  * subscribe the domain query
+  */
+store.subscribeQuery(yourDomain.query.YourQuery(), (queryResult) => {
+  console.log(queryResult)
+}
+
+
+/**
+ * send command to your domain
+ */
+store.send(yourDomain.command.YourCommand('Hello, world!'))
+
+
+/**
+ * Discard target domain resources
+ */
+store.discardDomain(YourDomain())
+
+/**
+ * discard all resource
+ */
+store.discard()
 ```
 
 ## Packages
