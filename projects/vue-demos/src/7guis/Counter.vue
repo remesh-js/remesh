@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { useRemeshDomain, useRemeshQuery } from 'remesh-vue'
+import { useRemeshDomain, useRemeshQuery, useRemeshSend } from 'remesh-vue'
 import { CounterDomain } from 'remesh-domains-for-demos/dist/7guis/Counter'
 
+const send = useRemeshSend()
 const counterDomain = useRemeshDomain(CounterDomain())
 
 const count = useRemeshQuery(counterDomain.query.CountQuery())
 
 const handleIncre = () => {
-  counterDomain.command.IncreCommand()
+  send(counterDomain.command.IncreCommand())
 }
 </script>
 

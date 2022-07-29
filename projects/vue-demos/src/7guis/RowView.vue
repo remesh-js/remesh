@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useRemeshDomain } from 'remesh-vue'
+import { useRemeshDomain, useRemeshSend } from 'remesh-vue'
 import { CellsDomain } from 'remesh-domains-for-demos/dist/7guis/Cells'
 import CellView from './CellView.vue'
 
@@ -8,13 +8,14 @@ const props = defineProps<{
   columnKeyList: Array<string>
 }>()
 
+const send = useRemeshSend()
 const cellsDomain = useRemeshDomain(CellsDomain())
 
 const handleClick = (event: Event, cellKey: string) => {
   if (event.target instanceof HTMLInputElement) {
     return
   }
-  cellsDomain.command.SelectCellCommand(cellKey)
+  send(cellsDomain.command.SelectCellCommand(cellKey))
 }
 </script>
 

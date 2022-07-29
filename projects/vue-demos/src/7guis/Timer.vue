@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { useRemeshDomain, useRemeshQuery } from 'remesh-vue'
+import { useRemeshDomain, useRemeshQuery, useRemeshSend } from 'remesh-vue'
 
 import { TimerDomain } from 'remesh-domains-for-demos/dist/7guis/Timer'
 
+const send = useRemeshSend()
 const timerDomain = useRemeshDomain(TimerDomain())
 const elapsed = useRemeshQuery(timerDomain.query.ElapsedQuery())
 const duration = useRemeshQuery(timerDomain.query.DurationQuery())
@@ -10,12 +11,12 @@ const duration = useRemeshQuery(timerDomain.query.DurationQuery())
 const handleDurationChange = (event: Event) => {
   const duration = parseInt((event.target as HTMLInputElement).value, 10)
   if (!isNaN(duration)) {
-    timerDomain.command.UpdateDurationCommand(duration)
+    send(timerDomain.command.UpdateDurationCommand(duration))
   }
 }
 
 const handleResetElapsed = () => {
-  timerDomain.command.ResetElapsedCommand()
+  send(timerDomain.command.ResetElapsedCommand())
 }
 </script>
 

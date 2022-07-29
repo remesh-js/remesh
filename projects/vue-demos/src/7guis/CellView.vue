@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useRemeshDomain, useRemeshQuery } from 'remesh-vue'
+import { useRemeshDomain, useRemeshQuery, useRemeshSend } from 'remesh-vue'
 import { CellsDomain } from 'remesh-domains-for-demos/dist/7guis/Cells'
 
 import { onClickOutside } from '@vueuse/core'
@@ -9,16 +9,17 @@ const props = defineProps<{
   cellKey: string
 }>()
 
+const send = useRemeshSend()
 const cellsDomain = useRemeshDomain(CellsDomain())
 const cell = useRemeshQuery(cellsDomain.query.CellQuery(props.cellKey))
 
 const handleChange = (e: Event) => {
-  cellsDomain.command.SetCellContentCommand({ key: props.cellKey, input: (e.target as HTMLInputElement).value })
+  send(cellsDomain.command.SetCellContentCommand({ key: props.cellKey, input: (e.target as HTMLInputElement).value }))
 }
 
 const handleUnselect = () => {
   if (cell.value.isEditing) {
-    cellsDomain.command.UnselectCellCommand(props.cellKey)
+    send(cellsDomain.command.UnselectCellCommand(props.cellKey))
   }
 }
 onUpdated(() => {
