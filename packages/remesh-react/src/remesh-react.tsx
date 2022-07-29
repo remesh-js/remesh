@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useContext, createContext, ReactNode, useCallback, useMemo } from 'react'
+import { useEffect, useRef, useContext, createContext, ReactNode, useCallback, useMemo } from 'react'
 
 import { useSyncExternalStore } from 'use-sync-external-store/shim'
 
@@ -65,6 +65,7 @@ export const RemeshRoot = (props: RemeshRootProps) => {
     }
   }, [store])
 
+  // @ts-ignore unexpected type error TS2786: 'RemeshReactContext.Provider' cannot be used as a JSX component.
   return <RemeshReactContext.Provider value={contextValue}>{props.children}</RemeshReactContext.Provider>
 }
 

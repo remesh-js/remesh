@@ -1,5 +1,5 @@
 import { Observable } from 'rxjs'
-import { concatMap, exhaustMap, mergeMap, switchMap, takeUntil } from 'rxjs/operators'
+import { concatMap, exhaustMap, mergeMap, switchMap, takeUntil, tap } from 'rxjs/operators'
 
 import {
   Capitalize,
@@ -60,7 +60,6 @@ export const AsyncData = {
   failed: (error: Error): FailedAsyncData => {
     return {
       type: 'failed',
-      promise: Promise.reject(error),
       error,
     }
   },
@@ -122,7 +121,7 @@ export type AsyncModuleOptions<T, U> = {
   onSuccess?: (context: AsyncModuleContext, value: U) => RemeshAction
   onFailed?: (context: AsyncModuleContext, error: Error) => RemeshAction
   onCanceled?: (context: AsyncModuleContext) => RemeshAction
-  onChange?: (context: AsyncModuleContext, data: AsyncData<U>) => RemeshAction
+  onChanged?: (context: AsyncModuleContext, data: AsyncData<U>) => RemeshAction
   default?: AsyncData<U>
   mode?: 'switch' | 'merge' | 'concat' | 'exhaust'
 }
@@ -137,8 +136,8 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
 
   const UpdateAsyncDataCommand = domain.command({
     name: `${options.name}.UpdateAsyncDataCommand`,
-    impl: ({}, data: AsyncData<U>) => {
-      return AsyncDataState().new(data)
+    impl: ({ get }, data: AsyncData<U>) => {
+      return [AsyncDataState().new(data), ChangedEvent(data), options.onChanged?.({ get }, data) ?? null]
     },
   })
 
@@ -173,16 +172,18 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
     name: `${options.name}.CanceledEvent`,
   })
 
+  const ChangedEvent = domain.event<AsyncData<U>>({
+    name: `${options.name}.ChangedEvent`,
+  })
+
   const LoadCommand = domain.command({
     name: `${options.name}.LoadCommand`,
     impl: ({ get }, arg: T) => {
-      const data = AsyncData.loading()
       return [
         ArgState().new(arg),
         UpdateAsyncDataCommand(AsyncData.loading()),
         LoadingEvent(),
         options.onLoading?.({ get }) ?? null,
-        options.onChange?.({ get }, data) ?? null,
       ]
     },
   })
@@ -191,12 +192,7 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
     name: `${options.name}.SuccessCommand`,
     impl: ({ get }, value: U) => {
       const data = AsyncData.success(value)
-      return [
-        UpdateAsyncDataCommand(data),
-        SuccessEvent(value),
-        options.onSuccess?.({ get }, value) ?? null,
-        options.onChange?.({ get }, data) ?? null,
-      ]
+      return [UpdateAsyncDataCommand(data), SuccessEvent(value), options.onSuccess?.({ get }, value) ?? null]
     },
   })
 
@@ -204,12 +200,7 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
     name: `${options.name}.FailedCommand`,
     impl: ({ get }, error: Error) => {
       const data = AsyncData.failed(error)
-      return [
-        UpdateAsyncDataCommand(data),
-        FailedEvent(error),
-        options.onFailed?.({ get }, error) ?? null,
-        options.onChange?.({ get }, data) ?? null,
-      ]
+      return [UpdateAsyncDataCommand(data), FailedEvent(error), options.onFailed?.({ get }, error) ?? null]
     },
   })
 
@@ -223,12 +214,7 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
       }
 
       const data = AsyncData.canceled()
-      return [
-        UpdateAsyncDataCommand(data),
-        CanceledEvent(),
-        options.onCanceled?.({ get }) ?? null,
-        options.onChange?.({ get }, data) ?? null,
-      ]
+      return [UpdateAsyncDataCommand(data), CanceledEvent(), options.onCanceled?.({ get }) ?? null]
     },
   })
 
@@ -253,21 +239,22 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
       const handleArg = (arg: T) => {
         return new Observable<RemeshAction>((subscriber) => {
           let isUnsubscribed = false
-          
-          options.load(ctx, arg).then(
-            (value) => {
-              if (!isUnsubscribed) {
-                subscriber.next(SuccessCommand(value))
-                subscriber.complete()
-              }
-            },
-            (error) => {
-              if (!isUnsubscribed) {
-                subscriber.next(FailedCommand(error instanceof Error ? error : new Error(`${error}`)))
-                subscriber.complete()
-              }
-            },
-          )
+
+          const handleSuccess = (value: U) => {
+            if (!isUnsubscribed) {
+              subscriber.next(SuccessCommand(value))
+              subscriber.complete()
+            }
+          }
+
+          const handleFailed = (error: unknown) => {
+            if (!isUnsubscribed) {
+              subscriber.next(FailedCommand(error instanceof Error ? error : new Error(`${error}`)))
+              subscriber.complete()
+            }
+          }
+
+          options.load(ctx, arg).then(handleSuccess).catch(handleFailed)
 
           return () => {
             isUnsubscribed = true
@@ -309,6 +296,7 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
       LoadingEvent: LoadingEvent.toSubscribeOnlyEvent(),
       SuccessEvent: SuccessEvent.toSubscribeOnlyEvent(),
       FailedEvent: FailedEvent.toSubscribeOnlyEvent(),
+      ChangedEvent: ChangedEvent.toSubscribeOnlyEvent(),
     },
   })
 }

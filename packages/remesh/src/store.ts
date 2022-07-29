@@ -345,6 +345,19 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
   const entityStorageWeakMap = new WeakMap<RemeshEntityItem<any>, RemeshEntityStorage<any>>()
 
+  const hasBeenInjectedWeakMap = new WeakMap<RemeshEntity<any>, boolean>()
+
+  const injectEntitiesIfNeeded = <T extends SerializableObject>(Entity: RemeshEntity<T>) => {
+    if (!hasBeenInjectedWeakMap.get(Entity)) {
+      hasBeenInjectedWeakMap.set(Entity, true)
+      if (Entity.injectEntities) {
+        for (const entity of Entity.injectEntities) {
+          updateEntityItem(Entity(Entity.key(entity)), entity)
+        }
+      }
+    }
+  }
+
   const createEntityStorage = <T extends SerializableObject>(
     entityItem: RemeshEntityItem<T>,
   ): RemeshEntityStorage<T> => {
@@ -363,12 +376,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     domainStorage.entityMap.set(key, newEntityStorage)
     entityStorageWeakMap.set(entityItem, newEntityStorage)
 
-    const Entity = entityItem.Entity
-    if (Entity.injectEntities) {
-      for (const entity of Entity.injectEntities) {
-        updateEntityItem(Entity(Entity.key(entity)), entity)
-      }
-    }
+    injectEntitiesIfNeeded(entityItem.Entity)
 
     inspectorManager.inspectEntityStorage(InspectorType.EntityCreated, newEntityStorage)
 
@@ -409,51 +417,12 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
   const eventStorageWeakMap = new WeakMap<RemeshEvent<any, any>, RemeshEventStorage<any, any>>()
 
-  const getWithCheck: RemeshInjectedContext['get'] = (
-    input: RemeshStateItem<any> | RemeshEntityItem<any> | RemeshQueryAction<any, any>,
-  ) => {
-    if (input.type === 'RemeshStateItem') {
-      const result = remeshInjectedContext.get(input)
-      const stateStorage = getStateStorage(input)
-
-      if (stateStorage.downstreamSet.size === 0) {
-        pendingClearSet.add(stateStorage)
-      }
-
-      return result
-    }
-
-    if (input.type === 'RemeshEntityItem') {
-      const result = remeshInjectedContext.get(input)
-      const entityStorage = getEntityStorage(input)
-
-      if (entityStorage.downstreamSet.size === 0) {
-        pendingClearSet.add(entityStorage)
-      }
-
-      return result
-    }
-
-    if (input.type === 'RemeshQueryAction') {
-      const result = remeshInjectedContext.get(input)
-      const queryStorage = getQueryStorage(input)
-
-      if (queryStorage.downstreamSet.size === 0) {
-        pendingClearSet.add(queryStorage)
-      }
-
-      return result
-    }
-
-    return remeshInjectedContext.get(input)
-  }
-
-  const eventContext: RemeshEventContext = {
-    get: getWithCheck,
-  }
-
   const createEventStorage = <T extends Args, U>(Event: RemeshEvent<T, U>): RemeshEventStorage<T, U> => {
     const domainStorage = getDomainStorage(Event.owner)
+
+    const eventContext: RemeshEventContext = {
+      get: remeshInjectedContext.get,
+    }
 
     const subject = new Subject<T>()
 
@@ -1338,7 +1307,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
   }
 
   const commandContext: RemeshCommandContext = {
-    get: getWithCheck,
+    get: remeshInjectedContext.get,
   }
 
   const handleCommandAction = <T extends Args>(commandAction: RemeshCommandAction<T>) => {
@@ -1434,7 +1403,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
   }
 
   const effectContext: RemeshEffectContext = {
-    get: getWithCheck,
+    get: remeshInjectedContext.get,
     fromEvent: remeshInjectedContext.fromEvent,
     fromQuery: remeshInjectedContext.fromQuery,
     fromCommand: remeshInjectedContext.fromCommand,

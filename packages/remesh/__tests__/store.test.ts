@@ -405,12 +405,13 @@ describe('store', () => {
       'Query::Updated',
       'Query::Updated',
       'Event::Emitted',
-      'Domain::Discarded',
       'Query::Discarded',
       'State::Discarded',
       'Domain::Discarded',
       'Query::Discarded',
       'Domain::Reused',
+      'Domain::Discarded',
+      'Domain::Discarded',
     ]
 
     expect(history).toStrictEqual(expectedHistory)
@@ -431,12 +432,13 @@ describe('store', () => {
       'Query::Updated',
       'Query::Updated',
       'Event::Emitted',
-      'Domain::Discarded',
       'Query::Discarded',
       'State::Discarded',
       'Domain::Discarded',
       'Query::Discarded',
       'Domain::Reused',
+      'Domain::Discarded',
+      'Domain::Discarded',
       'Domain::Reused',
       'Domain::Reused',
       'Event::Emitted',
@@ -452,11 +454,11 @@ describe('store', () => {
       'Query::Updated',
       'Query::Updated',
       'Event::Emitted',
-      'Domain::Discarded',
       'Query::Discarded',
       'Query::Discarded',
-      'Domain::Discarded',
       'State::Discarded',
+      'Domain::Discarded',
+      'Domain::Discarded',
     ]
 
     expect(history).toStrictEqual(restoreExpectedHistory)

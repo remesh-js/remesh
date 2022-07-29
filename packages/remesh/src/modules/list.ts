@@ -12,7 +12,7 @@ export const ListModule = <T extends SerializableObject>(
 ) => {
   const KeyListState = domain.state<string[]>({
     name: `${options.name}.KeyListState`,
-    default: [],
+    default: options.default?.map(options.key) ?? [],
   })
 
   const KeyListQuery = domain.query({
@@ -64,40 +64,40 @@ export const ListModule = <T extends SerializableObject>(
     name: `${options.name}.AddItemCommand`,
     impl: ({ get }, newItem: T) => {
       const keyList = get(KeyListState())
-      const list = get(ItemListQuery())
       const newKey = options.key(newItem)
 
       if (keyList.includes(newKey)) {
         return null
       }
 
-      return SetListCommand(list.concat(newItem))
+      return [KeyListState().new([...keyList, newKey]), ItemEntity(newKey).new(newItem)]
     },
   })
 
   const AddItemListCommand = domain.command({
     name: `${options.name}.AddItemListCommand`,
     impl: ({ get }, newItems: T[]) => {
-      const keyList = get(KeyListState())
-      const list = get(ItemListQuery())
+      if (newItems.length === 0) {
+        return null
+      }
 
-      const newList = [] as T[]
+      const keyList = get(KeyListState())
+
+      const itemUpdatePayloadList = [] as RemeshEntityItemUpdatePayload<T>[]
+      const newKeyList = [...keyList]
 
       for (const newItem of newItems) {
         const newItemKey = options.key(newItem)
 
-        if (keyList.includes(newItemKey)) {
+        if (newKeyList.includes(newItemKey)) {
           continue
         }
 
-        newList.push(newItem)
+        itemUpdatePayloadList.push(ItemEntity(newItemKey).new(newItem))
+        newKeyList.push(newItemKey)
       }
 
-      if (newList.length === 0) {
-        return null
-      }
-
-      return SetListCommand(list.concat(newList))
+      return [KeyListState().new(newKeyList), itemUpdatePayloadList]
     },
   })
 
@@ -146,15 +146,7 @@ export const ListModule = <T extends SerializableObject>(
         return null
       }
 
-      const list = get(ItemListQuery())
-      const newList = list.map((item) => {
-        if (options.key(item) === key) {
-          return newItem
-        }
-        return item
-      })
-
-      return SetListCommand(newList)
+      return [ItemEntity(key).new(newItem)]
     },
   })
 
@@ -162,23 +154,17 @@ export const ListModule = <T extends SerializableObject>(
     name: `${options.name}.UpdateItemListCommand`,
     impl: ({ get }, newItems: T[]) => {
       const keyList = get(KeyListState())
-      const list = get(ItemListQuery())
+      const newList = [] as RemeshEntityItemUpdatePayload<T>[]
 
-      const updateItemKeys = newItems.map((item) => options.key(item))
-      const newList = [] as T[]
+      for (const newItem of newItems) {
+        const itemKey = options.key(newItem)
 
-      for (const [index, key] of keyList.entries()) {
-        const updateItemIndex = updateItemKeys.indexOf(key)
-
-        if (updateItemIndex !== -1) {
-          const newItem = newItems[updateItemIndex]
-          newList.push(newItem)
-        } else {
-          newList.push(list[index])
+        if (keyList.includes(itemKey)) {
+          newList.push(ItemEntity(itemKey).new(newItem))
         }
       }
 
-      return SetListCommand(newList)
+      return newList
     },
   })
 
