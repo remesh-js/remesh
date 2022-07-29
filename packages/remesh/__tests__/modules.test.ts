@@ -38,8 +38,9 @@ describe('modules', () => {
 
         const TestAsync = AsyncModule(domain, {
           name: 'TestAsyncModule',
-          load: ({ get }, arg: number) => {
-            return load(get(ArgState()), arg)
+          load: async ({ get }, arg: number) => {
+            const result = await load(get(ArgState()), arg)
+            return result
           },
           onSuccess,
           onFailed,

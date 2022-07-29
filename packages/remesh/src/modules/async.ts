@@ -53,7 +53,6 @@ export const AsyncData = {
   success: <T>(value: T): SuccessAsyncData<T> => {
     return {
       type: 'success',
-      promise: Promise.resolve(value),
       value,
     }
   },
@@ -254,7 +253,11 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
             }
           }
 
-          options.load(ctx, arg).then(handleSuccess).catch(handleFailed)
+          try {
+            options.load(ctx, arg).then(handleSuccess, handleFailed)
+          } catch (error) {
+            handleFailed(error)
+          }
 
           return () => {
             isUnsubscribed = true
