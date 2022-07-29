@@ -696,16 +696,7 @@ const TodoListDomain = Remesh.domain({
   impl: (domain) => {
     const TodoList = ListModule(domain, {
       name: 'TodoList',
-      key: (todo) => todo.id.toString(),
-      onAdded: (todo) => {
-        return YourAddedCommand(todo)
-      },
-      onRemoved: (todo) => {
-        return YourRemovedCommand(todo)
-      },
-      onChanged: (todo) => {
-        return YourChangedCommand(todo)
-      },
+      key: (todo) => todo.id.toString()
     })
 
     return {
