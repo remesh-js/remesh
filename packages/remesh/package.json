@@ -2,6 +2,17 @@
   "name": "remesh",
   "version": "1.0.0",
   "description": "A DDD framework for TypeScript/JavaScript",
+  "keywords": [
+    "DDD",
+    "CQRS",
+    "functional",
+    "immutable",
+    "event driven"
+  ],
+  "homepage": "https://remesh-js.github.io/remesh/dist/index.html",
+  "repository": "github:remeshjs/remesh",
+  "bugs": "https://github.com/remesh-js/remesh/issues",
+  "author": "https://github.com/Lucifier129",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
