@@ -236,6 +236,8 @@ root.render(
 - [How to pass a remesh store to react component?](#how-to-pass-a-remesh-store-to-react-component)
 - [How to attach logger?](#how-to-attach-logger)
 - [How to connect redux-devtools?](#how-to-connect-redux-devtools)
+- [How to fetch async resources in domain?](#how-to-fetch-async-resources-in-domain)
+- [How to management a list in domain?](#how-to-management-a-list-in-domain)
 
 ### How to define a domain?
 
@@ -625,6 +627,105 @@ root.render(
   </RemeshRoot>,
 )
 ```
+
+### How to fetch async resources in domain?
+
+```typescript
+import { Remesh } from 'remesh'
+import { AsyncModule } from 'remesh/modules/async'
+
+const YourDomain = Remesh.domain({
+  name: 'YourDomain',
+  impl: (domain) => {
+    const YourAsyncTask = AsyncModule(domain, {
+      name: 'YourAsyncTask',
+      load: async ({ get }, arg: number) => {
+        const response = fetch('/path/to/api?arg=' + arg)
+        const json = await response.json()
+        return json
+      },
+      onSuccess: (json) => {
+        return MySuccessCommand(json)
+      },
+      onFailed: (error) => {
+        return MyFailedCommand(error.message)
+      },
+      onLoading: () => {
+        return MyLoadingCommand()
+      },
+      onCanceled: () => {
+        return MyCanceledCommand()
+      },
+      onChanged: () => {
+        return MyChangedCommand()
+      },
+    })
+
+    return {
+      command: {
+        LoadCommand: YourAsyncTask.command.LoadCommand,
+        CanceledCommand: YourAsyncTask.command.CanceledCommand,
+        ReloadCommand: YourAsyncTask.command.ReloadCommand,
+      },
+      event: {
+        SuccessEvent: YourAsyncTask.event.SuccessEvent,
+        FailedEvent: YourAsyncTask.event.FailedEvent,
+        LoadingEvent: YourAsyncTask.event.LoadingEvent,
+        CanceledEvent: YourAsyncTask.event.CanceledEvent,
+        ChangedEvent: YourAsyncTask.event.ChangedEvent,
+      },
+    }
+  },
+})
+```
+
+### How to management a list in domain?
+
+```typescript
+import { Remesh } from 'remesh'
+import { ListModule } from 'remesh/modules/list'
+
+type Todo = {
+  id: number
+  title: string
+  completed: boolean
+}
+
+const TodoListDomain = Remesh.domain({
+  name: 'TodoListDomain',
+  impl: (domain) => {
+    const TodoList = ListModule(domain, {
+      name: 'TodoList',
+      key: (todo) => todo.id.toString(),
+      onAdded: (todo) => {
+        return YourAddedCommand(todo)
+      },
+      onRemoved: (todo) => {
+        return YourRemovedCommand(todo)
+      },
+      onChanged: (todo) => {
+        return YourChangedCommand(todo)
+      },
+    })
+
+    return {
+      command: {
+        AddItemCommand: TodoList.command.AddItemCommand,
+        DeleteItemCommand: TodoList.command.DeleteItemCommand,
+        UpdateItemCommand: TodoList.command.UpdateItemCommand,
+        AddItemListCommand: TodoList.command.AddItemListCommand,
+        DeleteItemListCommand: TodoList.command.DeleteItemListCommand,
+        UpdateItemListCommand: TodoList.command.UpdateItemListCommand,
+        InsertBeforeCommand: TodoList.command.InsertBeforeCommand,
+        InsertAfterCommand: TodoList.command.InsertAfterCommand,
+        InsertAtCommand: TodoList.command.InsertAtCommand,
+      },
+    }
+  },
+})
+```
+
+})
 
 ## Packages
 
