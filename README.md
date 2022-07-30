@@ -237,7 +237,7 @@ root.render(
 - [How to attach logger?](#how-to-attach-logger)
 - [How to connect redux-devtools?](#how-to-connect-redux-devtools)
 - [How to fetch async resources in domain?](#how-to-fetch-async-resources-in-domain)
-- [How to management a list in domain?](#how-to-management-a-list-in-domain)
+- [How to manage a list in domain?](#how-to-manage-a-list-in-domain)
 - [How to define a custom module for reusing logic between domains?](#how-to-define-a-custom-module-for-reusing-logic-between-domains)
 - [How to access other domains?](#how-to-access-other-domains)
 - [How to subscribe to events or queries or commands in domain-effect?](#how-to-subscribe-to-events-or-queries-or-commands-in-domain-effect)
@@ -1006,11 +1006,11 @@ store.discard()
 
 ## Packages
 
-- remesh: the core package for define your domain
-- remesh-react: the package for using remesh in react
-- remesh-vue: the package for using remesh in vue
-- remesh-logger: the package for logging
-- remesh-redux-devtools: the package for redux-devtools
+- [remesh](packages/remesh) : the core package for define your domain
+- [remesh-react](packages/remesh-react) : the package for using remesh in react
+- [remesh-vue](packages/remesh-vue) : the package for using remesh in vue
+- [remesh-logger](packages/remesh-logger) : the package for logging
+- [remesh-redux-devtools](packages/remesh-redux-devtools) : the package for redux-devtools
 
 ## Inspiration
 
