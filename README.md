@@ -60,6 +60,8 @@ yarn add remesh rxjs
 
 ## Usage
 
+Visit [examples/](./projects//domains/src) for more.
+
 ### define your domain
 
 ```typescript
