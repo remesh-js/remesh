@@ -52,10 +52,10 @@ For the consumers of any domains.
 ## Installation
 
 ```sh
-# Install remesh via npm
-npm install --save remesh
-# Install remesh via yarn
-yarn add remesh
+# Install remesh and rxjs via npm
+npm install --save remesh rxjs
+# Install remesh and rxjs via yarn
+yarn add remesh rxjs
 ```
 
 ## Usage
