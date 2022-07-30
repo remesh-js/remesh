@@ -75,7 +75,7 @@ const CountDomain = Remesh.domain({
   name: 'CountDomain',
   impl: (domain) => {
     /**
-     * Define your domain's related events
+     * Define your domain's related states
      */
     const CountState = domain.state({
       name: 'CountState',
@@ -130,7 +130,7 @@ const CountDomain = Remesh.domain({
       name: 'IncrementCountEffect',
       impl: () => {
         /**
-         * Auto-increase count per seconds
+         * Auto-increase count per second
          */
         return interval(1000).pipe(map(() => IncreaseCountCommand()))
       },
@@ -683,7 +683,7 @@ const YourDomain = Remesh.domain({
 })
 ```
 
-### How to management a list in domain?
+### How to manage a list in domain?
 
 ```typescript
 import { Remesh } from 'remesh'
