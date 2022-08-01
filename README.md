@@ -167,7 +167,7 @@ export const CountDomain = Remesh.domain({
      */
 
     domain.effect({
-      name: 'IncrementCountEffect',
+      name: 'ChangeCountEffect',
       impl: ({ fromEvent }) => {
         return fromEvent(StartEvent).pipe(
           switchMap((mode) => {
