@@ -68,7 +68,9 @@ You can edit it in [stackblitz](https://stackblitz.com/edit/react-ts-gg1icr?file
 import { Remesh } from 'remesh'
 
 import { interval } from 'rxjs'
-import { map } from 'rxjs/operators'
+import { map, switchMap, takeUntil } from 'rxjs/operators'
+
+type ChangeMode = 'increment' | 'decrement'
 
 /**
  * Define your domain model
@@ -117,6 +119,9 @@ export const CountDomain = Remesh.domain({
       },
     })
 
+    /**
+     * You can use a command in another command
+     */
     const IncreaseCountCommand = domain.command({
       name: 'IncreaseCountCommand',
       impl: ({ get }, count: number = 1) => {
@@ -125,16 +130,54 @@ export const CountDomain = Remesh.domain({
     })
 
     /**
+     * You can use a command in another command
+     */
+    const DecreaseCountCommand = domain.command({
+      name: 'IncreaseCountCommand',
+      impl: ({ get }, count: number = 1) => {
+        return SetCountCommand(get(CountState()) - count)
+      },
+    })
+
+    const ChangeCountByModeCommand = domain.command({
+      name: 'ChangeCountByModeCommand',
+      impl: ({}, mode: ChangeMode) => {
+        if (mode === 'increment') return IncreaseCountCommand()
+        if (mode === 'decrement') return DecreaseCountCommand()
+        return null
+      },
+    })
+
+    /**
+     * Define an event for starting increment or decrement periodically
+     */
+    const StartEvent = domain.event<ChangeMode>({
+      name: 'StartEvent',
+    })
+
+    /**
+     * Define an event for stopping signal
+     */
+    const StopEvent = domain.event({
+      name: 'StopEvent',
+    })
+
+    /**
      * Define your domain's related effects
      */
 
     domain.effect({
       name: 'IncrementCountEffect',
-      impl: () => {
-        /**
-         * Auto-increase count per second
-         */
-        return interval(1000).pipe(map(() => IncreaseCountCommand()))
+      impl: ({ fromEvent }) => {
+        return fromEvent(StartEvent).pipe(
+          switchMap((mode) => {
+            return interval(100).pipe(
+              map(() => ChangeCountByModeCommand(mode)),
+              // finished when received stop event
+              takeUntil(fromEvent(StopEvent)),
+            )
+          }),
+        )
       },
     })
 
@@ -148,9 +191,15 @@ export const CountDomain = Remesh.domain({
       command: {
         SetCountCommand,
         IncreaseCountCommand,
+        DecreaseCountCommand,
       },
       event: {
-        CountChangedEvent,
+        StartEvent,
+        StopEvent,
+        /**
+         * You can make an event subscribe-only for the consumers outside of domain
+         */
+        CountChangedEvent: CountChangedEvent.toSubscribeOnlyEvent(),
       },
     }
   },
@@ -185,11 +234,39 @@ export const Counter = () => {
    */
   const count = useRemeshQuery(countDomain.query.CountQuery())
 
-  const handleClick = () => {
+  const handleIncrement = () => {
     /**
      * send command to domain
      */
     send(countDomain.command.IncreaseCountCommand())
+  }
+
+  const handleDecrement = () => {
+    /**
+     * send command to domain
+     */
+    send(countDomain.command.DecreaseCountCommand())
+  }
+
+  const handleStartIncrease = () => {
+    /**
+     * send event to domain
+     */
+    send(countDomain.event.StartEvent('increment'))
+  }
+
+  const handleStartDecrease = () => {
+    /**
+     * send event to domain
+     */
+    send(countDomain.event.StartEvent('decrement'))
+  }
+
+  const handleStop = () => {
+    /**
+     * send event to domain
+     */
+    send(countDomain.event.StopEvent())
   }
 
   /**
@@ -200,9 +277,19 @@ export const Counter = () => {
   })
 
   return (
-    <div id="container">
-      <div id="count">{count}</div>
-      <button onClick={handleClick}>Click me</button>
+    <div id="container" style={{ textAlign: 'center', fontSize: 28 }}>
+      <h1 id="count">{count}</h1>
+      <button style={{ height: 40 }} onClick={handleStartIncrease}>
+        start increase
+      </button> <button style={{ height: 40 }} onClick={handleIncrement}>
+        +1
+      </button> <button style={{ height: 40 }} onClick={handleStop}>
+        stop
+      </button> <button style={{ height: 40 }} onClick={handleDecrement}>
+        -1
+      </button> <button style={{ height: 40 }} onClick={handleStartDecrease}>
+        start decrease
+      </button>{' '}
     </div>
   )
 }
