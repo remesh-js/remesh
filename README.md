@@ -60,7 +60,7 @@ yarn add remesh rxjs
 
 ## Usage
 
-Visit [examples/](./projects//domains/src) for more.
+You can edit it in [stackblitz](https://stackblitz.com/edit/react-ts-gg1icr?file=domain.ts,index.tsx)
 
 ### define your domain
 
@@ -73,7 +73,7 @@ import { map } from 'rxjs/operators'
 /**
  * Define your domain model
  */
-const CountDomain = Remesh.domain({
+export const CountDomain = Remesh.domain({
   name: 'CountDomain',
   impl: (domain) => {
     /**
@@ -160,15 +160,16 @@ const CountDomain = Remesh.domain({
 ### Using your domain in react component
 
 ```jsx
-import React from 'react'
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
 
-import ReactDOM from 'react-dom/client'
+import * as React from 'react'
 
 import { RemeshRoot, useRemeshDomain, useRemeshQuery, useRemeshSend, useRemeshEvent } from 'remesh-react'
 
-import { CountDomain } from './CountDomain'
+import { CountDomain } from './domain'
 
-const Counter = () => {
+export const Counter = () => {
   /**
    * use remesh send for sending commands
    */
@@ -194,7 +195,7 @@ const Counter = () => {
   /**
    * listen to the domain event via useRemeshEvent
    */
-  useRemeshEvent(countDomain.event.CountEvent, (count) => {
+  useRemeshEvent(countDomain.event.CountChangedEvent, (count) => {
     console.log(count)
   })
 
@@ -206,15 +207,15 @@ const Counter = () => {
   )
 }
 
-const root = ReactDOM.createRoot(document.getElementById('root'))
+const rootElement = document.getElementById('root')
+const root = createRoot(rootElement)
 
-/**
- * <RemeshRoot /> is the root component of remesh-react
- */
 root.render(
-  <RemeshRoot>
-    <Counter />
-  </RemeshRoot>,
+  <StrictMode>
+    <RemeshRoot>
+      <Counter />
+    </RemeshRoot>
+  </StrictMode>,
 )
 ```
 
