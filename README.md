@@ -12,6 +12,18 @@
 
 > A DDD framework for large and complex TypeScript/JavaScript applications
 
+## Features
+
+- DDD principles
+- CQRS Architecture
+- Event-driven Architecture
+- Incremental updates
+- Reactive programming
+- Immutable state
+- Type-friendly APIs
+- Framework-agnostic(React/Vue supported officially)
+- SSR support
+
 ## Why Remesh?
 
 So, why Remesh? What benefits can it bring to my application?
@@ -33,18 +45,6 @@ It depends on whether you will be attracted to the following.
 - **Better predictability**: Remesh divides your business logic into pure and effect parts, where the pure parts are pure functions and immutable data, which are safe and predictable and form the core of your business logic. The effect part manages side effects in a combinatorial way through rxjs, so we can easily control the flow of data.
 
 - **Better sustainability**: Your business logic doesn't change with changes in the view layer, and even if you migrate from one view library to another (e.g. from react to vue), you can still reuse all the remesh code and keep iterating without refactoring or rewriting.
-
-## Features
-
-- DDD principles
-- CQRS Architecture
-- Event-driven Architecture
-- Incremental updates
-- Reactive programming
-- Immutable state
-- Type-friendly APIs
-- Framework-agnostic(React/Vue supported officially)
-- SSR support
 
 ## Concepts
 
