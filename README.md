@@ -30,13 +30,13 @@ So, why Remesh? What benefits can it bring to my application?
 
 It depends on whether you will be attracted to the following.
 
-- **Modularity**: You don't have to bring all your state together, it can be defined and processed atomically, and aggregated into the derived state you want with domain.query.
+- **Modularity**: You don't have to bring all your state together, it can be defined and processed atomically, and aggregated into other derived state with `domain.query`.
 
-- **High performance**: Your component can be re-rendered precisely in response to the domain.query it subscribes to.
+- **High performance**: Your component will not be re-rendered by the change of the `domain.query` it doesn't subscribe to.
 
 - **Better maintainability**: Remesh provides a set of expressive APIs to maintain your business logic with a uniform code style, enhancing code maintainability.
 
-- **Better composability**: Your pages don't have to have a unique domain, you can define as many domains as you need and simply access other domains via domain.getDomain(...) Build your application's business logic in a combinatorial way.
+- **Better composability**: There is no needed for your pages to have just one domain, you can define as many domains as you need and simply access other domains via `domain.getDomain(...)`. Build your application's business logic in a combinatorial way.
 
 - **Better reusability**: You can write remesh custom modules like react-hooks to reuse logic across multiple domains.
 
@@ -44,7 +44,7 @@ It depends on whether you will be attracted to the following.
 
 - **Better predictability**: Remesh divides your business logic into pure and effect parts, where the pure parts are pure functions and immutable data, which are safe and predictable and form the core of your business logic. The effect part manages side effects in a combinatorial way through rxjs, so we can easily control the flow of data.
 
-- **Better sustainability**: Your business logic doesn't change with changes in the view layer, and even if you migrate from one view library to another (e.g. from react to vue), you can still reuse all the remesh code and keep iterating without refactoring or rewriting.
+- **Better sustainability**: Your business logic doesn't tie to the view layer, even if you migrate from one view library to another (e.g. from react to vue), you can still reuse all the remesh code and keep iterating without refactoring or rewriting.
 
 ## Concepts
 
