@@ -155,7 +155,7 @@ export const CountDomain = Remesh.domain({
      * You can use a command in another command
      */
     const DecreaseCountCommand = domain.command({
-      name: 'IncreaseCountCommand',
+      name: 'DecreaseCountCommand',
       impl: ({ get }, count: number = 1) => {
         return SetCountCommand(get(CountState()) - count)
       },
