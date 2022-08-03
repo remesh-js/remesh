@@ -1,6 +1,6 @@
 # remesh
 
-English | [中文]
+[English] | 中文
 
 [English]:./README.md
 [中文]:./README_zh_CN.md
@@ -15,68 +15,68 @@ English | [中文]
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/Lucifier129/remesh/blob/master/LICENSE)
 [![Twitter: guyingjie129](https://img.shields.io/twitter/follow/guyingjie129.svg?style=social)](https://twitter.com/guyingjie129)
 
-> A DDD framework for large and complex TypeScript/JavaScript applications
+> Remesh, 领域驱动设计框架, 为大型 TypeScript/JavasScript 应用而生.
 
-## Features
+## 特性
 
-- DDD principles
-- CQRS Architecture
-- Event-driven Architecture
-- Incremental updates
-- Reactive programming
-- Immutable state
-- Type-friendly APIs
-- Framework-agnostic(React/Vue supported officially)
-- SSR support
+- DDD 原则
+- CQRS 架构
+- Event-driven 架构
+- 增量更新
+- 反应式编程
+- 可变状态
+- 类型友好的 APIs
+- 框架无关(官方支持 React/Vue)
+- 支持 SSR
 
-## Why Remesh?
+## 为何选择 Remesh?
 
-So, why Remesh? What benefits can it bring to my application?
+所以, 为什么是 Rememsh 呢? 它能为我的应用带来何种益处呢?
 
-It depends on whether you will be attracted to the following.
+这取决于你是否被以下内容所吸引:
 
-- **Modularity**: You don't have to bring all your state together, it can be defined and processed atomically, and aggregated into other derived state with `domain.query`.
+- **模块化**: 你不必将你的状态聚合到一起, 它可以原子化的方式被定义和处理, 并可以 `domain.query` 聚合为其它的派生状态.
 
-- **High performance**: Your component will not be re-rendered by the change of the `domain.query` it doesn't subscribe to.
+- **高性能**: 如果没有订阅, 你的组件不会因 `domain.query` 的变化而重新渲染.
 
-- **Maintainability**: Remesh provides a set of expressive APIs to maintain your business logic with a uniform code style, enhancing code maintainability.
+- **可维护性**: Remesh 提供了一组极具表达能力的 APIs, 鼓励你通过规范的编码方式, 维护业务逻辑, 如此提高代码的可维护性.
 
-- **Composability**: There is no needed for your pages to have just one domain, you can define as many domains as you need and simply access other domains via `domain.getDomain(...)`. Build your application's business logic in a combinatorial way.
+- **可组合性**: 无需仅为你的多个页面构建单一的 domain, 你可以按需定义多个 domain, 并且在一个 domain 中通过 `domain.getDomain(...)` 来访问其它 domains.
 
-- **Reusability**: You can write remesh custom modules like react-hooks to reuse logic across multiple domains.
+- **复用性**: 你可以编写 remesh 自定义模块以在多个 domains 中复用逻辑, 就像编写 react-hooks 那样.
 
-- **Testability**: Your Remesh code is view-independent, so you can test your business logic in a test environment more easily.
+- **可测试性**: 你的 Remesh code 是视图无关的, 因此你可以在测试环境下更简单地测试你的业务逻辑.
 
-- **Predictability**: Remesh divides your business logic into pure and effect parts, where the pure parts are pure functions and immutable data, which are safe and predictable and form the core of your business logic. The effect part manages side effects in a combinatorial way through rxjs, so we can easily control the flow of data.
+- **可预测性**: Remesh 帮助你将业务逻辑划分为 pure 和 effect 部分: pure 部分是纯函数和不可变数据, 它们安全且可预测, 并且构成了你业务逻辑的核心. effect 部分则通过 rxjs 以组合的方式管理副作用, 因此我们可以轻松的控制数据的流向.
 
-- **Sustainability**: Your business logic doesn't tie to the view layer, even if you migrate from one view library to another (e.g. from react to vue), you can still reuse all the remesh code and keep iterating without refactoring or rewriting.
+- **可持续性**: 你的业务逻辑并不和你的视图层绑定, 即便你从一个视图库迁移到另一个 (比如从 react 到 vue), 你仍然可以重用所有的 remesh 代码, 并且无需重构或重写即可继续迭代.
 
-## Concepts
+## 概念
 
-A domain is like a component of your application. But not for the UIs, it's for your business logic.
+一个 domain 就像你的应用中的一个 component, 但它不关于 UI, 而是关于你的业务逻辑.
 
-All related things are encapsuled in the domain.
+"所有相关的事物被封装到一起", 即为 domain.
 
-A domain can have as many resources listed in below as you want.
+一个 doamin 可以根据你的需求, 包含许多种资源, 如下:
 
-- **Domain States**: the state you want to store in the domain.
-- **Domain Entities**: the entity you want to store in the domain. An entity must has a unique identifier as key.
-- **Domain Events**: identify something happened in the domain.
-- **Domain Commands**: update states/entities or emit events or do nothing.
-- **Domain Queries**: query states/entities or deriving another query.
-- **Domain Effects**: An observable that perform side-effect and send commands or events.
+- **Domain States**: 你希望存储在 domain 中的状态.
+- **Domain Entities**: 你希望存储在 domain 中的实体. 一个实体必须有唯一的标识作为 key.
+- **Domain Events**: 指明 domain 中会发生的某些事情.
+- **Domain Commands**: 更新 states/entities, 或 emit events, 或什么都不做.
+- **Domain Queries**: 查询 states/entities, 或者驱动另一个 query.
+- **Domain Effects**: 一个可观察对象(observable), 用于执行副作用, 发送 commands 或者 events.
 
-For any domains, only `domain-query`, `domain-command`, `domain-event` can be exposed to the outside.
+对于任意 domains 而言, 只有 `domain-query`, `domain-command`, `domain-event` 可以被暴露出去.
 
-`domain-state` and `domain-entity` are not exposed to the outside and can't be touched directly out of the domain.
+`domain-state` and `domain-entity` 不会被暴露出去, 也不能在 domain 以外被直接接触到.
 
-For the consumers of any domains.
+对于 domains 的消费方而言.
 
-- The only way to read states or entities is through `domain-query` for preventing invalid read.
+- 唯一读取 states 或 entities 的方式, 是 `domain-query`, 以此阻止那些无效的读取.
 
-- The only way to update states or entities is through `domain-command` for preventing invalid update.
+- 唯一更新 states 或 entities 的方式, 是 `domain-command`, 以此阻止那些无效的更新.
 
-## Installation
+## 安装
 
 ```sh
 # Install remesh and rxjs via npm
@@ -85,11 +85,11 @@ npm install --save remesh rxjs
 yarn add remesh rxjs
 ```
 
-## Usage
+## 使用
 
-You can edit it in [stackblitz](https://stackblitz.com/edit/react-ts-gg1icr?file=domain.ts,index.tsx)
+你可以在 [stackblitz](https://stackblitz.com/edit/react-ts-gg1icr?file=domain.ts,index.tsx) 上编辑它.
 
-### define your domain
+### 定义你的 domain
 
 ```typescript
 import { Remesh } from 'remesh'
@@ -233,7 +233,7 @@ export const CountDomain = Remesh.domain({
 })
 ```
 
-### Using your domain in react component
+### 在 React 组件中使用你的 domain
 
 ```jsx
 import { StrictMode } from 'react'
@@ -333,34 +333,34 @@ root.render(
 )
 ```
 
-## Recipes
+## 示例
 
-- [How to define a domain?](#how-to-define-a-domain)
-- [How to define a state?](#how-to-define-a-state)
-- [How to define a command?](#how-to-define-a-command)
-- [How to read the state in command?](#how-to-read-the-state-in-command)
-- [How to define a query?](#how-to-define-a-query)
-- [How to update the state?](#how-to-update-the-state)
-- [How to define an event?](#how-to-define-an-event)
-- [How to emit an event in command?](#how-to-emit-an-event-in-command)
-- [How to update multiple states?](#how-to-update-multiple-states)
-- [How not to do anything in command?](#how-not-to-do-anything-in-command)
-- [How to pass arg to domain query?](#how-to-pass-arg-to-domain-query)
-- [How to pass arg to domain command?](#how-to-pass-arg-to-domain-command)
-- [How to define an effect?](#how-to-define-an-effect)
-- [How to define an entity?](#how-to-define-an-entity)
-- [How to use domain in react component?](#how-to-use-domain-in-react-component)
-- [How to pass a remesh store to react component?](#how-to-pass-a-remesh-store-to-react-component)
-- [How to attach logger?](#how-to-attach-logger)
-- [How to connect redux-devtools?](#how-to-connect-redux-devtools)
-- [How to fetch async resources in domain?](#how-to-fetch-async-resources-in-domain)
-- [How to manage a list in domain?](#how-to-manage-a-list-in-domain)
-- [How to define a custom module for reusing logic between domains?](#how-to-define-a-custom-module-for-reusing-logic-between-domains)
-- [How to access other domains?](#how-to-access-other-domains)
-- [How to subscribe to events or queries or commands in domain-effect?](#how-to-subscribe-to-events-or-queries-or-commands-in-domain-effect)
-- [How to create and use remesh store directly?](#how-to-create-and-use-remesh-store-directly)
+- [如何定义一个 domain?](#如何定义一个-domain)
+- [如何定义一个 state?](#如何定义一个-state)
+- [如何定义一个 command?](#如何定义一个-command)
+- [如何从一个 command 中读取 state?](#如何从一个-command-中读取-state)
+- [如何定义一个 query?](#如何更新-state)
+- [如何更新 state?](#如何定义一个-query)
+- [如何定义一个 event?](#如何定义一个-event)
+- [如何在 command 中 emit 一个 event?](#如何在-command-中-emit-一个-event)
+- [如何更新多个 states?](#如何更新多个-states)
+- [如何在 command-不做任何变更?](#如何在-command-不做任何变更)
+- [如何传递参数给 domain query?](#如何传递参数给-domain-query)
+- [如何传递参数给 domain command?](#如何传递参数给-domain-command)
+- [如何定义一个 effect?](#如何定义一个-effect)
+- [如何定义一个 entity?](#如何定义一个-entity)
+- [如何在 react component 中使用 domain?](#如何在-react-component-中使用-domain)
+- [如何将 remesh store 传递给 react component?](#如何将-remesh-store-传递给-react-component)
+- [如何挂载 logger?](#如何挂载-logger)
+- [如何连接到 redux-devtools?](#如何连接到-redux-devtools)
+- [如何在 domain 中拉取异步资源?](#如何在-domain-中拉取异步资源)
+- [如何在 domain 中管理一个 list?](#如何在-domain-中管理一个-list)
+- [如何定义一个 custom module 以跨 domains 重用 logic?](#如何定义一个-custom-module-以跨-domains-重用-logic)
+- [如何访问其它 domains?](#如何访问其它-domains)
+- [如何在 domain-effect 中订阅 events 或 queries 或 commands?](#如何在-domain-effect-中订阅-events-或-queries-或-commands)
+- [如何创建和直接使用 remesh store?](#如何创建和直接使用-remesh-store)
 
-### How to define a domain?
+### 如何定义一个 domain?
 
 ```typescript
 import { Remesh } from 'remesh'
@@ -373,7 +373,7 @@ const YourDomain = Remesh.domain({
 })
 ```
 
-### How to define a state?
+### 如何定义一个 state?
 
 ```typescript
 import { Remesh } from 'remesh'
@@ -389,9 +389,9 @@ const YourDomain = Remesh.domain({
 })
 ```
 
-### How to define a command?
+### 如何定义一个 command?
 
-Especially, it means no operations (no states & entities update, and no events emit) to return `null` or empty array `[]` in command implementation.
+特别的, 如果一个 command 返回 `null` 或空数组 `[]`, 则表示该 command 不会更新 state 或 entity，也不会触发 event.
 
 ```typescript
 import { Remesh } from 'remesh'
@@ -409,7 +409,7 @@ const YourDomain = Remesh.domain({
 })
 ```
 
-### How to read the state in command?
+### 如何从一个 command 中读取 state?
 
 ```typescript
 import { Remesh } from 'remesh'
@@ -432,7 +432,7 @@ const YourDomain = Remesh.domain({
 })
 ```
 
-### How to update the state?
+### 如何更新 state?
 
 ```typescript
 import { Remesh } from 'remesh'
@@ -455,7 +455,7 @@ const YourDomain = Remesh.domain({
 })
 ```
 
-### How to define a query?
+### 如何定义一个 query?
 
 ```typescript
 import { Remesh } from 'remesh'
@@ -473,7 +473,7 @@ const YourDomain = Remesh.domain({
 })
 ```
 
-### How to define an event?
+### 如何定义一个 event?
 
 ```typescript
 import { Remesh } from 'remesh'
@@ -488,7 +488,7 @@ const YourDomain = Remesh.domain({
 })
 ```
 
-### How to emit an event in command?
+### 如何在 command 中 emit 一个 event?
 
 ```typescript
 import { Remesh } from 'remesh'
@@ -511,7 +511,7 @@ const YourDomain = Remesh.domain({
 })
 ```
 
-### How to update multiple states?
+### 如何更新多个 states?
 
 ```typescript
 import { Remesh } from 'remesh'
@@ -544,7 +544,7 @@ const YourDomain = Remesh.domain({
 })
 ```
 
-### How not to do anything in command?
+### 如何在 command 不做任何变更?
 
 ```typescript
 import { Remesh } from 'remesh'
@@ -563,7 +563,7 @@ const YourDomain = Remesh.domain({
 })
 ```
 
-### How to pass arg to domain query?
+### 如何传递参数给 domain query?
 
 ```typescript
 import { Remesh } from 'remesh'
@@ -581,7 +581,7 @@ const YourDomain = Remesh.domain({
 })
 ```
 
-### How to pass arg to domain command?
+### 如何传递参数给 domain command?
 
 ```typescript
 import { Remesh } from 'remesh'
@@ -599,7 +599,7 @@ const YourDomain = Remesh.domain({
 })
 ```
 
-### How to define an effect?
+### 如何定义一个 effect?
 
 ```typescript
 import { Remesh } from 'remesh'
@@ -623,7 +623,7 @@ const YourDomain = Remesh.domain({
 })
 ```
 
-### How to define an entity?
+### 如何定义一个 entity?
 
 ```typescript
 import { Remesh } from 'remesh'
@@ -648,7 +648,7 @@ const YourDomain = Remesh.domain({
 })
 ```
 
-### How to use domain in react component?
+### 如何在 react component 中使用 domain?
 
 ```sh
 # via npm
@@ -658,7 +658,7 @@ npm install --save remesh-react
 yarn add remesh-react
 ```
 
-For `react v18`
+对于 `react v18`
 
 ```tsx
 import React from 'react'
@@ -690,7 +690,7 @@ root.render(
 )
 ```
 
-### How to pass a remesh store to react component?
+### 如何将 remesh store 传递给 react component?
 
 ```tsx
 const root = ReactDOM.createRoot(document.getElementById('root'))
@@ -704,7 +704,7 @@ root.render(
 )
 ```
 
-### How to attach logger?
+### 如何挂载 logger?
 
 ```sh
 # via npm
@@ -728,7 +728,7 @@ root.render(
 )
 ```
 
-### How to connect redux-devtools?
+### 如何连接到 redux-devtools?
 
 ```sh
 # via npm
@@ -752,7 +752,7 @@ root.render(
 )
 ```
 
-### How to fetch async resources in domain?
+### 如何在 domain 中拉取异步资源?
 
 ```typescript
 import { Remesh } from 'remesh'
@@ -803,7 +803,7 @@ const YourDomain = Remesh.domain({
 })
 ```
 
-### How to manage a list in domain?
+### 如何在 domain 中管理一个 list?
 
 ```typescript
 import { Remesh } from 'remesh'
@@ -840,7 +840,7 @@ const TodoListDomain = Remesh.domain({
 })
 ```
 
-### How to define a custom module for reusing logic between domains?
+### 如何定义一个 custom module 以跨 domains 重用 logic?
 
 ```typescript
 import { Remesh, RemeshDomainContext, Capitalize } from 'Remesh'
@@ -903,7 +903,7 @@ export const TextModule = (domain: RemeshDomainContext, options: TextModuleOptio
 }
 ```
 
-Using your custom remesh module in any domains like below:
+在任意 domains 中像下面这样使用你的自定义 remesh module:
 
 ```typescript
 import { Remesh } from 'Remesh'
@@ -935,7 +935,7 @@ const MyDomain = Remesh.domain({
 })
 ```
 
-### How to access other domains?
+### 如何访问其它 domains?
 
 ```typescript
 import { Remesh } from 'Remesh'
@@ -1002,7 +1002,7 @@ const MainDomain = Remesh.domain({
 })
 ```
 
-### How to subscribe to events or queries or commands in domain-effect?
+### 如何在 domain-effect 中订阅 events 或 queries 或 commands?
 
 ```typescript
 import { Remesh } from 'Remesh'
@@ -1069,7 +1069,7 @@ const YourDomain = Remesh.domain({
 })
 ```
 
-### How to create and use remesh store directly?
+### 如何创建和直接使用 remesh store?
 
 ```typescript
 import { Remesh } from 'Remesh'
@@ -1126,18 +1126,18 @@ store.discard()
 
 ## Packages
 
-- [remesh](packages/remesh) : the core package for define your domain
-- [remesh-react](packages/remesh-react) : the package for using remesh in react
-- [remesh-vue](packages/remesh-vue) : the package for using remesh in vue
-- [remesh-logger](packages/remesh-logger) : the package for logging
-- [remesh-redux-devtools](packages/remesh-redux-devtools) : the package for redux-devtools
+- [remesh](packages/remesh) : 定义你的 domain 的 core 包
+- [remesh-react](packages/remesh-react) : 帮助在 react 中使用 remesh 的包
+- [remesh-vue](packages/remesh-vue) : 帮助在 vue 中使用 remesh 的包
+- [remesh-logger](packages/remesh-logger) : 打日志的包
+- [remesh-redux-devtools](packages/remesh-redux-devtools) : 连接 redux-tools 的包
 
-## Inspiration
+## 灵感来源
 
-- Domain-Driven-Design inspired the conceptual model
-- CQRS/ES inspired the architecture model
-- [Redux](https://github.com/reduxjs/redux) inspired the implementation of command model
-- [Recoil](https://github.com/facebookexperimental/Recoil) inspired the implementation of query model
-- [Rxjs](https://github.com/ReactiveX/rxjs) inspired the implementation of the event model
+- Domain-Driven-Design 启发了 Remesh 的概念模型
+- CQRS/ES 启发了架构模型
+- [Redux](https://github.com/reduxjs/redux) 启发了 command 模型的实现
+- [Recoil](https://github.com/facebookexperimental/Recoil) 启发了 query 模型的实现
+- [Rxjs](https://github.com/ReactiveX/rxjs) 启发了 event 模型的实现
 
-## Pull requests are welcome
+## 欢迎提交 Pull requests
