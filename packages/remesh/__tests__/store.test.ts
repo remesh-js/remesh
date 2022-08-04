@@ -374,6 +374,7 @@ describe('store', () => {
       expect(changed).toHaveBeenCalledWith('bar')
 
       // @eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line prefer-const
       let [name, { UpdateNameCommand }] = store.query(testDomain.query.NameQuery())
 
       expect(name).toBe('bar')

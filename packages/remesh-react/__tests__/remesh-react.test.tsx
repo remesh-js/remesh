@@ -6,6 +6,7 @@ import { Remesh } from 'remesh'
 
 import { RemeshRoot, useRemeshDomain, useRemeshEvent, useRemeshQuery, useRemeshSend } from '../src/index'
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore config react testing environment
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
