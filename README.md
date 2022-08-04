@@ -15,7 +15,7 @@ English | [中文]
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/Lucifier129/remesh/blob/master/LICENSE)
 [![Twitter: guyingjie129](https://img.shields.io/twitter/follow/guyingjie129.svg?style=social)](https://twitter.com/guyingjie129)
 
-> A DDD framework for large and complex TypeScript/JavaScript applications
+> A CQRS-based DDD framework for large and complex TypeScript/JavaScript applications
 
 ## Features
 
