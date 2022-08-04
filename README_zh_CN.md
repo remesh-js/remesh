@@ -788,7 +788,7 @@ const YourDomain = Remesh.domain({
     return {
       command: {
         LoadCommand: YourAsyncTask.command.LoadCommand,
-        CanceledCommand: YourAsyncTask.command.CanceledCommand,
+        CancelCommand: YourAsyncTask.command.CancelCommand,
         ReloadCommand: YourAsyncTask.command.ReloadCommand,
       },
       event: {
