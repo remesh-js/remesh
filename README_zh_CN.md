@@ -15,7 +15,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/Lucifier129/remesh/blob/master/LICENSE)
 [![Twitter: guyingjie129](https://img.shields.io/twitter/follow/guyingjie129.svg?style=social)](https://twitter.com/guyingjie129)
 
-> Remesh, 领域驱动设计框架, 为大型 TypeScript/JavasScript 应用而生.
+> Remesh, 基于 CQRS 的领域驱动设计框架, 为大型 TypeScript/JavasScript 应用而生.
 
 ## 特性
 
