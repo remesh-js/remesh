@@ -20,7 +20,9 @@ describe('modules', () => {
   })
 
   it('async-module', async () => {
-    let load: (arg: string, arg1: number) => Promise<number> = async () => 0
+    let load: (arg: string, arg1: number) => Promise<number> = () => {
+      return Promise.resolve(0)
+    }
 
     const onSuccess = jest.fn()
     const onFailed = jest.fn()
@@ -91,7 +93,7 @@ describe('modules', () => {
     expect(loadingEventListener).toHaveBeenCalledTimes(1)
     expect(changedEventListener).toHaveBeenCalledTimes(2)
 
-    load = (arg, arg1) => {
+    load = (_arg, _arg1) => {
       throw new Error('error')
     }
 

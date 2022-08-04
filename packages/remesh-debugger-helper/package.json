@@ -2,6 +2,10 @@
   "name": "remesh-debugger-helper",
   "version": "1.0.0",
   "description": "A debugger helper for remesh",
+  "homepage": "https://remesh-js.github.io/remesh/dist/index.html",
+  "repository": "github:remeshjs/remesh",
+  "bugs": "https://github.com/remesh-js/remesh/issues",
+  "author": "https://github.com/Lucifier129",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
