@@ -89,7 +89,7 @@ yarn add remesh rxjs
 
 You can edit it in [stackblitz](https://stackblitz.com/edit/react-ts-gg1icr?file=domain.ts,index.tsx)
 
-### define your domain
+### Define your domain
 
 ```typescript
 import { Remesh } from 'remesh'
