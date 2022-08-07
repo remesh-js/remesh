@@ -2,8 +2,8 @@
 
 English | [中文]
 
-[English]:./README.md
-[中文]:./README_zh_CN.md
+[english]: ./README.md
+[中文]: ./README_zh_CN.md
 
 <p align="center">
   <img width="400" src="./assets/Remesh-logos.jpeg">
@@ -359,6 +359,8 @@ root.render(
 - [How to access other domains?](#how-to-access-other-domains)
 - [How to subscribe to events or queries or commands in domain-effect?](#how-to-subscribe-to-events-or-queries-or-commands-in-domain-effect)
 - [How to create and use remesh store directly?](#how-to-create-and-use-remesh-store-directly)
+- [How to send multiple commands or events at once?](#how-to-send-multiple-commands-or-events-at-once)
+- [How to avoid type error from interface?](#how-to-avoid-type-error-from-interface)
 
 ### How to define a domain?
 
@@ -1122,6 +1124,39 @@ store.discardDomain(YourDomain())
  * discard all resource
  */
 store.discard()
+```
+
+### How to send multiple commands or events at once?
+
+```typescript
+import { Remesh } from 'Remesh'
+
+import YourDomain from 'your-domain'
+
+const store = Remesh.store()
+
+const yourDomain = store.getDomain(YourDomain())
+
+// bundle commands or events into one array
+store.send([
+  yourDomain.command.YourACommand('Hello, ACommand!'),
+  yourDomain.command.YourBCommand('Hello, BCommand!'),
+  yourDomain.event.YourAEvent('Hello, AEvent!'),
+  yourDomain.event.YourBEvent('Hello, BEvent!'),
+])
+```
+
+### How to avoid type error from interface?
+
+You many hit type error from interface when using remesh.
+
+```typescript
+import { ToType } from 'Remesh'
+
+import { MyInterface } from 'my-interface'
+
+// create a type-alias from interface deeply.
+type MyType = ToType<MyInterface>
 ```
 
 ## Packages

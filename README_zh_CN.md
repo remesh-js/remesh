@@ -2,8 +2,8 @@
 
 [English] | 中文
 
-[English]:./README.md
-[中文]:./README_zh_CN.md
+[english]: ./README.md
+[中文]: ./README_zh_CN.md
 
 <p align="center">
   <img width="400" src="./assets/Remesh-logos.jpeg">
@@ -359,6 +359,8 @@ root.render(
 - [如何访问其它 domains?](#如何访问其它-domains)
 - [如何在 domain-effect 中订阅 events 或 queries 或 commands?](#如何在-domain-effect-中订阅-events-或-queries-或-commands)
 - [如何创建和直接使用 remesh store?](#如何创建和直接使用-remesh-store)
+- [如何一次性发送多个 command 或 event？](#如何一次性发送多个-command-或-event)
+- [如何规避 interface 引起的类型错误？](#如何规避-interface-引起的类型错误)
 
 ### 如何定义一个 domain?
 
@@ -1122,6 +1124,39 @@ store.discardDomain(YourDomain())
  * discard all resource
  */
 store.discard()
+```
+
+### 如何一次性发送多个 command 或 event？
+
+```typescript
+import { Remesh } from 'Remesh'
+
+import YourDomain from 'your-domain'
+
+const store = Remesh.store()
+
+const yourDomain = store.getDomain(YourDomain())
+
+// 打包成一个数组发送
+store.send([
+  yourDomain.command.YourACommand('Hello, ACommand!'),
+  yourDomain.command.YourBCommand('Hello, BCommand!'),
+  yourDomain.event.YourAEvent('Hello, AEvent!'),
+  yourDomain.event.YourBEvent('Hello, BEvent!'),
+])
+```
+
+### 如何规避 interface 引起的类型错误？
+
+你可能在使用 remesh 过程中会遇到 interface 引起的类型错误。
+
+```typescript
+import { ToType } from 'Remesh'
+
+import { MyInterface } from 'my-interface'
+
+// 从 interface 中创建一个 type-alias
+type MyType = ToType<MyInterface>
 ```
 
 ## Packages
