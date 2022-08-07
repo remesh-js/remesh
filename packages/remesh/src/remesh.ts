@@ -11,11 +11,11 @@ export type SerializableObject = { [key: string]: Serializable }
 
 export type Serializable = SerializablePrimitives | SerializableArray | SerializableObject | Serializable[]
 
-export type ToType<T> = T extends SerializableObject[]
-  ? ToType<T[number]>
-  : {
-      [key in keyof T]: T[key] extends SerializableObject ? T[key] : ToType<T[key]>
+export type ToType<T> = T extends object | unknown[]
+  ? {
+      [key in keyof T]: ToType<T[key]>
     }
+  : T
 
 export type Args<T = unknown> = [] | [arg: T] | [arg?: T]
 
