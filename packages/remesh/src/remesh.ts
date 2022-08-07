@@ -453,7 +453,7 @@ export type RemeshExternOptions<T> = {
 }
 
 let externUid = 0
-export const RemeshExtern = <T = void>(options: RemeshExternOptions<T>): RemeshExtern<T> => {
+export const RemeshExtern = <T>(options: RemeshExternOptions<T>): RemeshExtern<T> => {
   const Extern: RemeshExtern<T> = {
     type: 'RemeshExtern',
     externId: externUid++,
