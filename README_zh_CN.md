@@ -57,7 +57,7 @@
 
 "所有相关的事物被封装到一起", 即为 domain.
 
-一个 doamin 可以根据你的需求, 包含许多种资源, 如下:
+一个 domain 可以根据你的需求, 包含许多种资源, 如下:
 
 - **Domain States**: 你希望存储在 domain 中的状态.
 - **Domain Entities**: 你希望存储在 domain 中的实体. 一个实体必须有唯一的标识作为 key.
