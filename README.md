@@ -988,16 +988,16 @@ const MainDomain = Remesh.domain({
 
     return {
       query: {
-        AQuery: A.query.AQuery,
-        BQuery: B.query.BQuery,
+        AQuery: aDomain.query.AQuery,
+        BQuery: bDomain.query.BQuery,
       }
       command: {
-        ACommand: A.command.ACommand,
-        BCommand: B.command.BCommand,
+        ACommand: aDomain.command.ACommand,
+        BCommand: bDomain.command.BCommand,
       },
       event: {
-        AEvent: A.event.AEvent,
-        BEvent: B.event.BEvent,
+        AEvent: aDomain.event.AEvent,
+        BEvent: bDomain.event.BEvent,
       },
     }
   },
