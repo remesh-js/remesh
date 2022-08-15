@@ -1431,7 +1431,11 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     }
 
     for (const effect of domainStorage.effectList) {
-      const subscription = from(effect.impl(effectContext)).subscribe(handleEffectOutput)
+      const effectResult = effect.impl(effectContext)
+      if (effectResult === null) {
+        continue
+      }
+      const subscription = from(effectResult).subscribe(handleEffectOutput)
       domainStorage.effectMap.set(effect, subscription)
     }
   }

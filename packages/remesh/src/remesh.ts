@@ -501,7 +501,7 @@ export type RemeshAction = RemeshEventAction<any, any> | RemeshCommandAction<any
 
 export type RemeshEffect = {
   name: DomainConceptName<'Effect'>
-  impl: (context: RemeshEffectContext) => ObservableInput<RemeshAction>
+  impl: (context: RemeshEffectContext) => ObservableInput<RemeshAction> | null
 }
 
 export type RemeshDomainContext = {
