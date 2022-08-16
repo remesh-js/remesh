@@ -20,16 +20,16 @@ export const getTodoId = (todo: Todo) => todo.id
 export const TodoListDomain = Remesh.domain({
   name: 'TodoListDomain',
   impl: (domain) => {
-    const todoListModule = ListModule<Todo>(domain, {
-      name: 'TodoList',
+    const TodoListModule = ListModule<Todo>(domain, {
+      name: 'TodoListModule',
       key: getTodoId,
     })
 
-    const TodoListQuery = todoListModule.query.ItemListQuery
+    const TodoListQuery = TodoListModule.query.ItemListQuery
 
-    const TodoQuery = todoListModule.query.ItemQuery
+    const TodoQuery = TodoListModule.query.ItemQuery
 
-    const TodoKeyListQuery = todoListModule.query.KeyListQuery
+    const TodoKeyListQuery = TodoListModule.query.KeyListQuery
 
     const TodoListChangedEvent = domain.event({
       name: 'TodoListChangedEvent',
@@ -41,7 +41,7 @@ export const TodoListDomain = Remesh.domain({
     const SetTodoListCommand = domain.command({
       name: 'SetTodoListCommand',
       impl: ({}, todos: Todos) => {
-        return [todoListModule.command.SetListCommand(todos), TodoListChangedEvent()]
+        return [TodoListModule.command.SetListCommand(todos), TodoListChangedEvent()]
       },
     })
 
@@ -68,7 +68,7 @@ export const TodoListDomain = Remesh.domain({
           completed: false,
         }
 
-        return [todoListModule.command.AddItemCommand(todo), TodoItemAddedEvent(todo), TodoListChangedEvent()]
+        return [TodoListModule.command.AddItemCommand(todo), TodoItemAddedEvent(todo), TodoListChangedEvent()]
       },
     })
 
@@ -79,14 +79,14 @@ export const TodoListDomain = Remesh.domain({
           return DeleteTodoCommand(todo.id)
         }
 
-        return [todoListModule.command.UpdateItemCommand(todo), TodoListChangedEvent()]
+        return [TodoListModule.command.UpdateItemCommand(todo), TodoListChangedEvent()]
       },
     })
 
     const DeleteTodoCommand = domain.command({
       name: 'DeleteTodoCommand',
       impl: ({}, id: string) => {
-        return [todoListModule.command.DeleteItemCommand(id), TodoListChangedEvent()]
+        return [TodoListModule.command.DeleteItemCommand(id), TodoListChangedEvent()]
       },
     })
 

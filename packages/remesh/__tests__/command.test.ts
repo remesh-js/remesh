@@ -9,7 +9,7 @@ import {
   RemeshStore,
 } from '../src'
 import { of, switchMap } from 'rxjs'
-import { map } from 'rxjs/operators'
+import { map, tap } from 'rxjs/operators'
 import * as utils from './utils'
 
 let store: RemeshStore
@@ -178,6 +178,13 @@ describe('effect', () => {
           name: 'FetchFeaturesEvent',
         })
 
+        const FetchFeaturesCommand = domain.command({
+          name: 'FetchFeaturesCommand',
+          impl({}) {
+            return FetchFeaturesEvent()
+          },
+        })
+
         domain.effect({
           name: 'FetchFeaturesEffect',
           impl: ({ fromEvent }) => {
@@ -188,7 +195,7 @@ describe('effect', () => {
           },
         })
 
-        return { query: { FeaturesQuery }, event: { FetchFeaturesEvent } }
+        return { query: { FeaturesQuery }, command: { FetchFeaturesCommand }, event: { FetchFeaturesEvent } }
       },
     })
 
@@ -197,7 +204,7 @@ describe('effect', () => {
     jest.useFakeTimers()
     const changed = jest.fn()
     store.subscribeQuery(featuresDomain.query.FeaturesQuery(), changed)
-    store.send(featuresDomain.event.FetchFeaturesEvent())
+    store.send(featuresDomain.command.FetchFeaturesCommand())
     jest.runOnlyPendingTimers()
 
     jest.useRealTimers()
@@ -205,7 +212,9 @@ describe('effect', () => {
     expect(changed).toHaveBeenCalledWith(['ddd', 'cqrs', 'event-driven'])
   })
 
-  it('fromQuery/fromEvent/fromCommand', async () => {
+  it('fromQuery/fromEvent', async () => {
+    const fromQueryCallback = jest.fn()
+    const fromEventCallback = jest.fn()
     const CountDomain = RemeshDomain({
       name: 'CountDomain',
       impl(domain) {
@@ -224,7 +233,7 @@ describe('effect', () => {
         const UpdateCountCommand = domain.command({
           name: 'UpdateCountCommand',
           impl({}, count: number) {
-            return CountState().new(count)
+            return [CountState().new(count), CountChangedEvent(count)]
           },
         })
 
@@ -232,16 +241,12 @@ describe('effect', () => {
           name: 'CountChangedEvent',
         })
 
-        const CountIncreaseEvent = domain.event({
-          name: 'CountIncreaseEvent',
-        })
-
         domain.effect({
           name: 'FromEventToUpdateEffect',
           impl({ fromEvent, get }) {
-            return fromEvent(CountIncreaseEvent).pipe(
-              map(() => get(CountState()) + 1),
-              map(UpdateCountCommand),
+            return fromEvent(CountChangedEvent).pipe(
+              map(() => null),
+              tap(fromQueryCallback),
             )
           },
         })
@@ -250,25 +255,17 @@ describe('effect', () => {
           name: 'FromQueryToEventEffect',
           impl({ fromQuery }) {
             return fromQuery(CountQuery()).pipe(
-              map((value) => {
-                return CountChangedEvent(value)
-              }),
+              map(() => null),
+              tap(fromEventCallback),
             )
           },
         })
 
-        domain.effect({
-          name: 'FromCommandToEventEffect',
-          impl({ fromCommand }) {
-            return fromCommand(UpdateCountCommand).pipe(
-              map((value) => {
-                return CountChangedEvent(value)
-              }),
-            )
-          },
-        })
-
-        return { query: { CountQuery }, event: { CountChangedEvent, CountIncreaseEvent } }
+        return {
+          query: { CountQuery },
+          command: { UpdateCountCommand },
+          event: { CountChangedEvent },
+        }
       },
     })
 
@@ -277,11 +274,13 @@ describe('effect', () => {
 
     store.igniteDomain(CountDomain())
     store.subscribeEvent(countDomain.event.CountChangedEvent, changed)
-    store.send(countDomain.event.CountIncreaseEvent())
+    store.send(countDomain.command.UpdateCountCommand(1))
 
     await utils.delay(1)
 
-    expect(changed).toHaveBeenCalledTimes(2)
+    expect(changed).toHaveBeenCalledTimes(1)
+    expect(fromQueryCallback).toHaveBeenCalledTimes(1)
+    expect(fromEventCallback).toHaveBeenCalledTimes(1)
     expect(store.query(countDomain.query.CountQuery())).toBe(1)
   })
 

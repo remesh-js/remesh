@@ -1,7 +1,13 @@
-import { Remesh, RemeshDomainContext, Capitalize, SerializableObject, RemeshEntityItemUpdatePayload } from '../index'
+import {
+  Remesh,
+  RemeshDomainContext,
+  DomainConceptName,
+  SerializableObject,
+  RemeshEntityItemUpdatePayload,
+} from '../index'
 
 export type ListModuleOptions<T extends SerializableObject> = {
-  name: Capitalize
+  name: DomainConceptName<'ListModule'>
   key: (item: T) => string
   default?: T[]
 }

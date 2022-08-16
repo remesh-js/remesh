@@ -1,8 +1,6 @@
 import { Remesh, RemeshStore } from '../src'
 import { AsyncModule, AsyncData } from '../src/modules/async'
 import { ListModule } from '../src/modules/list'
-import { SwitchModule } from '../src/modules/switch'
-import { TextModule } from '../src/modules/text'
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -357,61 +355,5 @@ describe('modules', () => {
     ])
 
     expect(store.query(domain.query.KeyListQuery())).toEqual(['0', '1'])
-  })
-
-  it('text-module', () => {
-    const TestDomain = Remesh.domain({
-      name: 'TestDomain',
-      impl: (domain) => {
-        const TestTextModule = TextModule(domain, {
-          name: 'TestTextModule',
-          default: 'default',
-        })
-
-        return TestTextModule
-      },
-    })
-
-    const domain = store.getDomain(TestDomain())
-
-    expect(store.query(domain.query.TextQuery())).toEqual('default')
-
-    store.send(domain.command.SetTextCommand('text'))
-
-    expect(store.query(domain.query.TextQuery())).toEqual('text')
-
-    store.send(domain.command.ResetCommand())
-
-    expect(store.query(domain.query.TextQuery())).toEqual('default')
-
-    store.send(domain.command.ClearTextCommand())
-
-    expect(store.query(domain.query.TextQuery())).toEqual('')
-  })
-
-  it('switch-module', () => {
-    const TestDomain = Remesh.domain({
-      name: 'TestDomain',
-      impl: (domain) => {
-        const TestSwitchModule = SwitchModule(domain, {
-          name: 'TestSwitchModule',
-          default: false,
-        })
-
-        return TestSwitchModule
-      },
-    })
-
-    const domain = store.getDomain(TestDomain())
-
-    expect(store.query(domain.query.SwitchQuery())).toEqual(false)
-
-    store.send(domain.command.SwitchCommand(true))
-
-    expect(store.query(domain.query.SwitchQuery())).toEqual(true)
-
-    store.send(domain.command.ResetCommand())
-
-    expect(store.query(domain.query.SwitchQuery())).toEqual(false)
   })
 })

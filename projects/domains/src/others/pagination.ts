@@ -71,8 +71,8 @@ export const PaginationDomain = Remesh.domain({
       },
     })
 
-    const UserFetcher = AsyncModule<Pagination, UserList>(domain, {
-      name: 'UserFetcher',
+    const UserAsyncModule = AsyncModule<Pagination, UserList>(domain, {
+      name: 'UserAsyncModule',
       load: async ({}, pagination) => {
         const newUserList = await getUserList(pagination)
         return newUserList
@@ -86,9 +86,9 @@ export const PaginationDomain = Remesh.domain({
     })
 
     domain.effect({
-      name: 'UserFetcherEffect',
+      name: 'UserEffect',
       impl: ({}) => {
-        return [UserFetcher.command.LoadCommand(defaultPagination)]
+        return [UserAsyncModule.command.LoadCommand(defaultPagination)]
       },
     })
 
@@ -96,7 +96,7 @@ export const PaginationDomain = Remesh.domain({
       name: 'LoadMoreCommand',
       impl: ({ get }) => {
         const nextPagination = get(NextPaginationQuery())
-        return UserFetcher.command.LoadCommand(nextPagination)
+        return UserAsyncModule.command.LoadCommand(nextPagination)
       },
     })
 
@@ -111,16 +111,16 @@ export const PaginationDomain = Remesh.domain({
       query: {
         UserListQuery,
         IsEmptyUserListQuery,
-        AsyncDataQuery: UserFetcher.query.AsyncDataQuery,
+        AsyncDataQuery: UserAsyncModule.query.AsyncDataQuery,
       },
       command: {
         LoadMoreCommand: LoadMoreCommand,
         ResetCommand: ResetCommand,
       },
       event: {
-        LoadingUsersEvent: UserFetcher.event.LoadingEvent,
-        SuccessToLoadUsersEvent: UserFetcher.event.SuccessEvent,
-        FailedToLoadUsersEvent: UserFetcher.event.FailedEvent,
+        LoadingUsersEvent: UserAsyncModule.event.LoadingEvent,
+        SuccessToLoadUsersEvent: UserAsyncModule.event.SuccessEvent,
+        FailedToLoadUsersEvent: UserAsyncModule.event.FailedEvent,
       },
     }
   },

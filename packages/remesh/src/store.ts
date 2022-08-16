@@ -82,14 +82,6 @@ export type RemeshQueryStorage<T extends Args<Serializable>, U> = {
   wipUpstreamSet: Set<RemeshQueryStorage<any, any> | RemeshStateStorage<any> | RemeshEntityStorage<any>>
 }
 
-export type RemeshCommandStorage<T extends Args> = {
-  id: number
-  type: 'RemeshCommandStorage'
-  Command: RemeshCommand<T>
-  subject: Subject<T[0]>
-  observable: Observable<T[0]>
-}
-
 export type RemeshEventStorage<T extends Args, U> = {
   id: number
   type: 'RemeshEventStorage'
@@ -119,7 +111,6 @@ export type RemeshDomainStorage<T extends RemeshDomainDefinition, U extends Args
   entityMap: Map<string, RemeshEntityStorage<any>>
   queryMap: Map<string, RemeshQueryStorage<any, any>>
   eventMap: Map<RemeshEvent<any, any>, RemeshEventStorage<any, any>>
-  commandMap: Map<RemeshCommand<any>, RemeshCommandStorage<any>>
   ignited: boolean
   hasBeenPreloaded: boolean
   isDiscarding: boolean
@@ -148,9 +139,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
   const inspectorManager = createInspectorManager(config)
 
-  const pendingEmitSet = new Set<
-    RemeshQueryStorage<any, any> | RemeshEventAction<any, any> | RemeshCommandAction<any>
-  >()
+  const pendingEmitSet = new Set<RemeshQueryStorage<any, any> | RemeshEventAction<any, any>>()
   /**
    * Leaf means that the query storage has no downstream query storages
    */
@@ -589,36 +578,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     return createQueryStorage(queryAction)
   }
 
-  const createCommandStorage = <T extends Args>(Command: RemeshCommand<T>): RemeshCommandStorage<T> => {
-    const domainStorage = getDomainStorage(Command.owner)
-
-    const subject = new Subject<T[0]>()
-
-    const observable = subject.asObservable()
-
-    const currentCommandStorage: RemeshCommandStorage<T> = {
-      id: uid++,
-      type: 'RemeshCommandStorage',
-      Command,
-      subject,
-      observable,
-    }
-
-    domainStorage.commandMap.set(Command, currentCommandStorage)
-
-    return currentCommandStorage
-  }
-
-  const getCommandStorage = <T extends Args>(Command: RemeshCommand<T>): RemeshCommandStorage<T> => {
-    const domainStorage = getDomainStorage(Command.owner)
-
-    if (domainStorage.commandMap.has(Command)) {
-      return domainStorage.commandMap.get(Command) as RemeshCommandStorage<T>
-    }
-
-    return createCommandStorage(Command)
-  }
-
   const domainStorageWeakMap = new WeakMap<RemeshDomainAction<any, any>, RemeshDomainStorage<any, any>>()
 
   const createDomainStorage = <T extends RemeshDomainDefinition, U extends Args<Serializable>>(
@@ -927,7 +886,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     domainStorage.queryMap.clear()
     domainStorage.eventMap.clear()
     domainStorage.effectMap.clear()
-    domainStorage.commandMap.clear()
 
     domainStorageMap.delete(domainStorage.key)
 
@@ -1038,10 +996,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     fromQuery: (queryAction) => {
       const queryStorage = getQueryStorage(queryAction)
       return queryStorage.observable
-    },
-    fromCommand: (Command) => {
-      const commandStorage = getCommandStorage(Command)
-      return commandStorage.observable
     },
   }
 
@@ -1194,9 +1148,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
           item.subject.next(item.currentValue)
         } else if (item.type === 'RemeshEventAction') {
           emitEvent(item)
-        } else if (item.type === 'RemeshCommandAction') {
-          const commandStorage = getCommandStorage(item.Command)
-          commandStorage.subject.next(item.arg)
         }
       }
     }
@@ -1316,7 +1267,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
     const fn = Command.impl as (context: RemeshCommandContext, arg: T[0]) => RemeshCommandOutput
 
-    pendingEmitSet.add(commandAction)
     handleCommandOutput(fn(commandContext, arg))
   }
 
@@ -1407,7 +1357,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     get: remeshInjectedContext.get,
     fromEvent: remeshInjectedContext.fromEvent,
     fromQuery: remeshInjectedContext.fromQuery,
-    fromCommand: remeshInjectedContext.fromCommand,
   }
 
   const handleEffectOutput = (output: RemeshAction) => {

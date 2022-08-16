@@ -26,7 +26,6 @@ export type RemeshInjectedContext = {
   get(input: RemeshStateItem<any> | RemeshEntityItem<any> | RemeshQueryAction<any, any>): unknown
   fromEvent: <T extends Args, U>(Event: RemeshEvent<T, U> | RemeshSubscribeOnlyEvent<T, U>) => Observable<U>
   fromQuery: <T extends Args<Serializable>, U>(Query: RemeshQueryAction<T, U>) => Observable<U>
-  fromCommand: <T extends Args>(Command: RemeshCommand<T>) => Observable<T[0]>
 }
 
 export type RemeshEventContext = {
@@ -494,7 +493,6 @@ export type RemeshEffectContext = {
   get: RemeshInjectedContext['get']
   fromEvent: RemeshInjectedContext['fromEvent']
   fromQuery: RemeshInjectedContext['fromQuery']
-  fromCommand: RemeshInjectedContext['fromCommand']
 }
 
 export type RemeshAction = RemeshEventAction<any, any> | RemeshCommandAction<any> | null | RemeshAction[]
@@ -546,7 +544,7 @@ export type VerifiedRemeshDomainDefinition<T extends RemeshDomainDefinition> = P
   {
     event: {
       [key in keyof T['event']]: key extends DomainConceptName<'Event'>
-        ? T['event'][key]
+        ? ToRemeshSubscribeOnlyEvent<T['event'][key]>
         : `${key & string} is not a valid event name`
     }
     query: {
@@ -569,7 +567,18 @@ export const toValidRemeshDomainDefinition = <T extends RemeshDomainDefinition>(
   const result = {} as VerifiedRemeshDomainDefinition<T>
 
   if (domainDefinition.event) {
-    result.event = domainDefinition.event as unknown as typeof result.event
+    const eventRecord = {} as VerifiedRemeshDomainDefinition<T>['event']
+
+    for (const key in domainDefinition.event) {
+      const event = domainDefinition.event[key]
+      if (event.type === 'RemeshSubscribeOnlyEvent') {
+        eventRecord[key] = event
+      } else {
+        eventRecord[key] = toRemeshSubscribeOnlyEvent(event)
+      }
+    }
+
+    result.event = eventRecord
   }
 
   if (domainDefinition.query) {

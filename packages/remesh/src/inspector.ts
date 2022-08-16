@@ -75,27 +75,77 @@ export const RemeshInspectorDomain = RemeshDomain({
       name: 'RemeshDomainStorageEvent',
     })
 
+    const RemeshDomainStorageCommand = domain.command({
+      name: 'RemeshDomainStorageCommand',
+      impl: ({}, event: RemeshDomainStorageEventData<any, any>) => {
+        return RemeshDomainStorageEvent(event)
+      },
+    })
+
     const RemeshStateStorageEvent = domain.event<RemeshStateStorageEventData<any>>({
       name: 'RemeshStateStorageEvent',
+    })
+
+    const RemeshStateStorageCommand = domain.command({
+      name: 'RemeshStateStorageCommand',
+      impl: ({}, event: RemeshStateStorageEventData<any>) => {
+        return RemeshStateStorageEvent(event)
+      },
     })
 
     const RemeshQueryStorageEvent = domain.event<RemeshQueryStorageEventData<any, any>>({
       name: 'RemeshQueryStorageEvent',
     })
 
+    const RemeshQueryStorageCommand = domain.command({
+      name: 'RemeshQueryStorageCommand',
+      impl: ({}, event: RemeshQueryStorageEventData<any, any>) => {
+        return RemeshQueryStorageEvent(event)
+      },
+    })
+
     const RemeshEventEmittedEvent = domain.event<RemeshEventEmittedEventData<any, any>>({
       name: 'RemeshEventEmittedEvent',
+    })
+
+    const RemeshEventEmittedCommand = domain.command({
+      name: 'RemeshEventEmittedCommand',
+      impl: ({}, event: RemeshEventEmittedEventData<any, any>) => {
+        return RemeshEventEmittedEvent(event)
+      },
     })
 
     const RemeshCommandReceivedEvent = domain.event<RemeshCommandReceivedEventData<any>>({
       name: 'RemeshCommandReceivedEvent',
     })
 
+    const RemeshCommandReceivedCommand = domain.command({
+      name: 'RemeshCommandReceivedCommand',
+      impl: ({}, event: RemeshCommandReceivedEventData<any>) => {
+        return RemeshCommandReceivedEvent(event)
+      },
+    })
+
     const RemeshEntityStorageEvent = domain.event<RemeshEntityStorageEventData<any>>({
       name: 'RemeshEntityStorageEvent',
     })
 
+    const RemeshEntityStorageCommand = domain.command({
+      name: 'RemeshEntityStorageCommand',
+      impl: ({}, event: RemeshEntityStorageEventData<any>) => {
+        return RemeshEntityStorageEvent(event)
+      },
+    })
+
     return {
+      command: {
+        RemeshDomainStorageCommand,
+        RemeshStateStorageCommand,
+        RemeshQueryStorageCommand,
+        RemeshEventEmittedCommand,
+        RemeshCommandReceivedCommand,
+        RemeshEntityStorageCommand,
+      },
       event: {
         RemeshDomainStorageEvent,
         RemeshStateStorageEvent,
@@ -163,7 +213,7 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
         const inspectorDomain = inspector.getDomain(RemeshInspectorDomain())
 
         inspector.send(
-          inspectorDomain.event.RemeshDomainStorageEvent({
+          inspectorDomain.command.RemeshDomainStorageCommand({
             type,
             storage: domainStorage,
           }),
@@ -181,7 +231,7 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
         const inspectorDomain = inspector.getDomain(RemeshInspectorDomain())
 
         inspector.send(
-          inspectorDomain.event.RemeshStateStorageEvent({
+          inspectorDomain.command.RemeshStateStorageCommand({
             type,
             storage: stateStorage,
           }),
@@ -199,7 +249,7 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
         const inspectorDomain = inspector.getDomain(RemeshInspectorDomain())
 
         inspector.send(
-          inspectorDomain.event.RemeshQueryStorageEvent({
+          inspectorDomain.command.RemeshQueryStorageCommand({
             type,
             storage: queryStorage,
           }),
@@ -217,7 +267,7 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
         const inspectorDomain = inspector.getDomain(RemeshInspectorDomain())
 
         inspector.send(
-          inspectorDomain.event.RemeshEventEmittedEvent({
+          inspectorDomain.command.RemeshEventEmittedCommand({
             type,
             action: eventAction,
           }),
@@ -235,7 +285,7 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
         const inspectorDomain = inspector.getDomain(RemeshInspectorDomain())
 
         inspector.send(
-          inspectorDomain.event.RemeshCommandReceivedEvent({
+          inspectorDomain.command.RemeshCommandReceivedCommand({
             type,
             action: commandAction,
           }),
@@ -253,7 +303,7 @@ export const createInspectorManager = (options: RemeshStoreOptions) => {
         const inspectorDomain = inspector.getDomain(RemeshInspectorDomain())
 
         inspector.send(
-          inspectorDomain.event.RemeshEntityStorageEvent({
+          inspectorDomain.command.RemeshEntityStorageCommand({
             type,
             storage: entityStorage,
           }),

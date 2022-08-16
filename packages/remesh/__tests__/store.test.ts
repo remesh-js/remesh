@@ -334,6 +334,13 @@ describe('store', () => {
           name: 'HelloEvent',
         })
 
+        const HelloCommand = domain.command({
+          name: 'HelloCommand',
+          impl({ get }, name: string) {
+            return [HelloEvent(name)]
+          },
+        })
+
         domain.effect({
           name: 'RemoteUpdateNameEffect',
           impl({ get, fromEvent }) {
@@ -350,6 +357,9 @@ describe('store', () => {
           query: {
             ...nameDomain.query,
             HelloQuery,
+          },
+          command: {
+            HelloCommand,
           },
           event: {
             ...nameDomain.event,
@@ -368,7 +378,7 @@ describe('store', () => {
       const changed = jest.fn()
       store.subscribeEvent(testDomain.event.NameChangedEvent, changed)
 
-      store.send(testDomain.event.HelloEvent('bar'))
+      store.send(testDomain.command.HelloCommand('bar'))
       jest.runOnlyPendingTimers()
 
       expect(changed).toHaveBeenCalledWith('bar')
@@ -395,6 +405,7 @@ describe('store', () => {
     const expectedHistory: string[] = [
       'Domain::Created',
       'Domain::Created',
+      'Command::Received',
       'Event::Emitted',
       'State::Created',
       'Query::Created',
@@ -422,6 +433,7 @@ describe('store', () => {
     const restoreExpectedHistory = [
       'Domain::Created',
       'Domain::Created',
+      'Command::Received',
       'Event::Emitted',
       'State::Created',
       'Query::Created',
@@ -442,6 +454,7 @@ describe('store', () => {
       'Domain::Discarded',
       'Domain::Reused',
       'Domain::Reused',
+      'Command::Received',
       'Event::Emitted',
       'State::Reused',
       'Query::Updated',

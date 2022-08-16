@@ -2,7 +2,7 @@ import { Observable } from 'rxjs'
 import { concatMap, exhaustMap, mergeMap, switchMap, takeUntil } from 'rxjs/operators'
 
 import {
-  Capitalize,
+  DomainConceptName,
   Remesh,
   RemeshAction,
   RemeshDomainContext,
@@ -114,7 +114,7 @@ export type AsyncModuleContext = {
 }
 
 export type AsyncModuleOptions<T, U> = {
-  name: Capitalize
+  name: DomainConceptName<'AsyncModule'>
   load: (context: RemeshQueryContext, arg: T) => Promise<U>
   onLoading?: (context: AsyncModuleContext) => RemeshAction
   onSuccess?: (context: AsyncModuleContext, value: U) => RemeshAction
@@ -175,12 +175,17 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
     name: `${options.name}.ChangedEvent`,
   })
 
+  const LoadEvent = domain.event<T>({
+    name: `${options.name}.LoadEvent`,
+  })
+
   const LoadCommand = domain.command({
     name: `${options.name}.LoadCommand`,
     impl: ({ get }, arg: T) => {
       return [
         ArgState().new(arg),
         UpdateAsyncDataCommand(AsyncData.loading()),
+        LoadEvent(arg),
         LoadingEvent(),
         options.onLoading?.({ get }) ?? null,
       ]
@@ -232,7 +237,7 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
 
   domain.effect({
     name: `${options.name}.LoadEffect`,
-    impl: ({ get, fromCommand }) => {
+    impl: ({ get, fromEvent }) => {
       const ctx: AsyncModuleContext = { get }
 
       const handleArg = (arg: T) => {
@@ -262,23 +267,23 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
           return () => {
             isUnsubscribed = true
           }
-        }).pipe(takeUntil(fromCommand(CancelCommand)))
+        }).pipe(takeUntil(fromEvent(CanceledEvent)))
       }
 
       if (!options.mode || options.mode === 'switch') {
-        return fromCommand(LoadCommand).pipe(switchMap((arg) => handleArg(arg)))
+        return fromEvent(LoadEvent).pipe(switchMap((arg) => handleArg(arg)))
       }
 
       if (options.mode === 'concat') {
-        return fromCommand(LoadCommand).pipe(concatMap((arg) => handleArg(arg)))
+        return fromEvent(LoadEvent).pipe(concatMap((arg) => handleArg(arg)))
       }
 
       if (options.mode === 'merge') {
-        return fromCommand(LoadCommand).pipe(mergeMap((arg) => handleArg(arg)))
+        return fromEvent(LoadEvent).pipe(mergeMap((arg) => handleArg(arg)))
       }
 
       if (options.mode === 'exhaust') {
-        return fromCommand(LoadCommand).pipe(exhaustMap((arg) => handleArg(arg)))
+        return fromEvent(LoadEvent).pipe(exhaustMap((arg) => handleArg(arg)))
       }
 
       throw new Error(`RemeshAsyncModule: invalid mode: ${options.mode}`)
@@ -295,11 +300,11 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
       ReloadCommand,
     },
     event: {
-      CanceledEvent: CanceledEvent.toSubscribeOnlyEvent(),
-      LoadingEvent: LoadingEvent.toSubscribeOnlyEvent(),
-      SuccessEvent: SuccessEvent.toSubscribeOnlyEvent(),
-      FailedEvent: FailedEvent.toSubscribeOnlyEvent(),
-      ChangedEvent: ChangedEvent.toSubscribeOnlyEvent(),
+      CanceledEvent,
+      LoadingEvent,
+      SuccessEvent,
+      FailedEvent,
+      ChangedEvent,
     },
   })
 }
