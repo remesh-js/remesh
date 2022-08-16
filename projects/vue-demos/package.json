@@ -1,7 +1,7 @@
 {
   "name": "remesh-vue-demos",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.0.1",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -9,11 +9,11 @@
   },
   "dependencies": {
     "@vueuse/core": "^8.3.1",
-    "remesh": "^1.0.0",
-    "remesh-domains-for-demos": "^1.0.0",
-    "remesh-logger": "^1.0.0",
-    "remesh-redux-devtools": "^1.0.0",
-    "remesh-vue": "^1.0.0",
+    "remesh": "^2.0.0",
+    "remesh-domains-for-demos": "^1.0.1",
+    "remesh-logger": "^2.0.0",
+    "remesh-redux-devtools": "^2.0.0",
+    "remesh-vue": "^2.0.0",
     "rxjs": "^7.5.5",
     "vue": "^3.2.25"
   },

@@ -1,6 +1,6 @@
 {
   "name": "remesh",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "A CQRS-based DDD framework for large and complex TypeScript/JavaScript applications",
   "keywords": [
     "DDD",

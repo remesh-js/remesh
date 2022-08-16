@@ -1,6 +1,6 @@
 {
   "name": "remesh-example",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": true,
   "scripts": {
     "dev": "vite --host",
@@ -15,11 +15,11 @@
     "react-error-boundary": "^3.1.4",
     "react-router": "^6.2.2",
     "react-router-dom": "^6.2.2",
-    "remesh": "^1.0.0",
-    "remesh-logger": "^1.0.0",
-    "remesh-react": "^1.0.0",
-    "remesh-redux-devtools": "^1.0.0",
-    "remesh-domains-for-demos": "^1.0.0",
+    "remesh": "^2.0.0",
+    "remesh-logger": "^2.0.0",
+    "remesh-react": "^2.0.0",
+    "remesh-redux-devtools": "^2.0.0",
+    "remesh-domains-for-demos": "^1.0.1",
     "rxjs": "^7.0.0",
     "todomvc-app-css": "^2.4.2",
     "tslib": "^2.3.1"
