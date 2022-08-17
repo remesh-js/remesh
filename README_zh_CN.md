@@ -223,10 +223,7 @@ export const CountDomain = Remesh.domain({
       event: {
         StartEvent,
         StopEvent,
-        /**
-         * You can make an event subscribe-only for the consumers outside of domain
-         */
-        CountChangedEvent: CountChangedEvent.toSubscribeOnlyEvent(),
+        CountChangedEvent,
       },
     }
   },
@@ -770,19 +767,19 @@ const YourDomain = Remesh.domain({
         const json = await response.json()
         return json
       },
-      onSuccess: (json) => {
+      onSuccess: ({ get }, json, arg) => {
         return MySuccessCommand(json)
       },
-      onFailed: (error) => {
+      onFailed: ({ get }, error, arg) => {
         return MyFailedCommand(error.message)
       },
-      onLoading: () => {
+      onLoading: ({ get }, arg) => {
         return MyLoadingCommand()
       },
-      onCanceled: () => {
+      onCanceled: ({ get }, arg) => {
         return MyCanceledCommand()
       },
-      onChanged: () => {
+      onChanged: ({ get }, asyncState, arg) => {
         return MyChangedCommand()
       },
     })
@@ -1004,7 +1001,7 @@ const MainDomain = Remesh.domain({
 })
 ```
 
-### 如何在 domain-effect 中订阅 events 或 queries 或 commands?
+### 如何在 domain-effect 中订阅 events 或 queries?
 
 ```typescript
 import { Remesh } from 'Remesh'
@@ -1046,13 +1043,8 @@ const YourDomain = Remesh.domain({
          * The observable it returned will emit next value when the query is re-computed.
          */
         const query$ = fromQuery(YourQuery())
-        /**
-         * Subscribe to commands via fromCommand(..)
-         * The observable it returned will emit next value when the command is called.
-         */
-        const command$ = fromCommand(YourCommand)
 
-        return merge(event$, query$, command$).pipe(map(() => [ACommand(), BCommand()]))
+        return merge(event$, query$).pipe(map(() => [ACommand(), BCommand()]))
       }
     })
 
