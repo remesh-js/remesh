@@ -1,6 +1,7 @@
 import { Remesh, RemeshStore } from '../src'
 import { AsyncModule, AsyncData } from '../src/modules/async'
 import { ListModule } from '../src/modules/list'
+import { TreeModule } from '../src/modules/tree'
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -210,21 +211,21 @@ describe('modules', () => {
     expect(store.query(domain.query.ItemListQuery())).toEqual([
       { id: 0, text: 'todo0', completed: false },
       { id: 1, text: 'todo1', completed: false },
-      { id: 2, text: 'todo2', completed: false },
+      { id: 2, text: 'todo2-duplicated', completed: false },
     ])
 
     store.send(domain.command.DeleteItemCommand('0'))
 
     expect(store.query(domain.query.ItemListQuery())).toEqual([
       { id: 1, text: 'todo1', completed: false },
-      { id: 2, text: 'todo2', completed: false },
+      { id: 2, text: 'todo2-duplicated', completed: false },
     ])
 
     store.send(domain.command.UpdateItemCommand({ id: 1, text: 'todo1-updated', completed: true }))
 
     expect(store.query(domain.query.ItemListQuery())).toEqual([
       { id: 1, text: 'todo1-updated', completed: true },
-      { id: 2, text: 'todo2', completed: false },
+      { id: 2, text: 'todo2-duplicated', completed: false },
     ])
 
     store.send(domain.command.UpdateItemCommand({ id: 2, text: 'todo2-updated', completed: true }))
@@ -355,5 +356,332 @@ describe('modules', () => {
     ])
 
     expect(store.query(domain.query.KeyListQuery())).toEqual(['0', '1'])
+  })
+
+  it('tree-module', () => {
+    type Tree = {
+      id: string
+      name: string
+      children: Tree[]
+    }
+
+    const TreeDomain = Remesh.domain({
+      name: 'TreeDomain',
+      impl: (domain) => {
+        const MyTreeModule = TreeModule(domain, {
+          name: 'MyTreeModule',
+          getKey: (tree: Tree) => tree.id,
+          getChildren: (tree: Tree) => tree.children,
+          setChildren: (tree: Tree, children: Tree[]) => ({
+            ...tree,
+            children,
+          }),
+        })
+
+        return MyTreeModule
+      },
+    })
+
+    const store = Remesh.store()
+    const treeDomain = store.getDomain(TreeDomain())
+
+    let tree = store.query(treeDomain.query.TreeRootQuery())
+
+    const SetChildrenFailedEventCallback = jest.fn()
+    const RemoveTreeNodeFailedEventCallback = jest.fn()
+
+    store.subscribeEvent(treeDomain.event.SetChildrenFailedEvent, SetChildrenFailedEventCallback)
+    store.subscribeEvent(treeDomain.event.RemoveTreeNodeFailedEvent, RemoveTreeNodeFailedEventCallback)
+
+    expect(tree).toEqual(null)
+
+    store.send(
+      treeDomain.command.SetTreeRootCommand({
+        id: '0',
+        name: 'root',
+        children: [
+          {
+            id: '1',
+            name: 'child1',
+            children: [],
+          },
+          {
+            id: '2',
+            name: 'child2',
+            children: [],
+          },
+        ],
+      }),
+    )
+
+    tree = store.query(treeDomain.query.TreeRootQuery())
+
+    expect(tree).toEqual({
+      id: '0',
+      name: 'root',
+      children: [
+        {
+          id: '1',
+          name: 'child1',
+          children: [],
+        },
+        {
+          id: '2',
+          name: 'child2',
+          children: [],
+        },
+      ],
+    })
+
+    store.send(
+      treeDomain.command.SetTreeNodeCommand({
+        id: '1',
+        name: 'child1-updated',
+        children: [],
+      }),
+    )
+
+    tree = store.query(treeDomain.query.TreeRootQuery())
+
+    expect(tree).toEqual({
+      id: '0',
+      name: 'root',
+      children: [
+        {
+          id: '1',
+          name: 'child1-updated',
+          children: [],
+        },
+        {
+          id: '2',
+          name: 'child2',
+          children: [],
+        },
+      ],
+    })
+
+    store.send(
+      treeDomain.command.SetTreeNodeCommand({
+        id: '3',
+        name: 'child3',
+        children: [],
+      }),
+    )
+
+    tree = store.query(treeDomain.query.TreeRootQuery())
+
+    expect(tree).toEqual({
+      id: '0',
+      name: 'root',
+      children: [
+        {
+          id: '1',
+          name: 'child1-updated',
+          children: [],
+        },
+        {
+          id: '2',
+          name: 'child2',
+          children: [],
+        },
+      ],
+    })
+
+    store.send(
+      treeDomain.command.SetChildrenCommand({
+        key: '2',
+        children: [
+          {
+            id: '3',
+            name: 'child3',
+            children: [],
+          },
+        ],
+      }),
+    )
+
+    tree = store.query(treeDomain.query.TreeRootQuery())
+
+    expect(tree).toEqual({
+      id: '0',
+      name: 'root',
+      children: [
+        {
+          id: '1',
+          name: 'child1-updated',
+          children: [],
+        },
+        {
+          id: '2',
+          name: 'child2',
+          children: [
+            {
+              id: '3',
+              name: 'child3',
+              children: [],
+            },
+          ],
+        },
+      ],
+    })
+
+    store.send(
+      treeDomain.command.SetChildrenCommand({
+        key: '20',
+        children: [
+          {
+            id: '3',
+            name: 'child3-updated',
+            children: [],
+          },
+        ],
+      }),
+    )
+
+    tree = store.query(treeDomain.query.TreeRootQuery())
+
+    expect(SetChildrenFailedEventCallback).toBeCalledTimes(1)
+
+    expect(tree).toEqual({
+      id: '0',
+      name: 'root',
+      children: [
+        {
+          id: '1',
+          name: 'child1-updated',
+          children: [],
+        },
+        {
+          id: '2',
+          name: 'child2',
+          children: [
+            {
+              id: '3',
+              name: 'child3',
+              children: [],
+            },
+          ],
+        },
+      ],
+    })
+
+    store.send(
+      treeDomain.command.SetChildrenCommand({
+        key: '2',
+        children: [
+          {
+            id: '3',
+            name: 'child3-updated',
+            children: [],
+          },
+        ],
+      }),
+    )
+
+    tree = store.query(treeDomain.query.TreeRootQuery())
+
+    expect(tree).toEqual({
+      id: '0',
+      name: 'root',
+      children: [
+        {
+          id: '1',
+          name: 'child1-updated',
+          children: [],
+        },
+        {
+          id: '2',
+          name: 'child2',
+          children: [
+            {
+              id: '3',
+              name: 'child3-updated',
+              children: [],
+            },
+          ],
+        },
+      ],
+    })
+
+    store.send(
+      treeDomain.command.AddChildrenCommand({
+        key: '2',
+        children: [
+          {
+            id: '4',
+            name: 'child4',
+            children: [],
+          },
+        ],
+      }),
+    )
+
+    tree = store.query(treeDomain.query.TreeRootQuery())
+
+    expect(tree).toEqual({
+      id: '0',
+      name: 'root',
+      children: [
+        {
+          id: '1',
+          name: 'child1-updated',
+          children: [],
+        },
+        {
+          id: '2',
+          name: 'child2',
+          children: [
+            {
+              id: '3',
+              name: 'child3-updated',
+              children: [],
+            },
+            {
+              id: '4',
+              name: 'child4',
+              children: [],
+            },
+          ],
+        },
+      ],
+    })
+
+    store.send(treeDomain.command.RemoveTreeNodeCommand(['1', '3', '4']))
+
+    tree = store.query(treeDomain.query.TreeRootQuery())
+
+    expect(tree).toEqual({
+      id: '0',
+      name: 'root',
+      children: [
+        {
+          id: '2',
+          name: 'child2',
+          children: [],
+        },
+      ],
+    })
+
+    store.send(treeDomain.command.RemoveTreeNodeCommand(['2']))
+
+    tree = store.query(treeDomain.query.TreeRootQuery())
+
+    expect(tree).toEqual({
+      id: '0',
+      name: 'root',
+      children: [],
+    })
+
+    store.send(treeDomain.command.RemoveTreeNodeCommand(['0']))
+
+    expect(RemoveTreeNodeFailedEventCallback).toBeCalledTimes(1)
+
+    tree = store.query(treeDomain.query.TreeRootQuery())
+
+    expect(tree).toEqual({
+      id: '0',
+      name: 'root',
+      children: [],
+    })
   })
 })

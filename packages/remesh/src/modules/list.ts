@@ -73,7 +73,7 @@ export const ListModule = <T extends SerializableObject>(
       const newKey = options.key(newItem)
 
       if (keyList.includes(newKey)) {
-        return null
+        return UpdateItemCommand(newItem)
       }
 
       return [KeyListState().new([...keyList, newKey]), ItemEntity(newKey).new(newItem)]
