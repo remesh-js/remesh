@@ -116,11 +116,11 @@ export type AsyncModuleContext = {
 export type AsyncModuleOptions<T, U> = {
   name: DomainConceptName<'AsyncModule'>
   load: (context: RemeshQueryContext, arg: T) => Promise<U>
-  onLoading?: (context: AsyncModuleContext) => RemeshAction
-  onSuccess?: (context: AsyncModuleContext, value: U) => RemeshAction
-  onFailed?: (context: AsyncModuleContext, error: Error) => RemeshAction
-  onCanceled?: (context: AsyncModuleContext) => RemeshAction
-  onChanged?: (context: AsyncModuleContext, data: AsyncData<U>) => RemeshAction
+  onLoading?: (context: AsyncModuleContext, arg: T) => RemeshAction
+  onSuccess?: (context: AsyncModuleContext, value: U, arg: T) => RemeshAction
+  onFailed?: (context: AsyncModuleContext, error: Error, arg: T) => RemeshAction
+  onCanceled?: (context: AsyncModuleContext, arg: T) => RemeshAction
+  onChanged?: (context: AsyncModuleContext, data: AsyncData<U>, arg: T) => RemeshAction
   default?: AsyncData<U>
   mode?: 'switch' | 'merge' | 'concat' | 'exhaust'
 }
@@ -135,8 +135,8 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
 
   const UpdateAsyncDataCommand = domain.command({
     name: `${options.name}.UpdateAsyncDataCommand`,
-    impl: ({ get }, data: AsyncData<U>) => {
-      return [AsyncDataState().new(data), ChangedEvent(data), options.onChanged?.({ get }, data) ?? null]
+    impl: ({ get }, [data, arg]: [AsyncData<U>, T]) => {
+      return [AsyncDataState().new(data), ChangedEvent(data), options.onChanged?.({ get }, data, arg) ?? null]
     },
   })
 
@@ -155,7 +155,7 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
     default: ArgPlaceholder,
   })
 
-  const LoadingEvent = domain.event({
+  const LoadingEvent = domain.event<T>({
     name: `${options.name}.LoadingEvent`,
   })
 
@@ -184,27 +184,31 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
     impl: ({ get }, arg: T) => {
       return [
         ArgState().new(arg),
-        UpdateAsyncDataCommand(AsyncData.loading()),
+        UpdateAsyncDataCommand([AsyncData.loading(), arg]),
         LoadEvent(arg),
-        LoadingEvent(),
-        options.onLoading?.({ get }) ?? null,
+        LoadingEvent(arg),
+        options.onLoading?.({ get }, arg) ?? null,
       ]
     },
   })
 
   const SuccessCommand = domain.command({
     name: `${options.name}.SuccessCommand`,
-    impl: ({ get }, value: U) => {
+    impl: ({ get }, [value, arg]: [U, T]) => {
       const data = AsyncData.success(value)
-      return [UpdateAsyncDataCommand(data), SuccessEvent(value), options.onSuccess?.({ get }, value) ?? null]
+      return [
+        UpdateAsyncDataCommand([data, arg]),
+        SuccessEvent(value),
+        options.onSuccess?.({ get }, value, arg) ?? null,
+      ]
     },
   })
 
   const FailedCommand = domain.command({
     name: `${options.name}.FailedCommand`,
-    impl: ({ get }, error: Error) => {
+    impl: ({ get }, [error, arg]: [Error, T]) => {
       const data = AsyncData.failed(error)
-      return [UpdateAsyncDataCommand(data), FailedEvent(error), options.onFailed?.({ get }, error) ?? null]
+      return [UpdateAsyncDataCommand([data, arg]), FailedEvent(error), options.onFailed?.({ get }, error, arg) ?? null]
     },
   })
 
@@ -217,8 +221,14 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
         return null
       }
 
+      const arg = get(ArgState())
+
+      if (arg === ArgPlaceholder) {
+        return null
+      }
+
       const data = AsyncData.canceled()
-      return [UpdateAsyncDataCommand(data), CanceledEvent(), options.onCanceled?.({ get }) ?? null]
+      return [UpdateAsyncDataCommand([data, arg]), CanceledEvent(), options.onCanceled?.({ get }, arg) ?? null]
     },
   })
 
@@ -246,14 +256,14 @@ export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncMod
 
           const handleSuccess = (value: U) => {
             if (!isUnsubscribed) {
-              subscriber.next(SuccessCommand(value))
+              subscriber.next(SuccessCommand([value, arg]))
               subscriber.complete()
             }
           }
 
           const handleFailed = (error: unknown) => {
             if (!isUnsubscribed) {
-              subscriber.next(FailedCommand(error instanceof Error ? error : new Error(`${error}`)))
+              subscriber.next(FailedCommand([error instanceof Error ? error : new Error(`${error}`), arg]))
               subscriber.complete()
             }
           }
