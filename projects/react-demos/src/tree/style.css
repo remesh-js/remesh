@@ -1,0 +1,22 @@
+h1,
+p {
+  font-family: Lato;
+}
+
+.App {
+  font-family: sans-serif;
+  text-align: center;
+}
+
+.sub-nodes {
+  padding-left: 24px;
+}
+
+.toggle {
+  min-width: 24px;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+}

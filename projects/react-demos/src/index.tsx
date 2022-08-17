@@ -22,6 +22,9 @@ if (container) {
         <a href={`${import.meta.env.BASE_URL}chess/index.html`}>chinese chess</a>
       </li>
       <li>
+        <a href={`${import.meta.env.BASE_URL}tree/index.html`}>tree app</a>
+      </li>
+      <li>
         <a href={`${import.meta.env.BASE_URL}others/index.html`}>others...</a>
       </li>
     </ul>,
