@@ -98,17 +98,21 @@ export const RemeshYjs = <T extends SerializableType>(domain: RemeshDomainContex
     name: 'ReceivedEvent',
   })
 
+  const SendEvent = Remesh.event<T>({
+    name: 'SendEvent',
+  })
+
   const SendCommand = domain.command({
     inspectable: false,
     name: `SyncCommand`,
     impl: ({}, value: T) => {
-      return SetSyncStateCommand(value)
+      return [SetSyncStateCommand(value), SendEvent(value)]
     },
   })
 
   domain.effect({
     name: `YjsEffect`,
-    impl: ({ get, fromCommand }) => {
+    impl: ({ get, fromEvent }) => {
       const yjsExtern = domain.getExtern(RemeshYjsExtern)
 
       if (yjsExtern === null) {
@@ -119,7 +123,7 @@ export const RemeshYjs = <T extends SerializableType>(domain: RemeshDomainContex
 
       const yjsValue = getYjsValue(doc)
 
-      const send$ = fromCommand(SendCommand).pipe(
+      const send$ = fromEvent(SendEvent).pipe(
         tap((value) => {
           assertDataType(value)
           const currentJson = yjsValue.toJSON()
@@ -541,7 +545,7 @@ const TestDomain = Remesh.domain({
   name: 'TestDomain',
   impl: (domain) => {
     const TodoListModule = ListModule<Todo>(domain, {
-      name: 'TodoList',
+      name: 'TodoListModule',
       key: (todo) => todo.id,
     })
 
@@ -579,10 +583,7 @@ doc1.on('update', (update, origin) => {
     query: store.query(testDomain.query.ItemListQuery()),
     todoList: doc1.get('todo-list').toJSON(),
   })
-
 })
-
-
 
 const store = Remesh.store({
   externs: [RemeshYjsExtern.impl({ doc: doc1 })],
@@ -598,5 +599,5 @@ store.igniteDomain(TestDomain())
 
 let i = 0
 setInterval(() => {
-  store.send(testDomain.command.AddItemCommand({ id: i++ + '', text: 'test', done: false }))
+  store.send(testDomain.command.AddItemCommand({ id: `${i++}`, text: 'test', done: false }))
 }, 2000)
