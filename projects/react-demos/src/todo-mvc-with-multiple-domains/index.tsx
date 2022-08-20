@@ -11,13 +11,21 @@ import { RemeshLogger } from 'remesh-logger'
 import { StorageImpl } from './domain-externs-impl/storage'
 import { TodoApp } from './components/TodoApp'
 
+import * as Y from 'yjs'
+import { RemeshYjs, RemeshYjsExtern } from 'remesh-yjs'
+import { WebrtcProvider } from 'y-webrtc'
+
+const doc = new Y.Doc()
+
+const webrtcProvider = new WebrtcProvider('syncedstore-todos', doc)
+
 const container = document.getElementById('root')
 
 if (container) {
   const root = ReactDOMClient.createRoot(container)
   const store = Remesh.store({
-    externs: [StorageImpl],
-    inspectors: [RemeshReduxDevtools(), RemeshLogger()],
+    externs: [StorageImpl, RemeshYjsExtern.impl({ doc })],
+    inspectors: [],
   })
 
   root.render(

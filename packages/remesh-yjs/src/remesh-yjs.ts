@@ -5,6 +5,7 @@ import {
   SerializableObject,
   SerializableArray,
   RemeshAction,
+  RemeshQueryContext,
 } from 'remesh'
 
 import { ListModule } from 'remesh/modules/list'
@@ -23,7 +24,8 @@ const fromYjs = (yjsValue: Y.AbstractType<any>) => {
   return new Observable<SerializableType>((subscriber) => {
     const handler = (_yevents: Y.YEvent<Y.AbstractType<unknown>>[], transaction: Y.Transaction) => {
       if (transaction.origin !== origin) {
-        subscriber.next(yjsValue.toJSON())
+        const value = yjsValue.toJSON()
+        subscriber.next(value)
       }
     }
 
@@ -53,11 +55,19 @@ export const RemeshYjsExtern = Remesh.extern<RemeshYjsExtern | null>({
 
 export type RemeshYjOptions<T extends SerializableType> = {
   key: string
+  inspectable?: boolean
   dataType: 'object' | 'array'
+  onSend: (context: RemeshQueryContext) => T
   onReceive: (context: RemeshCommandContext, value: T) => RemeshAction
 }
 
 export const RemeshYjs = <T extends SerializableType>(domain: RemeshDomainContext, options: RemeshYjOptions<T>) => {
+  const yjsExtern = domain.getExtern(RemeshYjsExtern)
+
+  if (yjsExtern === null) {
+    return null
+  }
+
   function assertDataType(value: unknown): asserts value is T {
     if (Array.isArray(value) && options.dataType === 'array') {
       return
@@ -74,26 +84,6 @@ export const RemeshYjs = <T extends SerializableType>(domain: RemeshDomainContex
     return doc.get(options.key, options.dataType === 'object' ? Y.Map : Y.Array)
   }
 
-  const SyncState = Remesh.state<T | null>({
-    name: 'SyncState',
-    default: null,
-  })
-
-  const SyncQuery = Remesh.query({
-    name: 'SyncQuery',
-    impl: ({ get }) => {
-      return get(SyncState())
-    },
-  })
-
-  const SetSyncStateCommand = Remesh.command({
-    name: 'SetSyncStateCommand',
-    impl: ({}, value: T) => {
-      assertDataType(value)
-      return SyncState().new(value)
-    },
-  })
-
   const ReceivedEvent = Remesh.event<T>({
     name: 'ReceivedEvent',
   })
@@ -102,35 +92,33 @@ export const RemeshYjs = <T extends SerializableType>(domain: RemeshDomainContex
     name: 'SendEvent',
   })
 
-  const SendCommand = domain.command({
-    inspectable: false,
-    name: `SyncCommand`,
-    impl: ({}, value: T) => {
-      return [SetSyncStateCommand(value), SendEvent(value)]
+  const DataForSyncQuery = domain.query({
+    name: 'DataForSyncQuery',
+    impl: options.onSend,
+  })
+
+  const SyncDataCommand = domain.command({
+    name: 'SyncDataCommand',
+    impl: (ctx, data: T) => {
+      return [options.onReceive(ctx, data), ReceivedEvent(data)]
     },
   })
 
   domain.effect({
     name: `YjsEffect`,
-    impl: ({ get, fromEvent }) => {
-      const yjsExtern = domain.getExtern(RemeshYjsExtern)
-
-      if (yjsExtern === null) {
-        return null
-      }
-
+    impl: ({ get, fromQuery }) => {
       const { doc } = yjsExtern
 
       const yjsValue = getYjsValue(doc)
 
-      const send$ = fromEvent(SendEvent).pipe(
-        tap((value) => {
+      const send$ = fromQuery(DataForSyncQuery()).pipe(
+        map((value) => {
           assertDataType(value)
           const currentJson = yjsValue.toJSON()
           const diffResult = diff(currentJson, value)
 
           if (diffResult === null) {
-            return
+            return null
           }
 
           Y.transact(
@@ -140,34 +128,34 @@ export const RemeshYjs = <T extends SerializableType>(domain: RemeshDomainContex
             },
             origin,
           )
+
+          return SendEvent(value)
         }),
-        map(() => null),
       )
 
       const receive$ = fromYjs(yjsValue).pipe(
         map((next) => {
           assertDataType(next)
 
-          const current = get(SyncQuery())
+          const current = get(DataForSyncQuery())
 
           if (current === null) {
-            return [SetSyncStateCommand(next), options.onReceive({ get }, next), ReceivedEvent(next)]
+            return SyncDataCommand(next)
           }
 
           const diffResult = diff(current, next)
-          const value = diffResult === null ? current : (patch(current, diffResult) as T)
 
-          return [SetSyncStateCommand(value), options.onReceive({ get }, value), ReceivedEvent(value)]
+          if (diffResult === null) {
+            return null
+          }
+
+          const value = patch(current, diffResult) as T
+
+          return SyncDataCommand(value)
         }),
       )
 
       return merge(send$, receive$)
-    },
-  })
-
-  return Remesh.module({
-    command: {
-      SendCommand,
     },
   })
 }
@@ -374,7 +362,8 @@ const patchArray = (oldValue: unknown[], diffResult: ArrayDiffResult): unknown[]
   }
 
   // delete next
-  for (const deletedResult of diffResult.deletedResults) {
+  for (let i = diffResult.deletedResults.length - 1; i >= 0; i--) {
+    const deletedResult = diffResult.deletedResults[i]
     if (typeof deletedResult.key !== 'number') {
       throw new Error(`Expected key to be a number, got ${deletedResult.key}`)
     }
@@ -382,11 +371,9 @@ const patchArray = (oldValue: unknown[], diffResult: ArrayDiffResult): unknown[]
   }
 
   // add last to keep the indexes correct
-  for (const addedResult of diffResult.addedResults) {
-    if (typeof addedResult.key !== 'number') {
-      throw new Error(`Expected key to be a number, got ${addedResult.key}`)
-    }
-    newValue.splice(addedResult.key, 0, addedResult.value)
+  if (diffResult.addedResults.length > 0) {
+    const list = diffResult.addedResults.map((addedResult) => addedResult.value)
+    newValue.push(...list)
   }
 
   return newValue
@@ -459,14 +446,18 @@ const patchYjsArray = (yarray: Y.Array<unknown>, diffResult: ArrayDiffResult) =>
       throw new Error(`Expected key to be a number, got ${updatedResult.key}`)
     }
 
-    const updatedValue = patchYjs(yarray.get(updatedResult.key), updatedResult)
+    const oldValue = yarray.get(updatedResult.key)
+    const updatedValue = patchYjs(oldValue, updatedResult)
 
-    yarray.delete(updatedResult.key, 1)
-    yarray.insert(updatedResult.key, [updatedValue])
+    if (updatedValue !== oldValue) {
+      yarray.delete(updatedResult.key, 1)
+      yarray.insert(updatedResult.key, [updatedValue])
+    }
   }
 
   // delete next
-  for (const deletedResult of diffResult.deletedResults) {
+  for (let i = diffResult.deletedResults.length - 1; i >= 0; i--) {
+    const deletedResult = diffResult.deletedResults[i]
     if (typeof deletedResult.key !== 'number') {
       throw new Error(`Expected key to be a number, got ${deletedResult.key}`)
     }
@@ -474,11 +465,9 @@ const patchYjsArray = (yarray: Y.Array<unknown>, diffResult: ArrayDiffResult) =>
   }
 
   // add last to keep the indexes correct
-  for (const addedResult of diffResult.addedResults) {
-    if (typeof addedResult.key !== 'number') {
-      throw new Error(`Expected key to be a number, got ${addedResult.key}`)
-    }
-    yarray.push([fromSerializable(addedResult.value)])
+  if (diffResult.addedResults.length > 0) {
+    const list = diffResult.addedResults.map((addedResult) => fromSerializable(addedResult.value))
+    yarray.push(list)
   }
 }
 
@@ -494,8 +483,12 @@ const patchYjsObject = (ymap: Y.Map<unknown>, diffResult: ObjectDiffResult) => {
     if (typeof updatedResult.key !== 'string') {
       throw new Error(`Expected key to be a string, got ${updatedResult.key}`)
     }
-    const updatedValue = patchYjs(ymap.get(updatedResult.key), updatedResult)
-    ymap.set(updatedResult.key, updatedValue)
+    const oldValue = ymap.get(updatedResult.key)
+    const updatedValue = patchYjs(oldValue, updatedResult)
+
+    if (updatedValue !== oldValue) {
+      ymap.set(updatedResult.key, updatedValue)
+    }
   }
 
   for (const deletedResult of diffResult.deletedResults) {
@@ -534,70 +527,3 @@ const patchYjs = (value: unknown, diffResult: UpdatedDiffResult) => {
 
   throw new Error(`Unknown diff result: ${diffResult}`)
 }
-
-type Todo = {
-  id: string
-  text: string
-  done: boolean
-}
-
-const TestDomain = Remesh.domain({
-  name: 'TestDomain',
-  impl: (domain) => {
-    const TodoListModule = ListModule<Todo>(domain, {
-      name: 'TodoListModule',
-      key: (todo) => todo.id,
-    })
-
-    const TodoListYjs = RemeshYjs<Todo[]>(domain, {
-      key: 'todo-list',
-      dataType: 'array',
-      onReceive: ({}, todoList) => {
-        return TodoListModule.command.SetListCommand(todoList)
-      },
-    })
-
-    domain.effect({
-      name: 'TodoListYjsEffect',
-      impl: ({ fromQuery }) => {
-        return fromQuery(TodoListModule.query.ItemListQuery()).pipe(map(TodoListYjs.command.SendCommand))
-      },
-    })
-
-    return TodoListModule
-  },
-})
-
-const doc1 = new Y.Doc()
-
-doc1.on('update', (update, origin) => {
-  const todoList = doc1.get('todo-list').toJSON() as Todo[]
-
-  console.log('todoList in dco1', todoList)
-
-  if (todoList.length >= 5) {
-    doc1.getArray('todo-list').delete(0, todoList.length - 1)
-  }
-
-  console.log({
-    query: store.query(testDomain.query.ItemListQuery()),
-    todoList: doc1.get('todo-list').toJSON(),
-  })
-})
-
-const store = Remesh.store({
-  externs: [RemeshYjsExtern.impl({ doc: doc1 })],
-})
-
-const testDomain = store.getDomain(TestDomain())
-
-// store.subscribeQuery(testDomain.query.ItemListQuery(), (todoList) => {
-//   console.log('todoList', todoList)
-// })
-
-store.igniteDomain(TestDomain())
-
-let i = 0
-setInterval(() => {
-  store.send(testDomain.command.AddItemCommand({ id: `${i++}`, text: 'test', done: false }))
-}, 2000)

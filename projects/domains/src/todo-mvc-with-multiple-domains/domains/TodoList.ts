@@ -3,7 +3,6 @@ import { ListModule } from 'remesh/modules/list'
 
 import { uuid } from '../utils/uuid'
 import { syncStorage } from '../domain-modules/sync-storage'
-import { map } from 'rxjs/operators'
 
 export const TODO_LIST_STORAGE_KEY = 'remesh-example/todo-list'
 

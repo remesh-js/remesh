@@ -23,6 +23,7 @@ export default defineConfig({
     alias: {
       remesh: resolve(__dirname, '../../packages/remesh/src'),
       'remesh-react': resolve(__dirname, '../../packages/remesh-react/src'),
+      'remesh-yjs': resolve(__dirname, '../../packages/remesh-yjs/src'),
       'remesh-debugger-helper': resolve(__dirname, '../../packages/remesh-debugger-helper/src'),
       'remesh-redux-devtools': resolve(__dirname, '../../packages/remesh-redux-devtools/src'),
       'remesh-logger': resolve(__dirname, '../../packages/remesh-logger/src'),
