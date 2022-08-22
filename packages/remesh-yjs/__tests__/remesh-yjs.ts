@@ -3,7 +3,7 @@ import * as Y from 'yjs'
 import { map } from 'rxjs/operators'
 import { ListModule } from 'remesh/modules/list'
 
-import { RemeshYjs, RemeshYjsExtern } from '../'
+import { RemeshYjs, RemeshYjsExtern } from '../src'
 
 type Todo = {
   id: string
@@ -19,18 +19,14 @@ const TestDomain = Remesh.domain({
       key: (todo) => todo.id,
     })
 
-    const TodoListYjs = RemeshYjs<Todo[]>(domain, {
+    RemeshYjs<Todo[]>(domain, {
       key: 'todo-list',
       dataType: 'array',
+      onSend: ({ get }) => {
+        return get(TodoListModule.query.ItemListQuery())
+      },
       onReceive: ({}, todoList) => {
         return TodoListModule.command.SetListCommand(todoList)
-      },
-    })
-
-    domain.effect({
-      name: 'TodoListYjsEffect',
-      impl: ({ fromQuery }) => {
-        return fromQuery(TodoListModule.query.ItemListQuery()).pipe(map(TodoListYjs.command.SendCommand))
       },
     })
 
@@ -65,9 +61,11 @@ const testDomain = store.getDomain(TestDomain())
 //   console.log('todoList', todoList)
 // })
 
-store.igniteDomain(TestDomain())
+// store.igniteDomain(TestDomain())
 
-let i = 0
-setInterval(() => {
-  store.send(testDomain.command.AddItemCommand({ id: `${i++}`, text: 'test', done: false }))
-}, 2000)
+// let i = 0
+// setInterval(() => {
+//   store.send(testDomain.command.AddItemCommand({ id: `${i++}`, text: 'test', done: false }))
+// }, 2000)
+
+describe('remesh-yjs', () => {})
