@@ -114,8 +114,6 @@ describe('diff-patch', () => {
     }
     const diffResult = diff(oldValue, newValue)
 
-    console.log('diffResult', JSON.stringify(diffResult, null, 2))
-
     expect(diffResult).toEqual({
       type: 'object',
       addedResults: [],

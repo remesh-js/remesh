@@ -25,7 +25,13 @@ export const fromSerializableObject = (value: object, ymap?: Y.Map<unknown>): Y.
   return map
 }
 
-export const fromSerializable = (value: unknown) => {
+export function fromSerializable(value: string): string
+export function fromSerializable(value: number): number
+export function fromSerializable(value: boolean): boolean
+export function fromSerializable(value: unknown[]): Y.Array<unknown>
+export function fromSerializable(value: object): Y.Map<unknown>
+export function fromSerializable(value: unknown): string | number | boolean | Y.Array<unknown> | Y.Map<unknown>
+export function fromSerializable(value: unknown) {
   if (Array.isArray(value)) {
     return fromSerializableArray(value)
   }
@@ -105,7 +111,7 @@ export const patchYjsObject = (ymap: Y.Map<unknown>, diffResult: ObjectDiffResul
   }
 }
 
-export const patchYjs = (value: unknown, diffResult: UpdatedDiffResult) => {
+export const patchYjs = (value: unknown, diffResult: UpdatedDiffResult | null) => {
   if (diffResult === null) {
     return value
   }

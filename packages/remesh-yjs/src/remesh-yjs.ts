@@ -82,6 +82,10 @@ export const RemeshYjs = <T extends SerializableType>(domain: RemeshDomainContex
       const { doc } = yjsExtern
 
       const yjsValue = getYjsValue(doc)
+      const json = get(DataForSyncQuery())
+      const diffResult = diff(yjsToJson(yjsValue), json)
+
+      patchYjs(yjsValue, diffResult)
 
       const send$ = fromQuery(DataForSyncQuery()).pipe(
         map((value) => {
