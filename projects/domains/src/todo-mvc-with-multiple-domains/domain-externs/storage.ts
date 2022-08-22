@@ -6,17 +6,7 @@ export type Storage = {
   clear: (key: string) => Promise<void>
 }
 
-export const Storage = Remesh.extern<Storage>({
+export const Storage = Remesh.extern<Storage | null>({
   name: 'StorageExtern',
-  default: {
-    get: () => {
-      throw new Error('Not implemented')
-    },
-    set: () => {
-      throw new Error('Not implemented')
-    },
-    clear: () => {
-      throw new Error('Not implemented')
-    },
-  },
+  default: null,
 })

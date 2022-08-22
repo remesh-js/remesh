@@ -20,9 +20,12 @@
     "remesh-react": "^2.0.0",
     "remesh-redux-devtools": "^2.0.0",
     "remesh-domains-for-demos": "^1.0.1",
+    "remesh-yjs": "^2.0.0",
     "rxjs": "^7.0.0",
     "todomvc-app-css": "^2.4.2",
-    "tslib": "^2.3.1"
+    "tslib": "^2.3.1",
+    "yjs": "^13.5.41",
+    "y-webrtc": "^10.2.3"
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^13.0.4",

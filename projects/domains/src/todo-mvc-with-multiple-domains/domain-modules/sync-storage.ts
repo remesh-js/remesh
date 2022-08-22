@@ -43,6 +43,10 @@ const createOptions = <R>(storageKey: string, callback: <T, U>(options: SyncStor
 const createSyncStorage = <T, U = T>(domain: RemeshDomainContext, options: SyncStorageOptions<T, U>) => {
   const storage = domain.getExtern(Storage)
 
+  if (!storage) {
+    return
+  }
+
   domain.effect({
     name: 'ReadStorageEffect',
     impl: async (ctx) => {

@@ -1,5 +1,4 @@
 import { Remesh } from 'remesh'
-import { SwitchModule } from 'remesh/modules/switch'
 
 import { syncStorage } from '../domain-modules/sync-storage'
 
@@ -25,23 +24,28 @@ export const getValidTodoFilter = (input: string | undefined): TodoFilter => {
 export const TodoFilterDomain = Remesh.domain({
   name: 'TodoFilterDomain',
   impl: (domain) => {
-    const todoFilterModule = SwitchModule<TodoFilter>(domain, {
-      name: 'TodoFilter',
+    const TodoFilterState = domain.state<TodoFilter>({
+      name: 'TodoFilterState',
       default: 'all',
+    })
+
+    const TodoFilterQuery = domain.query({
+      name: 'TodoFilterQuery',
+      impl: ({ get }) => {
+        return get(TodoFilterState())
+      },
     })
 
     const TodoFilterChangedEvent = domain.event<TodoFilter>({
       name: 'TodoFilterChangedEvent',
     })
 
-    const TodoFilterQuery = todoFilterModule.query.SwitchQuery
-
     const SetFilterCommand = domain.command({
       name: 'SetFilterCommand',
       impl: ({}, input: string) => {
         const filter = getValidTodoFilter(input)
 
-        return [todoFilterModule.command.SwitchCommand(filter), TodoFilterChangedEvent(filter)]
+        return [TodoFilterState().new(filter), TodoFilterChangedEvent(filter)]
       },
     })
 

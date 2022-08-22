@@ -30,6 +30,9 @@
       "path": "../../packages/remesh-logger/tsconfig.json"
     },
     {
+      "path": "../../packages/remesh-yjs/tsconfig.json"
+    },
+    {
       "path": "./tsconfig.node.json"
     },
     {
