@@ -1,4 +1,3 @@
-import { Observable } from 'rxjs'
 import * as Y from 'yjs'
 
 import { ArrayDiffResult, ObjectDiffResult, UpdatedDiffResult } from './diff-patch'
@@ -169,29 +168,4 @@ export const yjsToJson = (yjsValue: Y.AbstractType<any>): SerializableType => {
   }
 
   throw new Error(`Cannot convert ${yjsValue} to JSON`)
-}
-
-export const fromYjs = (yjsValue: Y.AbstractType<any>) => {
-  return new Observable<SerializableType>((subscriber) => {
-    const handler = (_yevents: Y.YEvent<Y.AbstractType<unknown>>[], transaction: Y.Transaction) => {
-      if (transaction.origin !== origin) {
-        const value = yjsToJson(yjsValue)
-        subscriber.next(value)
-      }
-    }
-
-    const listen = () => {
-      yjsValue.observeDeep(handler)
-    }
-
-    const unlisten = () => {
-      yjsValue.unobserveDeep(handler)
-    }
-
-    listen()
-
-    return () => {
-      unlisten()
-    }
-  })
 }

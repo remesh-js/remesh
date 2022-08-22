@@ -1,26 +1,63 @@
-import { Remesh, RemeshDomainContext, RemeshCommandContext, RemeshAction, RemeshQueryContext } from 'remesh'
+import {
+  Remesh,
+  RemeshDomainContext,
+  RemeshCommandContext,
+  RemeshAction,
+  RemeshQueryContext,
+  RemeshExtern,
+} from 'remesh'
 
 import * as Y from 'yjs'
 
-import { merge } from 'rxjs'
+import { merge, Observable } from 'rxjs'
 import { map } from 'rxjs/operators'
 
-import { diff, patch } from './diff-patch'
-import { fromYjs, patchYjs, yjsToJson } from './json-yjs-converter'
+import { diff, patch, UpdatedDiffResult } from './diff-patch'
+import { patchYjs, yjsToJson } from './json-yjs-converter'
 import { SerializableType } from './types'
 
-export const origin = 'from-remesh-yjs'
+export const FROM_REMESH_YJS = 'from-remesh-yjs'
+
+const fromYjs = (yjsValue: Y.AbstractType<any>) => {
+  return new Observable<SerializableType>((subscriber) => {
+    const handler = (_yevents: Y.YEvent<Y.AbstractType<unknown>>[], transaction: Y.Transaction) => {
+      if (transaction.origin !== FROM_REMESH_YJS) {
+        const value = yjsValue.toJSON()
+        subscriber.next(value)
+      }
+    }
+
+    const listen = () => {
+      yjsValue.observeDeep(handler)
+    }
+
+    const unlisten = () => {
+      yjsValue.unobserveDeep(handler)
+    }
+
+    listen()
+
+    return () => {
+      unlisten()
+    }
+  })
+}
 
 export type RemeshYjsExtern = {
   doc: Y.Doc
 }
 
-export const RemeshYjsExtern = Remesh.extern<RemeshYjsExtern | null>({
-  default: null,
-})
+export const createYjsExtern = () => {
+  return Remesh.extern<RemeshYjsExtern | null>({
+    default: null,
+  })
+}
+
+export const RemeshYjsExtern = createYjsExtern()
 
 export type RemeshYjOptions<T extends SerializableType> = {
   key: string
+  extern?: RemeshExtern<RemeshYjsExtern | null>
   inspectable?: boolean
   dataType: T extends unknown[] ? 'array' : 'object'
   onSend: (context: RemeshQueryContext) => T
@@ -29,11 +66,13 @@ export type RemeshYjOptions<T extends SerializableType> = {
 
 export const RemeshYjs = <T extends SerializableType>(domain: RemeshDomainContext, options: RemeshYjOptions<T>) => {
   const inspectable = options.inspectable ?? false
-  const yjsExtern = domain.getExtern(RemeshYjsExtern)
+  const yjsExtern = domain.getExtern(options.extern ?? RemeshYjsExtern)
 
   if (yjsExtern === null) {
     return
   }
+
+  const { doc } = yjsExtern
 
   function assertDataType(value: unknown): asserts value is T {
     if (Array.isArray(value) && options.dataType === 'array') {
@@ -47,8 +86,16 @@ export const RemeshYjs = <T extends SerializableType>(domain: RemeshDomainContex
     throw new Error(`Expected value to be of type ${options.dataType}, got ${value}`)
   }
 
-  const getYjsValue = (doc: Y.Doc) => {
-    return doc.get(options.key, options.dataType === 'object' ? Y.Map : Y.Array)
+  const yjsValue = doc.get(options.key, options.dataType === 'object' ? Y.Map : Y.Array)
+
+  const updateYjsValue = (diffResult: UpdatedDiffResult | null, origin: unknown) => {
+    Y.transact(
+      doc,
+      () => {
+        patchYjs(yjsValue, diffResult)
+      },
+      origin,
+    )
   }
 
   const ReceivedEvent = Remesh.event<T>({
@@ -79,31 +126,23 @@ export const RemeshYjs = <T extends SerializableType>(domain: RemeshDomainContex
     name: `YjsEffect`,
     inspectable,
     impl: ({ get, fromQuery }) => {
-      const { doc } = yjsExtern
-
-      const yjsValue = getYjsValue(doc)
-      const json = get(DataForSyncQuery())
-      const diffResult = diff(yjsToJson(yjsValue), json)
-
-      patchYjs(yjsValue, diffResult)
-
       const send$ = fromQuery(DataForSyncQuery()).pipe(
         map((value) => {
           assertDataType(value)
-          const currentJson = yjsToJson(yjsValue)
+          const currentJson = yjsValue.toJSON()
           const diffResult = diff(currentJson, value)
 
           if (diffResult === null) {
             return null
           }
 
-          Y.transact(
-            doc,
-            () => {
-              patchYjs(yjsValue, diffResult)
-            },
-            origin,
-          )
+          updateYjsValue(diffResult, FROM_REMESH_YJS)
+
+          console.log('send', {
+            currentJson,
+            value,
+            diffResult,
+          })
 
           return SendEvent(value)
         }),
@@ -112,6 +151,7 @@ export const RemeshYjs = <T extends SerializableType>(domain: RemeshDomainContex
       const receive$ = fromYjs(yjsValue).pipe(
         map((next) => {
           assertDataType(next)
+          console.log('receive next', next)
           const current = get(DataForSyncQuery())
           const diffResult = diff(current, next)
 
@@ -120,6 +160,13 @@ export const RemeshYjs = <T extends SerializableType>(domain: RemeshDomainContex
           }
 
           const value = patch(current, diffResult) as T
+
+          console.log('receive', {
+            current,
+            next,
+            value,
+            diffResult,
+          })
 
           return SyncDataCommand(value)
         }),
