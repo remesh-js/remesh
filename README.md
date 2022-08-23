@@ -92,6 +92,7 @@ You can edit it in [stackblitz](https://stackblitz.com/edit/react-ts-gg1icr?file
 ### Define your domain
 
 ```typescript
+// domain.ts
 import { Remesh } from 'remesh'
 
 import { interval } from 'rxjs'
@@ -183,10 +184,30 @@ export const CountDomain = Remesh.domain({
     })
 
     /**
+     * Define a command to send event since event can't be sended outside of domain
+     */
+    const StartCommand = domain.command({
+      name: 'StartCommand',
+      impl: ({}, mode: ChangeMode) => {
+        return StartEvent(mode)
+      },
+    })
+
+    /**
      * Define an event for stopping signal
      */
     const StopEvent = domain.event({
       name: 'StopEvent',
+    })
+
+    /**
+     * Define a command to send event since event can't be sended outside of domain
+     */
+    const StopCommand = domain.command({
+      name: 'StopCommand',
+      impl: () => {
+        return StopEvent()
+      },
     })
 
     /**
@@ -219,6 +240,8 @@ export const CountDomain = Remesh.domain({
         SetCountCommand,
         IncreaseCountCommand,
         DecreaseCountCommand,
+        StartCommand,
+        StopCommand,
       },
       event: {
         StartEvent,
@@ -233,6 +256,7 @@ export const CountDomain = Remesh.domain({
 ### Using your domain in react component
 
 ```jsx
+// index.tsx
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
@@ -274,23 +298,23 @@ export const Counter = () => {
 
   const handleStartIncrease = () => {
     /**
-     * send event to domain
+     * send command to domain
      */
-    send(countDomain.event.StartEvent('increment'))
+    send(countDomain.command.StartCommand('increment'))
   }
 
   const handleStartDecrease = () => {
     /**
-     * send event to domain
+     * send command to domain
      */
-    send(countDomain.event.StartEvent('decrement'))
+    send(countDomain.command.StartCommand('decrement'))
   }
 
   const handleStop = () => {
     /**
-     * send event to domain
+     * send command to domain
      */
-    send(countDomain.event.StopEvent())
+    send(countDomain.command.StopCommand())
   }
 
   /**
@@ -358,6 +382,7 @@ root.render(
 - [How to create and use remesh store directly?](#how-to-create-and-use-remesh-store-directly)
 - [How to send multiple commands or events at once?](#how-to-send-multiple-commands-or-events-at-once)
 - [How to avoid type error from interface?](#how-to-avoid-type-error-from-interface)
+- [How to use yjs in remesh for collaboration?](#how-to-use-yjs-in-remesh-for-collaboration)
 
 ### How to define a domain?
 
@@ -1151,11 +1176,80 @@ import { MyInterface } from 'my-interface'
 type MyType = ToType<MyInterface>
 ```
 
+### How to use yjs in remesh for collaboration?
+
+use [remesh-yjs](packages/remesh-yjs), define your `onSend` and `onReceive`, that's all.
+
+```sh
+npm install --save remesh-yjs
+yarn add remesh-yjs
+```
+
+[click to see example](projects//react-demos/src/todo-mvc-with-multiple-domains/components/TodoApp.tsx)
+
+```typescript
+import { RemeshYjs } from 'remesh-yjs'
+
+type SyncedState = {
+  todos: Todo[]
+  filter: TodoFilter
+  input: string
+}
+
+const TodoAppDomain = Remesh.domain({
+  name: 'TodoAppDomain',
+  impl: (domain) => {
+    const todoListDomain = domain.getDomain(TodoListDomain())
+    const todoFilterDomain = domain.getDomain(TodoFilterDomain())
+    const todoInputDomain = domain.getDomain(TodoInputDomain())
+
+    const TodoFilterSyncEvent = domain.event<TodoFilter>({
+      name: 'TodoFilterSyncEvent',
+    })
+
+    RemeshYjs(domain, {
+      // a unique key for your state to sync with others
+      key: 'todo-app',
+      // a data-type(object/array) for your state
+      dataType: 'object',
+      // provide your state in `onSend `
+      onSend: ({ get }): SyncedState => {
+        const todos = get(todoListDomain.query.TodoListQuery())
+        const filter = get(todoFilterDomain.query.TodoFilterQuery())
+        const input = get(todoInputDomain.query.TodoInputQuery())
+        return {
+          todos,
+          filter,
+          input,
+        }
+      },
+      // consume state from others `onSend` in your `onReceive`
+      onReceive: ({ get }, state: SyncedState) => {
+        const filter = get(todoFilterDomain.query.TodoFilterQuery())
+
+        return [
+          todoListDomain.command.SetTodoListCommand(state.todos),
+          filter !== state.filter ? TodoFilterSyncEvent(state.filter) : null,
+          todoInputDomain.command.SetTodoInputCommand(state.input),
+        ]
+      },
+    })
+
+    return {
+      event: {
+        TodoFilterSyncEvent,
+      },
+    }
+  },
+})
+```
+
 ## Packages
 
 - [remesh](packages/remesh) : the core package for define your domain
 - [remesh-react](packages/remesh-react) : the package for using remesh in react
 - [remesh-vue](packages/remesh-vue) : the package for using remesh in vue
+- [remesh-yjs](packages/remesh-yjs) : the package for using yjs in remesh
 - [remesh-logger](packages/remesh-logger) : the package for logging
 - [remesh-redux-devtools](packages/remesh-redux-devtools) : the package for redux-devtools
 

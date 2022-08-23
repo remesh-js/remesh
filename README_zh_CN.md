@@ -92,6 +92,7 @@ yarn add remesh rxjs
 ### 定义你的 domain
 
 ```typescript
+// domain.ts
 import { Remesh } from 'remesh'
 
 import { interval } from 'rxjs'
@@ -183,10 +184,30 @@ export const CountDomain = Remesh.domain({
     })
 
     /**
+     * Define a command to send event since event can't be sended outside of domain
+     */
+    const StartCommand = domain.command({
+      name: 'StartCommand',
+      impl: ({}, mode: ChangeMode) => {
+        return StartEvent(mode)
+      },
+    })
+
+    /**
      * Define an event for stopping signal
      */
     const StopEvent = domain.event({
       name: 'StopEvent',
+    })
+
+    /**
+     * Define a command to send event since event can't be sended outside of domain
+     */
+    const StopCommand = domain.command({
+      name: 'StopCommand',
+      impl: () => {
+        return StopEvent()
+      },
     })
 
     /**
@@ -219,6 +240,8 @@ export const CountDomain = Remesh.domain({
         SetCountCommand,
         IncreaseCountCommand,
         DecreaseCountCommand,
+        StartCommand,
+        StopCommand,
       },
       event: {
         StartEvent,
@@ -233,6 +256,7 @@ export const CountDomain = Remesh.domain({
 ### 在 React 组件中使用你的 domain
 
 ```jsx
+// index.tsx
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
@@ -274,23 +298,23 @@ export const Counter = () => {
 
   const handleStartIncrease = () => {
     /**
-     * send event to domain
+     * send command to domain
      */
-    send(countDomain.event.StartEvent('increment'))
+    send(countDomain.command.StartCommand('increment'))
   }
 
   const handleStartDecrease = () => {
     /**
-     * send event to domain
+     * send command to domain
      */
-    send(countDomain.event.StartEvent('decrement'))
+    send(countDomain.command.StartCommand('decrement'))
   }
 
   const handleStop = () => {
     /**
-     * send event to domain
+     * send command to domain
      */
-    send(countDomain.event.StopEvent())
+    send(countDomain.command.StopCommand())
   }
 
   /**
@@ -358,6 +382,7 @@ root.render(
 - [如何创建和直接使用 remesh store?](#如何创建和直接使用-remesh-store)
 - [如何一次性发送多个 command 或 event？](#如何一次性发送多个-command-或-event)
 - [如何规避 interface 引起的类型错误？](#如何规避-interface-引起的类型错误)
+- [如何在 remesh 中使用 yjs 做状态同步？](#如何在-remesh-中使用-yjs-做状态同步)
 
 ### 如何定义一个 domain?
 
@@ -1149,6 +1174,74 @@ import { MyInterface } from 'my-interface'
 
 // 从 interface 中创建一个 type-alias
 type MyType = ToType<MyInterface>
+```
+
+### 如何在 remesh 中使用 yjs 做状态同步？
+
+用 [remesh-yjs](packages/remesh-yjs), 只要定义你的 `onSend` 和 `onReceive` 就行了。
+
+```sh
+npm install --save remesh-yjs
+yarn add remesh-yjs
+```
+
+[click to see example](projects//react-demos/src/todo-mvc-with-multiple-domains/components/TodoApp.tsx)
+
+```typescript
+import { RemeshYjs } from 'remesh-yjs'
+
+type SyncedState = {
+  todos: Todo[]
+  filter: TodoFilter
+  input: string
+}
+
+const TodoAppDomain = Remesh.domain({
+  name: 'TodoAppDomain',
+  impl: (domain) => {
+    const todoListDomain = domain.getDomain(TodoListDomain())
+    const todoFilterDomain = domain.getDomain(TodoFilterDomain())
+    const todoInputDomain = domain.getDomain(TodoInputDomain())
+
+    const TodoFilterSyncEvent = domain.event<TodoFilter>({
+      name: 'TodoFilterSyncEvent',
+    })
+
+    RemeshYjs(domain, {
+      // 提供一个唯一的 key 给你需要同步的状态
+      key: 'todo-app',
+      // 提供你的状态的数据类型：object/array
+      dataType: 'object',
+      // 在 onSend 中提供你要同步给其他用户的状态
+      onSend: ({ get }): SyncedState => {
+        const todos = get(todoListDomain.query.TodoListQuery())
+        const filter = get(todoFilterDomain.query.TodoFilterQuery())
+        const input = get(todoInputDomain.query.TodoInputQuery())
+        return {
+          todos,
+          filter,
+          input,
+        }
+      },
+      // 在 onReceive 中消费其他用户的 `onSend` 里的状态
+      onReceive: ({ get }, state: SyncedState) => {
+        const filter = get(todoFilterDomain.query.TodoFilterQuery())
+
+        return [
+          todoListDomain.command.SetTodoListCommand(state.todos),
+          filter !== state.filter ? TodoFilterSyncEvent(state.filter) : null,
+          todoInputDomain.command.SetTodoInputCommand(state.input),
+        ]
+      },
+    })
+
+    return {
+      event: {
+        TodoFilterSyncEvent,
+      },
+    }
+  },
+})
 ```
 
 ## Packages
