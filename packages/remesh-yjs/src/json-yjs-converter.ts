@@ -138,34 +138,3 @@ export const patchYjs = (value: unknown, diffResult: UpdatedDiffResult | null) =
 
   throw new Error(`Unknown diff result: ${diffResult}`)
 }
-
-const yjsJsonWeakMap = new WeakMap<Y.AbstractType<any>, SerializableType>()
-
-const yjsWeakSet = new WeakSet<Y.AbstractType<any>>()
-
-export const yjsToJson = (yjsValue: Y.AbstractType<any>): SerializableType => {
-  if (!yjsWeakSet.has(yjsValue)) {
-    yjsValue.observeDeep(() => {
-      yjsJsonWeakMap.delete(yjsValue)
-    })
-    yjsWeakSet.add(yjsValue)
-  }
-
-  if (yjsJsonWeakMap.has(yjsValue)) {
-    return yjsJsonWeakMap.get(yjsValue)!
-  }
-
-  if (yjsValue instanceof Y.Array) {
-    const value = yjsValue.toJSON()
-    yjsJsonWeakMap.set(yjsValue, value)
-    return value
-  }
-
-  if (yjsValue instanceof Y.Map) {
-    const value = yjsValue.toJSON()
-    yjsJsonWeakMap.set(yjsValue, value)
-    return value
-  }
-
-  throw new Error(`Cannot convert ${yjsValue} to JSON`)
-}

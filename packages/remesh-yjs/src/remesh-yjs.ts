@@ -13,7 +13,7 @@ import { merge, Observable } from 'rxjs'
 import { map } from 'rxjs/operators'
 
 import { diff, patch, UpdatedDiffResult } from './diff-patch'
-import { patchYjs, yjsToJson } from './json-yjs-converter'
+import { patchYjs } from './json-yjs-converter'
 import { SerializableType } from './types'
 
 export const FROM_REMESH_YJS = 'from-remesh-yjs'
@@ -88,13 +88,14 @@ export const RemeshYjs = <T extends SerializableType>(domain: RemeshDomainContex
 
   const yjsValue = doc.get(options.key, options.dataType === 'object' ? Y.Map : Y.Array)
 
-  const updateYjsValue = (diffResult: UpdatedDiffResult | null, origin: unknown) => {
+  const updateYjsValue = (diffResult: UpdatedDiffResult | null, origin: unknown, local?: boolean) => {
     Y.transact(
       doc,
       () => {
         patchYjs(yjsValue, diffResult)
       },
       origin,
+      local,
     )
   }
 
@@ -138,12 +139,6 @@ export const RemeshYjs = <T extends SerializableType>(domain: RemeshDomainContex
 
           updateYjsValue(diffResult, FROM_REMESH_YJS)
 
-          console.log('send', {
-            currentJson,
-            value,
-            diffResult,
-          })
-
           return SendEvent(value)
         }),
       )
@@ -151,7 +146,6 @@ export const RemeshYjs = <T extends SerializableType>(domain: RemeshDomainContex
       const receive$ = fromYjs(yjsValue).pipe(
         map((next) => {
           assertDataType(next)
-          console.log('receive next', next)
           const current = get(DataForSyncQuery())
           const diffResult = diff(current, next)
 
@@ -160,13 +154,6 @@ export const RemeshYjs = <T extends SerializableType>(domain: RemeshDomainContex
           }
 
           const value = patch(current, diffResult) as T
-
-          console.log('receive', {
-            current,
-            next,
-            value,
-            diffResult,
-          })
 
           return SyncDataCommand(value)
         }),

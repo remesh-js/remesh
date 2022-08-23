@@ -17,7 +17,7 @@ import { WebrtcProvider } from 'y-webrtc'
 
 const doc = new Y.Doc()
 
-const webrtcProvider = new WebrtcProvider('syncedstore-todos', doc)
+const webrtcProvider = new WebrtcProvider('remesh-todo-app', doc)
 
 const container = document.getElementById('root')
 

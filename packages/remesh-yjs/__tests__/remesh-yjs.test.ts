@@ -1,6 +1,5 @@
 import { Remesh } from 'remesh'
 import * as Y from 'yjs'
-import { map } from 'rxjs/operators'
 import { ListModule } from 'remesh/modules/list'
 
 import { RemeshYjs, RemeshYjsExtern } from '../src'
@@ -44,7 +43,6 @@ const TestDomain = Remesh.domain({
 describe('remesh-yjs', () => {
   it('should sync', () => {
     const doc1 = new Y.Doc()
-
     const doc2 = new Y.Doc()
 
     doc1.on('update', (update) => {
@@ -61,14 +59,6 @@ describe('remesh-yjs', () => {
 
     const jsonValue0 = doc2.getArray('todo-list').toJSON()
 
-    expect(jsonValue0).toEqual([
-      {
-        id: '1',
-        text: 'Hello',
-        done: false,
-      },
-    ])
-
     expect(store.query(testDomain.query.ItemListQuery())).toEqual([
       {
         id: '1',
@@ -76,6 +66,9 @@ describe('remesh-yjs', () => {
         done: false,
       },
     ])
+
+    // has no changed yet
+    expect(jsonValue0).toEqual([])
 
     store.send(
       testDomain.command.AddItemCommand({
