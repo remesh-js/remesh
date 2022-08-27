@@ -402,8 +402,12 @@ export type RemeshCommand<T extends Args> = {
   impl: (context: RemeshCommandContext, ...args: T) => RemeshCommandOutput
   (...args: T): RemeshCommandAction<T>
   owner: RemeshDomainAction<any, any>
+  before: (task: RemeshCommandTask<T>) => void
+  after: (task: RemeshCommandTask<T>) => void
   inspectable: boolean
 }
+
+type RemeshCommandTask<T extends Args> = (context: RemeshCommandContext, ...args: T) => RemeshCommandOutput
 
 export type RemeshCommandOptions<T extends Args> = {
   name: DomainConceptName<'Command'>
@@ -412,6 +416,15 @@ export type RemeshCommandOptions<T extends Args> = {
 }
 
 let commandUid = 0
+
+const remeshCommandTaskStore = {
+  before: new WeakMap<RemeshCommand<any>, Set<RemeshCommandTask<any>>>(),
+  after: new WeakMap<RemeshCommand<any>, Set<RemeshCommandTask<any>>>(),
+}
+
+export const getCommandTaskSet = <T extends Args>(Command: RemeshCommand<T>, type: 'before' | 'after') => {
+  return remeshCommandTaskStore[type].get(Command)
+}
 
 export const RemeshCommand = <T extends Args = []>(options: RemeshCommandOptions<T>): RemeshCommand<T> => {
   const commandId = commandUid++
@@ -430,6 +443,26 @@ export const RemeshCommand = <T extends Args = []>(options: RemeshCommandOptions
   Command.impl = options.impl
   Command.owner = DefaultDomain()
   Command.inspectable = options.inspectable ?? true
+
+  Command.before = (task) => {
+    if (remeshCommandTaskStore.before.has(Command)) {
+      return remeshCommandTaskStore.before.get(Command)!.add(task)
+    }
+    const taskSet = new Set<RemeshCommandTask<T>>()
+    remeshCommandTaskStore.before.set(Command, taskSet)
+    taskSet.add(task)
+    return taskSet
+  }
+
+  Command.after = (task) => {
+    if (remeshCommandTaskStore.after.has(Command)) {
+      return remeshCommandTaskStore.after.get(Command)!.add(task)
+    }
+    const taskSet = new Set<RemeshCommandTask<T>>()
+    remeshCommandTaskStore.after.set(Command, taskSet)
+    taskSet.add(task)
+    return taskSet
+  }
 
   return Command
 }

@@ -38,6 +38,7 @@ import {
   toValidRemeshDomainDefinition,
   VerifiedRemeshDomainDefinition,
   RemeshDomainPreloadQueryContext,
+  getCommandTaskSet,
 } from './remesh'
 
 import { createInspectorManager, InspectorType } from './inspector'
@@ -1267,7 +1268,23 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
     const fn = Command.impl as (context: RemeshCommandContext, arg: T[0]) => RemeshCommandOutput
 
+    const beforeTaskSet = getCommandTaskSet(Command, 'before')
+
+    if (beforeTaskSet) {
+      for (const task of beforeTaskSet) {
+        handleCommandOutput(task(commandContext, arg))
+      }
+    }
+
     handleCommandOutput(fn(commandContext, arg))
+
+    const afterTaskSet = getCommandTaskSet(Command, 'after')
+
+    if (afterTaskSet) {
+      for (const task of afterTaskSet) {
+        handleCommandOutput(task(commandContext, arg))
+      }
+    }
   }
 
   const handleCommandOutput = (output: RemeshCommandOutput) => {

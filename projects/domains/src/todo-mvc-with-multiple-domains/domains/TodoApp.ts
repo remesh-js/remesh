@@ -1,7 +1,5 @@
 import { Remesh } from 'remesh'
 
-import { filter, map } from 'rxjs/operators'
-
 import { TodoInputDomain } from './TodoInput'
 import { TodoListDomain, getTodoId } from './TodoList'
 import { TodoFilterDomain } from './TodoFilter'
@@ -34,19 +32,14 @@ export const TodoAppDomain = Remesh.domain({
       },
     })
 
-    domain.effect({
-      name: 'ClearTodoInputWhenTodoAddedEffect',
-      impl: ({ fromEvent, get }) => {
-        return fromEvent(todoList.event.TodoItemAddedEvent).pipe(
-          filter((todo) => {
-            const todoInput = get(todoHeader.query.TodoInputQuery())
-            return todoInput === todo.title
-          }),
-          map(() => {
-            return todoHeader.command.ClearTodoInputCommand()
-          }),
-        )
-      },
+    todoList.command.AddTodoCommand.after(({ get }, title) => {
+      const todoInput = get(todoHeader.query.TodoInputQuery())
+
+      if (todoInput === title) {
+        return todoHeader.command.ClearTodoInputCommand()
+      }
+
+      return null
     })
 
     return {
