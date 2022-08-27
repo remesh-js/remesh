@@ -26,8 +26,10 @@ English | [中文]
 - Reactive programming
 - Immutable state
 - Type-friendly APIs
-- Framework-agnostic(React/Vue supported officially)
+- Framework-agnostic(officially supports React/Vue)
 - SSR support
+- Collaboration support(provides official yjs integration)
+- Time-Travel/Undo/Redo supports(via `remesh/modules/history`)
 
 ## Why Remesh?
 
@@ -381,6 +383,8 @@ root.render(
 - [How to subscribe to events or queries or commands in domain-effect?](#how-to-subscribe-to-events-or-queries-or-commands-in-domain-effect)
 - [How to create and use remesh store directly?](#how-to-create-and-use-remesh-store-directly)
 - [How to send multiple commands or events at once?](#how-to-send-multiple-commands-or-events-at-once)
+- [How to do something before or after a command?](#How-to-do-something-before-or-after-a-command)
+- [How to time-travel or redo/undo?](#How-to-time-travel-or-redo/undo)
 - [How to avoid type error from interface?](#how-to-avoid-type-error-from-interface)
 - [How to use yjs in remesh for collaboration?](#how-to-use-yjs-in-remesh-for-collaboration)
 
@@ -1143,7 +1147,7 @@ store.discardDomain(YourDomain())
 store.discard()
 ```
 
-### How to send multiple commands or events at once?
+### How to send multiple commands at once?
 
 ```typescript
 import { Remesh } from 'Remesh'
@@ -1155,12 +1159,94 @@ const store = Remesh.store()
 const yourDomain = store.getDomain(YourDomain())
 
 // bundle commands or events into one array
-store.send([
-  yourDomain.command.YourACommand('Hello, ACommand!'),
-  yourDomain.command.YourBCommand('Hello, BCommand!'),
-  yourDomain.event.YourAEvent('Hello, AEvent!'),
-  yourDomain.event.YourBEvent('Hello, BEvent!'),
-])
+store.send([yourDomain.command.YourACommand('Hello, ACommand!'), yourDomain.command.YourBCommand('Hello, BCommand!')])
+```
+
+### How to do something before or after a command?
+
+```typescript
+const YourDomain = Remesh.domain({
+  name: 'YourDomain',
+  impl: (domain) => {
+    const ACommand = domain.command({
+      name: 'ACommand',
+      impl: ({ get }, arg: number) => {
+        // ...do something
+      },
+    })
+
+    ACommand.before(({ get }, arg) => {
+      // do something *before* ACommand called
+      return BeforeACommand(arg)
+    })
+
+    ACommand.after(({ get }, arg) => {
+      // do something *after* ACommand called
+      return AfterACommand()
+    })
+  },
+})
+```
+
+### How to time-travel or redo/undo?
+
+```typescript
+// use history-module in remesh
+import { HistoryModule } from 'remesh/modules/history'
+
+const YourDomain = Remesh.domain({
+  name: 'YourDomain',
+  impl: (domain) => {
+    const TodoAppHistoryModule = HistoryModule(domain, {
+      name: 'TodoAppHistoryModule',
+      // subscribe state via query
+      query: ({ get }) => {
+        return get(TodoAppStateQuery())
+      },
+      // sync state via command
+      command: ({}, state) => {
+        return UpdateTodoAppStateCommand(state)
+      },
+    })
+
+    return {
+      query: {
+        // history list: T[]
+        HistoryListQuery: TodoAppHistoryModule.query.HistoryListQuery,
+        // can back: boolean
+        CanBackQuery: HistoryListQuery.query.CanBackQuery,
+        // can forward: boolean
+        CanForwardQuery: HistoryListQuery.query.CanForwardQuery,
+        // current index: number | null
+        CurrentIndexQuery: HistoryListQuery.query.CurrentIndexQuery,
+        // current state: T | null
+        CurrentStateQuery: HistoryListQuery.query.CurrentStateQuery,
+      },
+      command: {
+        // go(n), n can be negative, just like history.go(n)
+        GoCommand: HistoryListQuery.command.GoCommand,
+        // add state to history list
+        AddCommand: HistoryListQuery.command.AddCommand,
+        // set history list
+        SetCommand: HistoryListQuery.command.SetCommand,
+        // replace state
+        ReplaceCommand: HistoryListQuery.command.ReplaceCommand,
+        // back() if possible
+        BackCommand: HistoryListQuery.command.BackCommand,
+        // forward() if possible
+        ForwardCommand: HistoryListQuery.command.ForwardCommand,
+      },
+      event: {
+        // trigger when back
+        BackEvent: HistoryListQuery.event.BackEvent,
+        // trigger when forward
+        ForwardEvent: HistoryListQuery.event.ForwardEvent,
+        // trigger when go
+        GoEvent: HistoryListQuery.event.GoEvent,
+      },
+    }
+  },
+})
 ```
 
 ### How to avoid type error from interface?

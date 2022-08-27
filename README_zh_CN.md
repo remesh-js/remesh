@@ -28,6 +28,8 @@
 - 类型友好的 APIs
 - 框架无关(官方支持 React/Vue)
 - 支持 SSR
+- 支持多人协作(提供官方 yjs 集成)
+- 支持时间旅行/Undo/Redo（借助`remesh/modules/history`）
 
 ## 为何选择 Remesh?
 
@@ -380,7 +382,9 @@ root.render(
 - [如何访问其它 domains?](#如何访问其它-domains)
 - [如何在 domain-effect 中订阅 events 或 queries 或 commands?](#如何在-domain-effect-中订阅-events-或-queries-或-commands)
 - [如何创建和直接使用 remesh store?](#如何创建和直接使用-remesh-store)
-- [如何一次性发送多个 command 或 event？](#如何一次性发送多个-command-或-event)
+- [如何一次性发送多个 command？](#如何一次性发送多个-command)
+- [如何在 command 之前或之后执行？](#如何在-command-之前或之后执行)
+- [如何 time-travel 或 redo/undo?](#如何-time-travel-或-redo/undo)
 - [如何规避 interface 引起的类型错误？](#如何规避-interface-引起的类型错误)
 - [如何在 remesh 中使用 yjs 做状态同步？](#如何在-remesh-中使用-yjs-做状态同步)
 
@@ -1143,7 +1147,7 @@ store.discardDomain(YourDomain())
 store.discard()
 ```
 
-### 如何一次性发送多个 command 或 event？
+### 如何一次性发送多个 command？
 
 ```typescript
 import { Remesh } from 'Remesh'
@@ -1155,12 +1159,94 @@ const store = Remesh.store()
 const yourDomain = store.getDomain(YourDomain())
 
 // 打包成一个数组发送
-store.send([
-  yourDomain.command.YourACommand('Hello, ACommand!'),
-  yourDomain.command.YourBCommand('Hello, BCommand!'),
-  yourDomain.event.YourAEvent('Hello, AEvent!'),
-  yourDomain.event.YourBEvent('Hello, BEvent!'),
-])
+store.send([yourDomain.command.YourACommand('Hello, ACommand!'), yourDomain.command.YourBCommand('Hello, BCommand!')])
+```
+
+### 如何在 command 之前或之后执行？
+
+```typescript
+const YourDomain = Remesh.domain({
+  name: 'YourDomain',
+  impl: (domain) => {
+    const ACommand = domain.command({
+      name: 'ACommand',
+      impl: ({ get }, arg: number) => {
+        // ...do something
+      },
+    })
+
+    ACommand.before(({ get }, arg) => {
+      // 在 ACommand 之前执行
+      return BeforeACommand(arg)
+    })
+
+    ACommand.after(({ get }, arg) => {
+      // 在 ACommand 之后执行
+      return AfterACommand()
+    })
+  },
+})
+```
+
+### 如何 time-travel 或 redo/undo?
+
+```typescript
+// use history-module in remesh
+import { HistoryModule } from 'remesh/modules/history'
+
+const YourDomain = Remesh.domain({
+  name: 'YourDomain',
+  impl: (domain) => {
+    const TodoAppHistoryModule = HistoryModule(domain, {
+      name: 'TodoAppHistoryModule',
+      // subscribe state via query
+      query: ({ get }) => {
+        return get(TodoAppStateQuery())
+      },
+      // sync state via command
+      command: ({}, state) => {
+        return UpdateTodoAppStateCommand(state)
+      },
+    })
+
+    return {
+      query: {
+        // history list: T[]
+        HistoryListQuery: TodoAppHistoryModule.query.HistoryListQuery,
+        // can back: boolean
+        CanBackQuery: HistoryListQuery.query.CanBackQuery,
+        // can forward: boolean
+        CanForwardQuery: HistoryListQuery.query.CanForwardQuery,
+        // current index: number | null
+        CurrentIndexQuery: HistoryListQuery.query.CurrentIndexQuery,
+        // current state: T | null
+        CurrentStateQuery: HistoryListQuery.query.CurrentStateQuery,
+      },
+      command: {
+        // go(n), n can be negative, just like history.go(n)
+        GoCommand: HistoryListQuery.command.GoCommand,
+        // add state to history list
+        AddCommand: HistoryListQuery.command.AddCommand,
+        // set history list
+        SetCommand: HistoryListQuery.command.SetCommand,
+        // replace state
+        ReplaceCommand: HistoryListQuery.command.ReplaceCommand,
+        // back() if possible
+        BackCommand: HistoryListQuery.command.BackCommand,
+        // forward() if possible
+        ForwardCommand: HistoryListQuery.command.ForwardCommand,
+      },
+      event: {
+        // trigger when back
+        BackEvent: HistoryListQuery.event.BackEvent,
+        // trigger when forward
+        ForwardEvent: HistoryListQuery.event.ForwardEvent,
+        // trigger when go
+        GoEvent: HistoryListQuery.event.GoEvent,
+      },
+    }
+  },
+})
 ```
 
 ### 如何规避 interface 引起的类型错误？
