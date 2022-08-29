@@ -68,7 +68,7 @@
 - **Domain Queries**: 查询 states/entities, 或者驱动另一个 query.
 - **Domain Effects**: 一个可观察对象(observable), 用于执行副作用, 发送 commands 或者 events.
 
-对于任意 domains 而言, 只有 `domain-query`, `domain-command`, `domain-event` 可以被暴露出去.
+对于任意 domain 而言, 只有 `domain-query`, `domain-command`, `domain-event` 可以被暴露出去.
 
 `domain-state` and `domain-entity` 不会被暴露出去, 也不能在 domain 以外被直接接触到.
 
