@@ -68,11 +68,11 @@ A domain can have as many resources listed in below as you want.
 - **Domain Queries**: query states/entities or deriving another query.
 - **Domain Effects**: An observable that perform side-effect and send commands or events.
 
-For any domains, only `domain-query`, `domain-command`, `domain-event` can be exposed to the outside.
+For any domain, only `domain-query`, `domain-command`, `domain-event` can be exposed to the outside.
 
 `domain-state` and `domain-entity` are not exposed to the outside and can't be touched directly out of the domain.
 
-For the consumers of any domains.
+For the consumers of any domain.
 
 - The only way to read states or entities is through `domain-query` for preventing invalid read.
 
