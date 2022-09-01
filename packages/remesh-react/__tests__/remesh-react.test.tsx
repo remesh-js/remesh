@@ -1,10 +1,10 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { act } from 'react-dom/test-utils'
 import ReactDOM, { Root } from 'react-dom/client'
 
 import { Remesh } from 'remesh'
 
-import { RemeshRoot, useRemeshDomain, useRemeshEvent, useRemeshQuery, useRemeshSend } from '../src/index'
+import { RemeshRoot, RemeshScope, useRemeshDomain, useRemeshEvent, useRemeshQuery, useRemeshSend } from '../src/index'
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore config react testing environment
@@ -109,5 +109,123 @@ describe('remesh-react', () => {
 
     expect(countEventListener).toHaveBeenCalledTimes(1)
     expect(countEventListener).toHaveBeenCalledWith(1)
+  })
+
+  it('can use RemeshScope to keep domain alive', () => {
+    const TestScopeDomain = Remesh.domain({
+      name: 'TestScopeDomain',
+      impl: (domain) => {
+        const AState = domain.state({
+          name: 'AState',
+          default: 0,
+        })
+
+        const AQuery = domain.query({
+          name: 'AQuery',
+          impl: ({ get }) => {
+            return get(AState())
+          },
+        })
+
+        const ACommand = domain.command({
+          name: 'ACommand',
+          impl: ({}, value: number) => {
+            return AState().new(value)
+          },
+        })
+
+        return {
+          query: {
+            AQuery,
+          },
+          command: {
+            ACommand,
+          },
+        }
+      },
+    })
+
+    const A = (props: { id: string }) => {
+      const send = useRemeshSend()
+      const testScopeDomain = useRemeshDomain(TestScopeDomain())
+      const a = useRemeshQuery(testScopeDomain.query.AQuery())
+
+      const handleClick = () => {
+        send(testScopeDomain.command.ACommand(a + 1))
+      }
+
+      return (
+        <button id={props.id} onClick={handleClick}>
+          {a}
+        </button>
+      )
+    }
+
+    const App = () => {
+      const [state, setState] = useState(true)
+
+      const handleClick = () => {
+        setState(!state)
+      }
+
+      return (
+        <div id="container">
+          <button onClick={handleClick} id="toggle">
+            toggle
+          </button>
+          <RemeshRoot>{state && <A id="outside" />}</RemeshRoot>
+          <RemeshRoot>
+            <RemeshScope domains={[TestScopeDomain()]}>{state && <A id="inside" />}</RemeshScope>
+          </RemeshRoot>
+        </div>
+      )
+    }
+
+    act(() => {
+      root.render(<App />)
+    })
+
+    const toggleButton = document.getElementById('toggle') as HTMLButtonElement
+    let insideButton = document.getElementById('inside') as HTMLButtonElement
+    let outsideButton = document.getElementById('outside') as HTMLButtonElement
+
+    expect(insideButton.innerHTML).toBe('0')
+    expect(outsideButton.innerHTML).toBe('0')
+
+    act(() => {
+      insideButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      outsideButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(insideButton.innerHTML).toBe('1')
+    expect(outsideButton.innerHTML).toBe('1')
+
+    act(() => {
+      toggleButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    insideButton = document.getElementById('inside') as HTMLButtonElement
+    outsideButton = document.getElementById('outside') as HTMLButtonElement
+
+    expect(insideButton).toBe(null)
+    expect(outsideButton).toBe(null)
+
+    act(() => {
+      toggleButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    insideButton = document.getElementById('inside') as HTMLButtonElement
+    outsideButton = document.getElementById('outside') as HTMLButtonElement
+
+    expect(insideButton.innerHTML).toBe('1')
+    expect(outsideButton.innerHTML).toBe('0')
+
+    act(() => {
+      insideButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      outsideButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(insideButton.innerHTML).toBe('2')
+    expect(outsideButton.innerHTML).toBe('1')
   })
 })

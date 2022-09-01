@@ -109,19 +109,7 @@ export const RemeshLogger = (options?: RemeshLoggerOptions): RemeshStoreInspecto
           stateName: State.stateName,
           stateValue: event.storage.currentState,
         }
-
-        if (event.storage.key !== undefined) {
-          log(
-            info.type,
-            {
-              ...info,
-              stateKey: event.storage.key,
-            },
-            config.colors.state,
-          )
-        } else {
-          log(info.type, info, config.colors.state)
-        }
+        log(info.type, info, config.colors.state)
       })
     })
 

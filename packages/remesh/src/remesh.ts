@@ -145,7 +145,7 @@ export type RemeshState<T> = {
   type: 'RemeshState'
   stateId: number
   stateName: DomainConceptName<'State'>
-  (key?: string): RemeshStateItem<T>
+  (): RemeshStateItem<T>
   default: T | (() => T)
   owner: RemeshDomainAction<any, any>
   compare: CompareFn<T>
@@ -154,7 +154,6 @@ export type RemeshState<T> = {
 
 export type RemeshStateItem<T> = {
   type: 'RemeshStateItem'
-  key?: string
   State: RemeshState<T>
   new: (state: T) => RemeshStateItemUpdatePayload<T>
 }
@@ -194,28 +193,24 @@ export const RemeshState = <T>(options: RemeshStateOptions<T>): RemeshState<T> =
 
   let cacheForNullary = null as StateItem | null
 
-  const State = ((key) => {
-    if (key === undefined && cacheForNullary) {
+  const State = (() => {
+    if (cacheForNullary) {
       return cacheForNullary
     }
 
     const stateItem: StateItem = {
       type: 'RemeshStateItem',
-      key,
       State,
       new: (newState) => {
         return {
           type: 'RemeshStateItemUpdatePayload',
-          key,
           value: newState,
           stateItem,
         }
       },
     }
 
-    if (key === undefined) {
-      cacheForNullary = stateItem
-    }
+    cacheForNullary = stateItem
 
     return stateItem
   }) as RemeshState<T>

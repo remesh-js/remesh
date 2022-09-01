@@ -25,6 +25,9 @@ if (container) {
         <a href={`${import.meta.env.BASE_URL}tree/index.html`}>tree app</a>
       </li>
       <li>
+        <a href={`${import.meta.env.BASE_URL}steps/index.html`}>steps</a>
+      </li>
+      <li>
         <a href={`${import.meta.env.BASE_URL}others/index.html`}>others...</a>
       </li>
     </ul>,

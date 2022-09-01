@@ -148,5 +148,59 @@ export const useRemeshDomain = function <T extends RemeshDomainDefinition, U ext
     store.igniteDomain(domainAction)
   }, [store, domainAction])
 
+  const domainKey = store.getKey(domainAction)
+  const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null)
+
+  useEffect(() => {
+    return () => {
+      subscriptionRef.current?.unsubscribe()
+      subscriptionRef.current = null
+    }
+  }, [store, domainKey])
+
+  useEffect(() => {
+    if (subscriptionRef.current !== null) {
+      return
+    }
+    subscriptionRef.current = store.subscribeDomain(domainAction)
+  }, [store, domainAction])
+
   return domain
+}
+
+type RemeshDomainHolderProps = {
+  domain: RemeshDomainAction<any, any>
+}
+
+const RemeshDomainHolder = (props: RemeshDomainHolderProps) => {
+  useRemeshDomain(props.domain)
+  return <></>
+}
+
+export type RemeshDomainHolderContainerProps = {
+  domains: RemeshDomainAction<any, any>[]
+}
+
+export const RemeshDomainHolderContainer = (props: RemeshDomainHolderContainerProps) => {
+  return (
+    <>
+      {props.domains.map((domain, index) => {
+        return <RemeshDomainHolder key={index} domain={domain} />
+      })}
+    </>
+  )
+}
+
+export type RemeshScopeProps = {
+  domains: RemeshDomainAction<any, any>[]
+  children: ReactNode
+}
+
+export const RemeshScope = (props: RemeshScopeProps) => {
+  return (
+    <>
+      <RemeshDomainHolderContainer domains={props.domains} />
+      {props.children}
+    </>
+  )
 }

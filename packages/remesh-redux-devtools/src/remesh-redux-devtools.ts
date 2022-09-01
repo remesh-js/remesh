@@ -105,14 +105,7 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
           stateValue: event.storage.currentState,
         }
 
-        if (event.storage.key !== undefined) {
-          send(info.type, {
-            ...info,
-            stateArg: event.storage.key,
-          })
-        } else {
-          send(info.type, info)
-        }
+        send(info.type, info)
       })
     })
 

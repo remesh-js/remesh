@@ -176,8 +176,6 @@ describe('store', () => {
 
     expect(store.getKey(AQuery())).toMatch(AQuery.queryName)
     expect(store.getKey(BQuery())).toMatch(BQuery.queryName)
-    expect(store.getKey(AState())).toMatch(AState.stateName)
-    expect(store.getKey(BState())).toMatch(BState.stateName)
   })
 
   it('replacing the implementation of extern', () => {
@@ -470,8 +468,8 @@ describe('store', () => {
       'Event::Emitted',
       'Query::Discarded',
       'Query::Discarded',
-      'State::Discarded',
       'Domain::Discarded',
+      'State::Discarded',
       'Domain::Discarded',
     ]
 
