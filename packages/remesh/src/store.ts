@@ -891,7 +891,18 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       },
     }
 
-    const newValue = Query.impl(queryContext, queryStorage.arg)
+    let newValue: U
+
+    if (!Query.onError) {
+      newValue = Query.impl(queryContext, queryStorage.arg)
+    } else {
+      try {
+        newValue = Query.impl(queryContext, queryStorage.arg)
+      } catch (e) {
+        const error = e instanceof Error ? e : new Error(`${e}`)
+        newValue = Query.onError(error, queryStorage.currentValue)
+      }
+    }
 
     const isEqual = Query.compare(queryStorage.currentValue, newValue)
 

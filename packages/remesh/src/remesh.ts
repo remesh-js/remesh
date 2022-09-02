@@ -252,6 +252,7 @@ export type RemeshQuery<T extends Args<Serializable>, U> = {
   impl: (context: RemeshQueryContext, arg: T[0]) => U
   (...args: T): RemeshQueryAction<T, U>
   owner: RemeshDomainAction<any, any>
+  onError?: (error: Error, value: U) => U
   compare: CompareFn<U>
   inspectable: boolean
 }
@@ -266,6 +267,7 @@ export type RemeshQueryOptions<T extends Args<Serializable>, U> = {
   name: DomainConceptName<'Query'>
   inspectable?: boolean
   impl: (context: RemeshQueryContext, ...args: T) => U
+  onError?: (error: Error, previous: U) => U
   compare?: RemeshQuery<T, U>['compare']
 }
 
@@ -303,6 +305,7 @@ export const RemeshQuery = <T extends Args<Serializable>, U>(options: RemeshQuer
   Query.compare = options.compare ?? defaultCompare
   Query.owner = DefaultDomain()
   Query.inspectable = options.inspectable ?? true
+  Query.onError = options.onError
 
   return Query
 }

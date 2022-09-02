@@ -10,18 +10,6 @@ export const ListModule = <T extends SerializableObject>(
   domain: RemeshDomainContext,
   options: ListModuleOptions<T>,
 ) => {
-  const KeyListState = domain.state<string[]>({
-    name: `${options.name}.KeyListState`,
-    default: options.default?.map(options.key) ?? [],
-  })
-
-  const KeyListQuery = domain.query({
-    name: `${options.name}.KeyListQuery`,
-    impl: ({ get }) => {
-      return get(KeyListState())
-    },
-  })
-
   const ItemListState = domain.state<T[]>({
     name: `${options.name}.ItemListState`,
     default: options.default ?? [],
@@ -34,43 +22,55 @@ export const ListModule = <T extends SerializableObject>(
     },
   })
 
-  const RecordQuery = domain.query({
-    name: `${options.name}.RecordQuery`,
+  const DerivedQuery = domain.query({
+    name: `${options.name}.DerivedQuery`,
     impl: ({ get }) => {
-      const itemList = get(ItemListQuery())
-      const keyList = get(KeyListQuery())
+      const itemList = get(ItemListState())
+      const keyList = [] as string[]
       const record = {} as Record<string, T>
 
-      for (let i = 0; i < keyList.length; i++) {
-        const key = keyList[i]
+      for (let i = 0; i < itemList.length; i++) {
         const item = itemList[i]
+        const key = options.key(item)
+        keyList.push(key)
         record[key] = item
       }
 
-      return record
+      return { record, keyList }
+    },
+  })
+
+  const KeyListQuery = domain.query({
+    name: `${options.name}.KeyListQuery`,
+    impl: ({ get }) => {
+      return get(DerivedQuery()).keyList
     },
   })
 
   const ItemQuery = domain.query({
     name: `${options.name}.ItemQuery`,
     impl: ({ get }, key: string) => {
-      const record = get(RecordQuery())
+      const record = get(DerivedQuery()).record
+
+      if (!(key in record)) {
+        throw new Error(`${key} in not founded in ${options.name}`)
+      }
+
       const item = record[key]
       return item
+    },
+    /**
+     * return previous when item was deleted
+     */
+    onError: (_, previous) => {
+      return previous
     },
   })
 
   const SetListCommand = domain.command({
     name: `${options.name}.SetListCommand`,
     impl: ({}, newList: T[]) => {
-      const keyList = [] as string[]
-
-      for (const item of newList) {
-        const key = options.key(item)
-        keyList.push(key)
-      }
-
-      return [KeyListState().new(keyList), ItemListState().new(newList)]
+      return ItemListState().new(newList)
     },
   })
 
@@ -190,7 +190,7 @@ export const ListModule = <T extends SerializableObject>(
   const InsertAtCommand = domain.command({
     name: `${options.name}.InsertAtCommand`,
     impl: ({ get }, { index, item }: { index: number; item: T }) => {
-      const keyList = get(KeyListState())
+      const keyList = get(KeyListQuery())
 
       if (keyList.includes(options.key(item))) {
         return null
@@ -206,7 +206,7 @@ export const ListModule = <T extends SerializableObject>(
   const InsertBeforeCommand = domain.command({
     name: `${options.name}.InsertBeforeCommand`,
     impl: ({ get }, { before, item }: { before: T; item: T }) => {
-      const keyList = get(KeyListState())
+      const keyList = get(KeyListQuery())
       const itemKey = options.key(item)
       const beforeKey = options.key(before)
 
@@ -234,7 +234,7 @@ export const ListModule = <T extends SerializableObject>(
   const InsertAfterCommand = domain.command({
     name: `${options.name}.InsertAfterCommand`,
     impl: ({ get }, { after, item }: { after: T; item: T }) => {
-      const keyList = get(KeyListState())
+      const keyList = get(KeyListQuery())
       const itemKey = options.key(item)
       const afterKey = options.key(after)
 

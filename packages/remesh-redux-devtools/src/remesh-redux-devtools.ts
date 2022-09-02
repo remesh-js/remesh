@@ -109,22 +109,6 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
       })
     })
 
-    helper.onActive('entity', () => {
-      store.subscribeEvent(inspectorDomain.event.RemeshEntityStorageEvent, (event) => {
-        const Entity = event.storage.Entity
-        const info = {
-          type: `${event.type}::${Entity.entityName}`,
-          owner: getOwnerInfo(Entity.owner),
-          entityId: Entity.entityId,
-          entityName: Entity.entityName,
-          entityValue: event.storage.currentEntity,
-          entityKey: event.storage.key,
-        }
-
-        send(info.type, info)
-      })
-    })
-
     helper.onActive('query', () => {
       store.subscribeEvent(inspectorDomain.event.RemeshQueryStorageEvent, (event) => {
         const Query = event.storage.Query

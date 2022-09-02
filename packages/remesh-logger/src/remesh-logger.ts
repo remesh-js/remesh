@@ -113,22 +113,6 @@ export const RemeshLogger = (options?: RemeshLoggerOptions): RemeshStoreInspecto
       })
     })
 
-    helper.onActive('entity', () => {
-      store.subscribeEvent(inspectorDomain.event.RemeshEntityStorageEvent, (event) => {
-        const Entity = event.storage.Entity
-        const info = {
-          type: `${event.type}::${Entity.entityName}`,
-          owner: getOwnerInfo(Entity.owner),
-          entityId: Entity.entityId,
-          entityName: Entity.entityName,
-          entityValue: event.storage.currentEntity,
-          entityKey: event.storage.key,
-        }
-
-        log(info.type, info, config.colors.entity)
-      })
-    })
-
     helper.onActive('query', () => {
       store.subscribeEvent(inspectorDomain.event.RemeshQueryStorageEvent, (event) => {
         const Query = event.storage.Query

@@ -13,7 +13,7 @@ export const formatNow = () => {
   return formatTime(time)
 }
 
-export type RemeshDebugSource = 'state' | 'query' | 'domain' | 'event' | 'command' | 'entity'
+export type RemeshDebugSource = 'state' | 'query' | 'domain' | 'event' | 'command'
 
 export type RemeshDebugOptions = {
   include?: RemeshDebugSource[]
@@ -22,7 +22,7 @@ export type RemeshDebugOptions = {
 
 export const RemeshDebuggerHelper = (options?: RemeshDebugOptions) => {
   const config = {
-    include: ['state', 'domain', 'query', 'event', 'command', 'entity'],
+    include: ['state', 'domain', 'query', 'event', 'command'],
     ...options,
   }
 
