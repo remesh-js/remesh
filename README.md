@@ -387,6 +387,7 @@ root.render(
 - [How to time-travel or redo/undo?](#How-to-time-travel-or-redo/undo)
 - [How to avoid type error from interface?](#how-to-avoid-type-error-from-interface)
 - [How to use yjs in remesh for collaboration?](#how-to-use-yjs-in-remesh-for-collaboration)
+- [How do I manage the scope of the remesh domain in my React application?](#how-do-i-manage-the-scope-of-the-remesh-domain-in-my-React application)
 
 ### How to define a domain?
 
@@ -1328,6 +1329,23 @@ const TodoAppDomain = Remesh.domain({
     }
   },
 })
+```
+
+### How do I manage the scope of the remesh domain in my React application?
+
+remesh automatically reclaims domain resources that are no longer subscribed by default, which is sometimes not expected, and we can extend the active time of domain resources in a specific range with the `RemeshScope` component.
+
+```tsx
+import { RemeshScope } from 'remesh-react'
+
+const App = (props) => {
+  /**
+   * Pass in domains to RemeshScope
+   * Even if the A component is destroyed and the domain resource loses its subscribers, it will not be reclaimed
+   * The next time the A component is rendered, the original state is available
+   */
+  return <RemeshScope domains={[TestScopeDomain()]}>{props.show && <A />}</RemeshScope>
+}
 ```
 
 ## Packages

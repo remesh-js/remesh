@@ -1330,6 +1330,23 @@ const TodoAppDomain = Remesh.domain({
 })
 ```
 
+### 如何在 React 应用中管理 remesh domain 的生存范围？
+
+remesh 默认会自动回收不再被订阅的 domain 资源，有时这是不符合预期的，我们可以通过 `RemeshScope` 组件，延长特定范围内的 domain 资源的活跃时间。
+
+```tsx
+import { RemeshScope } from 'remesh-react'
+
+const App = (props) => {
+  /**
+   * 传入 domains 给 RemeshScope
+   * 即便 A 组件被销毁，领域资源失去订阅者，它也不会被回收
+   * 下一次 A 组件渲染时，可以获取到原来的状态
+   */
+  return <RemeshScope domains={[TestScopeDomain()]}>{props.show && <A />}</RemeshScope>
+}
+```
+
 ## Packages
 
 - [remesh](packages/remesh) : 定义你的 domain 的 core 包
