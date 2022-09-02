@@ -387,6 +387,7 @@ root.render(
 - [如何 time-travel 或 redo/undo?](#如何-time-travel-或-redo/undo)
 - [如何规避 interface 引起的类型错误？](#如何规避-interface-引起的类型错误)
 - [如何在 remesh 中使用 yjs 做状态同步？](#如何在-remesh-中使用-yjs-做状态同步)
+- [如何在 React 应用中管理 remesh domain 的生存范围？](#如何在-React-应用中管理-remesh-domain-的生存范围)
 
 ### 如何定义一个 domain?
 

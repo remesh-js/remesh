@@ -387,7 +387,7 @@ root.render(
 - [How to time-travel or redo/undo?](#How-to-time-travel-or-redo/undo)
 - [How to avoid type error from interface?](#how-to-avoid-type-error-from-interface)
 - [How to use yjs in remesh for collaboration?](#how-to-use-yjs-in-remesh-for-collaboration)
-- [How do I manage the scope of the remesh domain in my React application?](#how-do-i-manage-the-scope-of-the-remesh-domain-in-my-React application)
+- [How do I manage the scope of the remesh domain in my React application?](#how-do-i-manage-the-scope-of-the-remesh-domain-in-my-React-application)
 
 ### How to define a domain?
 
