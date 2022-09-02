@@ -62,21 +62,21 @@
 一个 domain 可以根据你的需求, 包含许多种资源, 如下:
 
 - **Domain States**: 你希望存储在 domain 中的状态.
-- **Domain Entities**: 你希望存储在 domain 中的实体. 一个实体必须有唯一的标识作为 key.
-- **Domain Events**: 指明 domain 中会发生的某些事情.
-- **Domain Commands**: 更新 states/entities, 或 emit events, 或什么都不做.
-- **Domain Queries**: 查询 states/entities, 或者驱动另一个 query.
+- **Domain Queries**: 查询 states, 或者驱动另一个 query.
+- **Domain Commands**: 更新 states, 或 emit events, 或什么都不做.
 - **Domain Effects**: 一个可观察对象(observable), 用于执行副作用, 发送 commands 或者 events.
+
+- **Domain Events**: 指明 domain 中会发生的某些事情.
 
 对于任意 domain 而言, 只有 `domain-query`, `domain-command`, `domain-event` 可以被暴露出去.
 
-`domain-state` and `domain-entity` 不会被暴露出去, 也不能在 domain 以外被直接接触到.
+`domain-state` 既不会被暴露出去, 也不能在 domain 以外被直接接触到.
 
 对于 domains 的消费方而言.
 
-- 唯一读取 states 或 entities 的方式, 是 `domain-query`, 以此阻止那些无效的读取.
+- 唯一读取 states 的方式, 是 `domain-query`, 以此阻止那些无效的读取.
 
-- 唯一更新 states 或 entities 的方式, 是 `domain-command`, 以此阻止那些无效的更新.
+- 唯一更新 states 的方式, 是 `domain-command`, 以此阻止那些无效的更新.
 
 ## 安装
 
@@ -371,7 +371,7 @@ root.render(
 - [如何传递参数给 domain query?](#如何传递参数给-domain-query)
 - [如何传递参数给 domain command?](#如何传递参数给-domain-command)
 - [如何定义一个 effect?](#如何定义一个-effect)
-- [如何定义一个 entity?](#如何定义一个-entity)
+- [如何定义一个 defer state?](#如何定义一个-defer-state)
 - [如何在 react component 中使用 domain?](#如何在-react-component-中使用-domain)
 - [如何将 remesh store 传递给 react component?](#如何将-remesh-store-传递给-react-component)
 - [如何挂载 logger?](#如何挂载-logger)
@@ -420,7 +420,7 @@ const YourDomain = Remesh.domain({
 
 ### 如何定义一个 command?
 
-特别的, 如果一个 command 返回 `null` 或空数组 `[]`, 则表示该 command 不会更新 state 或 entity，也不会触发 event.
+特别的, 如果一个 command 返回 `null` 或空数组 `[]`, 则表示该 command 不会更新 state 和触发 event.
 
 ```typescript
 import { Remesh } from 'remesh'
@@ -652,7 +652,7 @@ const YourDomain = Remesh.domain({
 })
 ```
 
-### 如何定义一个 entity?
+### 如何定义一个 defer state?
 
 ```typescript
 import { Remesh } from 'remesh'
@@ -666,12 +666,10 @@ type Todo = {
 const YourDomain = Remesh.domain({
   name: 'YourDomain',
   impl: (domain) => {
-    /**
-     * Every entity should has a unique key
-     */
-    const YourEntity = domain.entity<Todo>({
-      name: 'YourEntity',
-      key: (todo) => todo.id.toString(),
+    const YourState = domain.state<Todo>({
+      name: 'YourState',
+      // 设置 defer = true
+      defer: true,
     })
   },
 })

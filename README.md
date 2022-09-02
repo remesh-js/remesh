@@ -62,21 +62,20 @@ All related things are encapsuled in the domain.
 A domain can have as many resources listed in below as you want.
 
 - **Domain States**: the state you want to store in the domain.
-- **Domain Entities**: the entity you want to store in the domain. An entity must has a unique identifier as key.
-- **Domain Events**: identify something happened in the domain.
-- **Domain Commands**: update states/entities or emit events or do nothing.
-- **Domain Queries**: query states/entities or deriving another query.
+- **Domain Queries**: query states or deriving another query.
+- **Domain Commands**: update states or emit events or do nothing.
 - **Domain Effects**: An observable that perform side-effect and send commands or events.
+- **Domain Events**: identify something happened in the domain.
 
 For any domain, only `domain-query`, `domain-command`, `domain-event` can be exposed to the outside.
 
-`domain-state` and `domain-entity` are not exposed to the outside and can't be touched directly out of the domain.
+`domain-state` will not be exposed to the outside and can't be touched directly out of the domain.
 
 For the consumers of any domain.
 
-- The only way to read states or entities is through `domain-query` for preventing invalid read.
+- The only way to read state is through `domain-query` for preventing invalid read.
 
-- The only way to update states or entities is through `domain-command` for preventing invalid update.
+- The only way to update state is through `domain-command` for preventing invalid update.
 
 ## Installation
 
@@ -371,7 +370,7 @@ root.render(
 - [How to pass arg to domain query?](#how-to-pass-arg-to-domain-query)
 - [How to pass arg to domain command?](#how-to-pass-arg-to-domain-command)
 - [How to define an effect?](#how-to-define-an-effect)
-- [How to define an entity?](#how-to-define-an-entity)
+- [How to define a defer state?](#How-to-define-a-defer-state)
 - [How to use domain in react component?](#how-to-use-domain-in-react-component)
 - [How to pass a remesh store to react component?](#how-to-pass-a-remesh-store-to-react-component)
 - [How to attach logger?](#how-to-attach-logger)
@@ -420,7 +419,7 @@ const YourDomain = Remesh.domain({
 
 ### How to define a command?
 
-Especially, it means no operations (no states & entities update, and no events emit) to return `null` or empty array `[]` in command implementation.
+Especially, it means no operations (no states update, and no events emit) to return `null` or empty array `[]` in command implementation.
 
 ```typescript
 import { Remesh } from 'remesh'
@@ -652,7 +651,7 @@ const YourDomain = Remesh.domain({
 })
 ```
 
-### How to define an entity?
+### How to define a defer state?
 
 ```typescript
 import { Remesh } from 'remesh'
@@ -666,12 +665,10 @@ type Todo = {
 const YourDomain = Remesh.domain({
   name: 'YourDomain',
   impl: (domain) => {
-    /**
-     * Every entity should has a unique key
-     */
-    const YourEntity = domain.entity<Todo>({
-      name: 'YourEntity',
-      key: (todo) => todo.id.toString(),
+    const YourState = domain.state<Todo>({
+      name: 'YourState',
+      // set defer = true
+      defer: true,
     })
   },
 })
