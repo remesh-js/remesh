@@ -1,5 +1,16 @@
 # remesh-debugger-helper
 
+## 3.0.0
+
+### Major Changes
+
+- deprecated RemeshEntity, add Query.onError
+
+### Patch Changes
+
+- Updated dependencies
+  - remesh@3.0.0
+
 ## 2.0.1
 
 ### Major Changes

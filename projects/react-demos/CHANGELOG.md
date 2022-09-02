@@ -1,5 +1,17 @@
 # remesh-example
 
+## 0.0.3
+
+### Patch Changes
+
+- Updated dependencies
+  - remesh@3.0.0
+  - remesh-logger@3.0.0
+  - remesh-react@3.0.0
+  - remesh-redux-devtools@3.0.0
+  - remesh-yjs@3.0.0
+  - remesh-domains-for-demos@1.0.3
+
 ## 0.0.2
 
 ### Patch Changes

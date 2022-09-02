@@ -1,5 +1,11 @@
 # remesh
 
+## 3.0.0
+
+### Major Changes
+
+- deprecated RemeshEntity, add Query.onError
+
 ## 2.0.1
 
 ### Minor Changes

@@ -1,6 +1,6 @@
 {
   "name": "remesh-domains-for-demos",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": true,
   "description": "",
   "main": "index.js",
@@ -9,7 +9,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "remesh": "^2.0.1",
+    "remesh": "^3.0.0",
     "rxjs": "^7.0.0"
   },
   "devDependencies": {
