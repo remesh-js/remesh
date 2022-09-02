@@ -1,5 +1,7 @@
 import { Remesh } from 'remesh'
 
+import { ListModule } from 'remesh/modules/list'
+
 export type CellContent =
   | {
       type: 'text'
@@ -11,53 +13,50 @@ export type CellContent =
     }
 
 export type CellState = {
+  row: number
+  column: string
   content: CellContent
   isEditing: boolean
+}
+
+export const rows = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+export const columns = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']
+
+const generateDefaultCellList = () => {
+  const cellList = [] as CellState[]
+
+  for (const column of columns) {
+    for (const row of rows) {
+      cellList.push({
+        row,
+        column,
+        content: {
+          type: 'text',
+          text: '',
+        },
+        isEditing: false,
+      })
+    }
+  }
+
+  return cellList
 }
 
 export const CellsDomain = Remesh.domain({
   name: 'CellsDomain',
   inspectable: false,
   impl: (domain) => {
-    const RowKeyListState = domain.state({
-      name: 'RowKeyListState',
-      default: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(String),
-    })
-
-    const RowKeyListQuery = domain.query({
-      name: 'RowKeyListQuery',
-      impl: ({ get }) => {
-        return get(RowKeyListState())
-      },
-    })
-
-    const ColumnKeyListState = domain.state({
-      name: 'ColumnKeyListState',
-      default: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'],
-    })
-
-    const ColumnKeyListQuery = domain.query({
-      name: 'ColumnKeyListQuery',
-      impl: ({ get }) => {
-        return get(ColumnKeyListState())
-      },
-    })
-
-    const CellState = domain.state<CellState>({
-      name: 'CellState',
-      default: {
-        content: {
-          type: 'text',
-          text: '',
-        },
-        isEditing: false,
-      },
+    const CellListModule = ListModule<CellState>(domain, {
+      name: 'CellListModule',
+      key: (cell) => cell.column + cell.row,
+      default: generateDefaultCellList(),
     })
 
     const CellQuery = domain.query({
       name: 'CellQuery',
       impl: ({ get }, key: string) => {
-        const state = get(CellState(key))
+        const state = get(CellListModule.query.ItemQuery(key))
 
         if (state.content.type === 'text') {
           return {
@@ -89,10 +88,10 @@ export const CellsDomain = Remesh.domain({
     const SelectCellCommand = domain.command({
       name: 'SelectCellCommand',
       impl: ({ get }, key: string) => {
-        const state = get(CellState(key))
+        const state = get(CellListModule.query.ItemQuery(key))
 
-        return CellState(key).new({
-          content: state.content,
+        return CellListModule.command.UpdateItemCommand({
+          ...state,
           isEditing: true,
         })
       },
@@ -101,10 +100,10 @@ export const CellsDomain = Remesh.domain({
     const UnselectCellCommand = domain.command({
       name: 'UnselectCellCommand',
       impl: ({ get }, key: string) => {
-        const state = get(CellState(key))
+        const state = get(CellListModule.query.ItemQuery(key))
 
-        return CellState(key).new({
-          content: state.content,
+        return CellListModule.command.UpdateItemCommand({
+          ...state,
           isEditing: false,
         })
       },
@@ -113,10 +112,11 @@ export const CellsDomain = Remesh.domain({
     const SetCellContentCommand = domain.command({
       name: 'SetCellContentCommand',
       impl: ({ get }, { key, input }: { key: string; input: string }) => {
-        const state = get(CellState(key))
+        const state = get(CellListModule.query.ItemQuery(key))
 
         if (input.startsWith('=')) {
-          return CellState(key).new({
+          return CellListModule.command.UpdateItemCommand({
+            ...state,
             content: {
               type: 'formula',
               formula: input,
@@ -124,7 +124,8 @@ export const CellsDomain = Remesh.domain({
             isEditing: state.isEditing,
           })
         } else {
-          return CellState(key).new({
+          return CellListModule.command.UpdateItemCommand({
+            ...state,
             content: {
               type: 'text',
               text: input,
@@ -138,8 +139,6 @@ export const CellsDomain = Remesh.domain({
     return {
       query: {
         CellQuery,
-        ColumnKeyListQuery,
-        RowKeyListQuery,
       },
       command: {
         SelectCellCommand,

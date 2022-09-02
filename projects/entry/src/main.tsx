@@ -24,6 +24,9 @@ if (container) {
           <a href={`${import.meta.env.BASE_URL}react/chess/index.html`}>chinese chess</a>
         </li>
         <li>
+          <a href={`${import.meta.env.BASE_URL}react/tree/index.html`}>tree app</a>
+        </li>
+        <li>
           <a href={`${import.meta.env.BASE_URL}react/others/index.html`}>others...</a>
         </li>
       </ul>

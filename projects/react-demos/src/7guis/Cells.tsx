@@ -1,12 +1,10 @@
 import React from 'react'
 import { useRemeshDomain, useRemeshQuery, useRemeshSend } from 'remesh-react'
 
-import { CellsDomain } from 'remesh-domains-for-demos/dist/7guis/Cells'
+import { CellsDomain, rows, columns } from 'remesh-domains-for-demos/dist/7guis/Cells'
 
 export const CellsApp = () => {
   const cellsDomain = useRemeshDomain(CellsDomain())
-  const columnKeyList = useRemeshQuery(cellsDomain.query.ColumnKeyListQuery())
-  const rowKeyList = useRemeshQuery(cellsDomain.query.RowKeyListQuery())
 
   return (
     <div>
@@ -25,7 +23,7 @@ export const CellsApp = () => {
             }}
           >
             <th style={{ width: 30, display: 'block' }}></th>
-            {columnKeyList.map((key) => (
+            {columns.map((key) => (
               <th
                 key={key}
                 style={{
@@ -39,10 +37,10 @@ export const CellsApp = () => {
           </tr>
         </thead>
         <tbody>
-          {rowKeyList.map((rowKey) => {
+          {rows.map((rowKey) => {
             return (
               <tr key={rowKey}>
-                <RowView rowKey={rowKey} columnKeyList={columnKeyList} />
+                <RowView rowKey={rowKey} columnKeyList={columns} />
               </tr>
             )
           })}
@@ -53,7 +51,7 @@ export const CellsApp = () => {
 }
 
 type RowViewProps = {
-  rowKey: string
+  rowKey: number
   columnKeyList: string[]
 }
 
