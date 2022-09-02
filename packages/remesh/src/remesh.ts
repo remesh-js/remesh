@@ -22,8 +22,7 @@ export type Args<T = unknown> = [] | [arg: T] | [arg?: T]
 export type RemeshInjectedContext = {
   get<T extends Args<Serializable>, U>(input: RemeshQueryAction<T, U>): U
   get<state>(input: RemeshStateItem<state>): state
-  get<entity extends SerializableObject>(input: RemeshEntityItem<entity>): entity
-  get(input: RemeshStateItem<any> | RemeshEntityItem<any> | RemeshQueryAction<any, any>): unknown
+  get(input: RemeshStateItem<any> | RemeshQueryAction<any, any>): unknown
   fromEvent: <T extends Args, U>(Event: RemeshEvent<T, U> | RemeshSubscribeOnlyEvent<T, U>) => Observable<U>
   fromQuery: <T extends Args<Serializable>, U>(Query: RemeshQueryAction<T, U>) => Observable<U>
 }
@@ -141,12 +140,16 @@ export const internalToOriginalEvent = <T extends Args, U>(
 
 export type CompareFn<T> = (prev: T, curr: T) => boolean
 
+export const DefaultStateValue = Symbol('DefaultStateValue')
+
+export type DefaultStateValue = typeof DefaultStateValue
+
 export type RemeshState<T> = {
   type: 'RemeshState'
   stateId: number
   stateName: DomainConceptName<'State'>
   (): RemeshStateItem<T>
-  default: T | (() => T)
+  default: T | (() => T) | DefaultStateValue
   owner: RemeshDomainAction<any, any>
   compare: CompareFn<T>
   inspectable: boolean
@@ -167,10 +170,16 @@ export type RemeshStateItemUpdatePayload<T> = {
 
 export type RemeshStateOptions<T> = {
   name: DomainConceptName<'State'>
-  default: T
   inspectable?: boolean
   compare?: CompareFn<T>
-}
+} & (
+  | {
+      default: T | (() => T)
+    }
+  | {
+      defer: true
+    }
+)
 
 let stateUid = 0
 
@@ -218,92 +227,18 @@ export const RemeshState = <T>(options: RemeshStateOptions<T>): RemeshState<T> =
   State.type = 'RemeshState'
   State.stateId = stateId
   State.stateName = options.name
-  State.default = options.default
+
+  if ('default' in options) {
+    State.default = options.default
+  } else if (options.defer) {
+    State.default = DefaultStateValue
+  }
+
   State.compare = options.compare ?? defaultCompare
   State.owner = DefaultDomain()
   State.inspectable = options.inspectable ?? true
 
   return State
-}
-
-export type RemeshEntity<T extends SerializableObject> = {
-  type: 'RemeshEntity'
-  entityId: number
-  entityName: DomainConceptName<'Entity'>
-  key: (entity: T) => string
-  injectEntities?: T[]
-  (key: string | number): RemeshEntityItem<T>
-  owner: RemeshDomainAction<any, any>
-  inspectable: boolean
-  compare: CompareFn<T>
-}
-
-export type RemeshEntityItem<T extends SerializableObject> = {
-  type: 'RemeshEntityItem'
-  key: string
-  Entity: RemeshEntity<T>
-  new: (entity: T) => RemeshEntityItemUpdatePayload<T>
-}
-
-export type RemeshEntityItemUpdatePayload<T extends SerializableObject> = {
-  type: 'RemeshEntityItemUpdatePayload'
-  value: T
-  entityItem: RemeshEntityItem<T>
-}
-
-export type RemeshEntityOptions<T extends SerializableObject> = {
-  name: DomainConceptName<'Entity'>
-  key: (entity: T) => string
-  injectEntities?: T[]
-  inspectable?: boolean
-  compare?: CompareFn<T>
-}
-
-let entityUid = 0
-
-export const RemeshEntity = <T extends SerializableObject>(options: RemeshEntityOptions<T>): RemeshEntity<T> => {
-  const entityId = entityUid++
-
-  type EntityItem = RemeshEntityItem<T>
-
-  let cacheForNullary = null as EntityItem | null
-
-  const Entity = ((key) => {
-    if (key === undefined && cacheForNullary) {
-      return cacheForNullary
-    }
-
-    const entityItem: EntityItem = {
-      type: 'RemeshEntityItem',
-      key: `${key}`,
-      Entity,
-      new: (newEntity) => {
-        return {
-          type: 'RemeshEntityItemUpdatePayload',
-          key,
-          value: newEntity,
-          entityItem,
-        }
-      },
-    }
-
-    if (key === undefined) {
-      cacheForNullary = entityItem
-    }
-
-    return entityItem
-  }) as RemeshEntity<T>
-
-  Entity.type = 'RemeshEntity'
-  Entity.entityId = entityId
-  Entity.entityName = options.name
-  Entity.key = options.key
-  Entity.injectEntities = options.injectEntities
-  Entity.owner = DefaultDomain()
-  Entity.inspectable = options.inspectable ?? true
-  Entity.compare = options.compare ?? defaultCompare
-
-  return Entity
 }
 
 export type RemeshQueryContext = {
@@ -386,7 +321,6 @@ export type RemeshCommandOutput =
   | RemeshCommandAction<any>
   | RemeshEventAction<any, any>
   | RemeshStateItemUpdatePayload<any>
-  | RemeshEntityItemUpdatePayload<any>
   | RemeshCommandOutput[]
   | null
 
@@ -507,7 +441,6 @@ export type RemeshDomainPreloadCommandContext = {
 
 export type RemeshDomainPreloadCommandOutput =
   | RemeshStateItemUpdatePayload<any>
-  | RemeshEntityItemUpdatePayload<any>
   | RemeshDomainPreloadCommandOutput[]
   | null
 
@@ -533,7 +466,6 @@ export type RemeshEffect = {
 export type RemeshDomainContext = {
   // definitions
   state: typeof RemeshState
-  entity: typeof RemeshEntity
   event: typeof RemeshEvent
   query: typeof RemeshQuery
   command: typeof RemeshCommand

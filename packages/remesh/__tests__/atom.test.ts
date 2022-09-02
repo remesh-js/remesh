@@ -1,13 +1,4 @@
-import {
-  RemeshState,
-  RemeshQuery,
-  RemeshStore,
-  RemeshCommand,
-  RemeshDomain,
-  DefaultDomain,
-  RemeshEvent,
-  RemeshEntity,
-} from '../src'
+import { RemeshState, RemeshQuery, RemeshStore, RemeshCommand, RemeshDomain, DefaultDomain, RemeshEvent } from '../src'
 
 let store: ReturnType<typeof RemeshStore>
 beforeEach(() => {
@@ -64,36 +55,35 @@ describe('atom', () => {
     expect(store.query(NameQuery())).toBe('remesh')
   })
 
-  it('use RemeshEntity for defer state', () => {
-    type Name = { key: string; value: string }
-    const NameEntity = RemeshEntity<Name>({
-      name: 'NameEntity',
-      key: (name) => name.key,
+  it('use RemeshState for defer state', () => {
+    const NameState = RemeshState<string>({
+      name: 'NameState',
+      defer: true,
     })
 
     const NameQuery = RemeshQuery({
       name: 'NameQuery',
-      impl: ({ get }, key: string) => get(NameEntity(key)).value,
+      impl: ({ get }) => get(NameState()),
     })
 
-    expect(() => store.query(NameQuery('test'))).toThrow()
+    expect(() => store.query(NameQuery())).toThrow()
 
     const HasValueEvent = RemeshEvent({ name: 'HasValueEvent' })
 
     const ChangeNameCommand = RemeshCommand({
       name: 'ChangeNameCommand',
-      impl({}, name: Name) {
-        return [NameEntity(name.key).new(name), HasValueEvent()]
+      impl({}, name: string) {
+        return [NameState().new(name), HasValueEvent()]
       },
     })
 
-    store.send(ChangeNameCommand({ key: 'test', value: 'remesh' }))
-    expect(store.query(NameQuery('test'))).toBe('remesh')
+    store.send(ChangeNameCommand('remesh'))
+    expect(store.query(NameQuery())).toBe('remesh')
 
     const changed = jest.fn()
     store.subscribeEvent(HasValueEvent, changed)
-    store.send(ChangeNameCommand({ key: 'test', value: 'ddd' }))
-    expect(store.query(NameQuery('test'))).toBe('ddd')
+    store.send(ChangeNameCommand('ddd'))
+    expect(store.query(NameQuery())).toBe('ddd')
     expect(changed).toHaveBeenCalled()
   })
 
@@ -203,36 +193,5 @@ describe('atom', () => {
     ;[age, { UpdateAgeCommand }] = store.query(domain.query.AgeQuery())
 
     expect(age).toBe(20)
-  })
-
-  it('supports injectEntities', () => {
-    type Entity = {
-      key: string
-      value: number
-    }
-    const TestEntity = RemeshEntity<Entity>({
-      name: 'TestEntity',
-      key: (entity) => entity.key,
-      injectEntities: [
-        {
-          key: '0',
-          value: 123,
-        },
-        {
-          key: '1',
-          value: 456,
-        },
-      ],
-    })
-
-    const TestQuery = RemeshQuery({
-      name: 'TestQuery',
-      impl({ get }, key: string) {
-        return get(TestEntity(key)).value
-      },
-    })
-
-    expect(store.query(TestQuery('0'))).toBe(123)
-    expect(store.query(TestQuery('1'))).toBe(456)
   })
 })

@@ -294,20 +294,20 @@ describe('effect', () => {
     const AccountDomain = RemeshDomain({
       name: 'AccountDomain',
       impl(domain, accountId: number) {
-        const AccountEntity = domain.entity<Account>({
-          name: 'AccountEntity',
-          key: (account) => `${account.id}`,
+        const AccountState: RemeshState<Account> = domain.state<Account>({
+          name: 'AccountState',
+          defer: true,
         })
 
         const UpdateAccountCommand = domain.command({
           name: 'UpdateAccountCommand',
           impl({}, account: Account) {
-            return AccountEntity(account.id).new(account)
+            return AccountState().new(account)
           },
         })
 
         domain.effect({
-          name: 'AccountEntityEffect',
+          name: 'AccountStateEffect',
           impl({}) {
             return [UpdateAccountCommand({ id: accountId, status: 'inactive', balance: 0 }), ActivateAccountCommand()]
           },
@@ -316,7 +316,7 @@ describe('effect', () => {
         const AccountQuery = domain.query({
           name: 'AccountQuery',
           impl: ({ get }) => {
-            return get(AccountEntity(accountId))
+            return get(AccountState())
           },
         })
 
@@ -337,7 +337,7 @@ describe('effect', () => {
               status: 'inactive',
             }
 
-            return AccountEntity(accountId).new(newAccountState)
+            return AccountState().new(newAccountState)
           },
         })
 
@@ -350,7 +350,7 @@ describe('effect', () => {
               status: 'active',
             } as Account
 
-            return AccountEntity(accountId).new(newAccountState)
+            return AccountState().new(newAccountState)
           },
         })
 
@@ -358,7 +358,7 @@ describe('effect', () => {
           name: 'DepositCommand',
           impl({ get }, amount: number) {
             const account = get(AccountQuery())
-            return AccountEntity(accountId).new({ ...account, balance: account.balance + amount })
+            return AccountState().new({ ...account, balance: account.balance + amount })
           },
         })
 
@@ -381,7 +381,7 @@ describe('effect', () => {
               return WithdrawFailedEvent('insufficient')
             }
 
-            return AccountEntity(accountId).new({ ...account, balance: account.balance - amount })
+            return AccountState().new({ ...account, balance: account.balance - amount })
           },
         })
 

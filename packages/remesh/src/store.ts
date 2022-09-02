@@ -18,8 +18,6 @@ import {
   RemeshEffect,
   RemeshEffectContext,
   RemeshAction,
-  RemeshEntity,
-  RemeshEntityItem,
   RemeshEvent,
   RemeshEventAction,
   RemeshEventContext,
@@ -34,11 +32,11 @@ import {
   RemeshStateItem,
   RemeshSubscribeOnlyEvent,
   Serializable,
-  SerializableObject,
   toValidRemeshDomainDefinition,
   VerifiedRemeshDomainDefinition,
   RemeshDomainPreloadQueryContext,
   getCommandTaskSet,
+  DefaultStateValue,
 } from './remesh'
 
 import { createInspectorManager, InspectorType } from './inspector'
@@ -54,16 +52,7 @@ export type RemeshStateStorage<T> = {
   type: 'RemeshStateStorage'
   State: RemeshState<T>
   stateItem: RemeshStateItem<T>
-  currentState: T
-  downstreamSet: Set<RemeshQueryStorage<any, any>>
-}
-
-export type RemeshEntityStorage<T extends SerializableObject> = {
-  id: number
-  type: 'RemeshEntityStorage'
-  Entity: RemeshEntity<T>
-  key: string
-  currentEntity: T | null
+  currentState: DefaultStateValue | T
   downstreamSet: Set<RemeshQueryStorage<any, any>>
 }
 
@@ -74,13 +63,13 @@ export type RemeshQueryStorage<T extends Args<Serializable>, U> = {
   arg: T[0]
   key: string
   currentValue: U
-  upstreamSet: Set<RemeshQueryStorage<any, any> | RemeshStateStorage<any> | RemeshEntityStorage<any>>
+  upstreamSet: Set<RemeshQueryStorage<any, any> | RemeshStateStorage<any>>
   downstreamSet: Set<RemeshQueryStorage<any, any>>
   subject: Subject<U>
   observable: Observable<U>
   refCount: number
   status: 'default' | 'wip' | 'updated'
-  wipUpstreamSet: Set<RemeshQueryStorage<any, any> | RemeshStateStorage<any> | RemeshEntityStorage<any>>
+  wipUpstreamSet: Set<RemeshQueryStorage<any, any> | RemeshStateStorage<any>>
 }
 
 export type RemeshEventStorage<T extends Args, U> = {
@@ -109,7 +98,6 @@ export type RemeshDomainStorage<T extends RemeshDomainDefinition, U extends Args
   effectList: RemeshEffect[]
   effectMap: Map<RemeshEffect, Subscription>
   stateMap: Map<RemeshStateItem<any>, RemeshStateStorage<any>>
-  entityMap: Map<string, RemeshEntityStorage<any>>
   queryMap: Map<string, RemeshQueryStorage<any, any>>
   eventMap: Map<RemeshEvent<any, any>, RemeshEventStorage<any, any>>
   refCount: number
@@ -146,7 +134,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
    * Leaf means that the query storage has no downstream query storages
    */
   const pendingLeafSet = new Set<RemeshQueryStorage<any, any>>()
-  const pendingClearSet = new Set<RemeshQueryStorage<any, any> | RemeshEntityStorage<any>>()
+  const pendingClearSet = new Set<RemeshQueryStorage<any, any>>()
 
   const domainStorageMap = new Map<string, RemeshDomainStorage<any, any>>()
 
@@ -186,10 +174,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     return getExternStorage(Extern).currentValue
   }
 
-  const storageKeyWeakMap = new WeakMap<
-    RemeshDomainAction<any, any> | RemeshQueryAction<any, any> | RemeshEntityItem<any>,
-    string
-  >()
+  const storageKeyWeakMap = new WeakMap<RemeshDomainAction<any, any> | RemeshQueryAction<any, any>, string>()
 
   const getQueryStorageKey = <T extends Args<Serializable>, U>(queryAction: RemeshQueryAction<T, U>): string => {
     const key = storageKeyWeakMap.get(queryAction)
@@ -225,28 +210,11 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     return keyString
   }
 
-  const getEntityStorageKey = <T extends SerializableObject>(entityItem: RemeshEntityItem<T>): string => {
-    const key = storageKeyWeakMap.get(entityItem)
-
-    if (key) {
-      return key
-    }
-
-    const entityName = entityItem.Entity.entityName
-    const keyString = `Entity/${entityItem.Entity.entityId}/${entityName}:${entityItem.key}`
-
-    storageKeyWeakMap.set(entityItem, keyString)
-
-    return keyString
-  }
-
-  const getStorageKey = <T extends Args<Serializable>, U, E extends SerializableObject>(
-    input: RemeshEntityItem<E> | RemeshQueryAction<T, U> | RemeshDomainAction<RemeshDomainDefinition, any>,
+  const getStorageKey = <T extends Args<Serializable>, U>(
+    input: RemeshQueryAction<T, U> | RemeshDomainAction<RemeshDomainDefinition, any>,
   ): string => {
     if (input.type === 'RemeshQueryAction') {
       return getQueryStorageKey(input)
-    } else if (input.type === 'RemeshEntityItem') {
-      return getEntityStorageKey(input)
     }
     return getDomainStorageKey(input)
   }
@@ -310,78 +278,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     }
 
     return createStateStorage(stateItem)
-  }
-
-  const entityStorageWeakMap = new WeakMap<RemeshEntityItem<any>, RemeshEntityStorage<any>>()
-
-  const hasBeenInjectedWeakMap = new WeakMap<RemeshEntity<any>, boolean>()
-
-  const injectEntitiesIfNeeded = <T extends SerializableObject>(Entity: RemeshEntity<T>) => {
-    if (!hasBeenInjectedWeakMap.get(Entity)) {
-      hasBeenInjectedWeakMap.set(Entity, true)
-      if (Entity.injectEntities) {
-        for (const entity of Entity.injectEntities) {
-          updateEntityItem(Entity(Entity.key(entity)), entity)
-        }
-      }
-    }
-  }
-
-  const createEntityStorage = <T extends SerializableObject>(
-    entityItem: RemeshEntityItem<T>,
-  ): RemeshEntityStorage<T> => {
-    const domainStorage = getDomainStorage(entityItem.Entity.owner)
-    const key = getStorageKey(entityItem)
-
-    const newEntityStorage: RemeshEntityStorage<T> = {
-      id: uid++,
-      type: 'RemeshEntityStorage',
-      Entity: entityItem.Entity,
-      key,
-      currentEntity: null,
-      downstreamSet: new Set(),
-    }
-
-    domainStorage.entityMap.set(key, newEntityStorage)
-    entityStorageWeakMap.set(entityItem, newEntityStorage)
-
-    injectEntitiesIfNeeded(entityItem.Entity)
-
-    inspectorManager.inspectEntityStorage(InspectorType.EntityCreated, newEntityStorage)
-
-    return newEntityStorage
-  }
-
-  const restoreEntityStorage = <T extends SerializableObject>(entityStorage: RemeshEntityStorage<T>) => {
-    const domainStorage = getDomainStorage(entityStorage.Entity.owner)
-
-    if (domainStorage.entityMap.has(entityStorage.key)) {
-      return
-    }
-
-    entityStorage.currentEntity = null
-
-    domainStorage.entityMap.set(entityStorage.key, entityStorage)
-    inspectorManager.inspectEntityStorage(InspectorType.EntityReused, entityStorage)
-  }
-
-  const getEntityStorage = <T extends SerializableObject>(entityItem: RemeshEntityItem<T>): RemeshEntityStorage<T> => {
-    const domainStorage = getDomainStorage(entityItem.Entity.owner)
-    const key = getStorageKey(entityItem)
-    const entityStorage = domainStorage.entityMap.get(key)
-
-    if (entityStorage) {
-      return entityStorage as RemeshEntityStorage<T>
-    }
-
-    const cachedStorage = entityStorageWeakMap.get(entityItem)
-
-    if (cachedStorage) {
-      restoreEntityStorage(cachedStorage)
-      return cachedStorage
-    }
-
-    return createEntityStorage(entityItem)
   }
 
   const eventStorageWeakMap = new WeakMap<RemeshEvent<any, any>, RemeshEventStorage<any, any>>()
@@ -457,7 +353,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     const { Query } = queryAction
 
     const queryContext: RemeshQueryContext = {
-      get: (input: RemeshStateItem<any> | RemeshEntityItem<any> | RemeshQueryAction<any, any>) => {
+      get: (input: RemeshStateItem<any> | RemeshQueryAction<any, any>) => {
         if (currentQueryStorage.upstreamSet !== upstreamSet) {
           return remeshInjectedContext.get(input)
         }
@@ -467,15 +363,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
           currentQueryStorage.upstreamSet.add(upstreamStateStorage)
           upstreamStateStorage.downstreamSet.add(currentQueryStorage)
-
-          return remeshInjectedContext.get(input)
-        }
-
-        if (input.type === 'RemeshEntityItem') {
-          const upstreamEntityStorage = getEntityStorage(input)
-
-          currentQueryStorage.upstreamSet.add(upstreamEntityStorage)
-          upstreamEntityStorage.downstreamSet.add(currentQueryStorage)
 
           return remeshInjectedContext.get(input)
         }
@@ -524,8 +411,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       upstream.downstreamSet.add(queryStorage)
       if (upstream.type === 'RemeshQueryStorage') {
         restoreQueryStorage(upstream)
-      } else if (upstream.type === 'RemeshEntityStorage') {
-        restoreEntityStorage(upstream)
       } else if (upstream.type === 'RemeshStateStorage') {
         restoreStateStorage(upstream)
       } else {
@@ -572,11 +457,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
         const State = RemeshState(options)
         State.owner = domainAction
         return State
-      },
-      entity: (options) => {
-        const Entity = RemeshEntity(options)
-        Entity.owner = domainAction
-        return Entity
       },
       query: (options) => {
         const Query = RemeshQuery(options)
@@ -726,8 +606,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
       if (upstreamStorage.type === 'RemeshQueryStorage') {
         clearQueryStorageIfNeeded(upstreamStorage)
-      } else if (upstreamStorage.type === 'RemeshEntityStorage') {
-        clearEntityStorageIfNeeded(upstreamStorage)
       }
     }
 
@@ -764,34 +642,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     domainStorage.stateMap.delete(stateStorage.stateItem)
     stateStorage.downstreamSet.clear()
     inspectorManager.inspectStateStorage(InspectorType.StateDiscarded, stateStorage)
-  }
-
-  const shouldClearEntityStorage = <T extends SerializableObject>(entityStorage: RemeshEntityStorage<T>) => {
-    if (entityStorage.downstreamSet.size !== 0) {
-      return false
-    }
-
-    return true
-  }
-
-  const clearEntityStorageIfNeeded = <T extends SerializableObject>(entityStorage: RemeshEntityStorage<T>) => {
-    if (shouldClearEntityStorage(entityStorage)) {
-      clearEntityStorage(entityStorage)
-    }
-  }
-
-  const clearEntityStorage = <T extends SerializableObject>(entityStorage: RemeshEntityStorage<T>) => {
-    const domainStorage = getDomainStorage(entityStorage.Entity.owner)
-
-    if (!domainStorage.entityMap.has(entityStorage.key)) {
-      return
-    }
-
-    domainStorage.entityMap.delete(entityStorage.key)
-
-    entityStorage.downstreamSet.clear()
-    entityStorage.currentEntity = null
-    inspectorManager.inspectEntityStorage(InspectorType.EntityDiscarded, entityStorage)
   }
 
   const clearEventStorage = <T extends Args, U>(eventStorage: RemeshEventStorage<T, U>) => {
@@ -840,10 +690,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
     for (const stateStorage of domainStorage.stateMap.values()) {
       clearStateStorage(stateStorage)
-    }
-
-    for (const entityStorage of domainStorage.entityMap.values()) {
-      clearEntityStorage(entityStorage)
     }
 
     domainStorage.downstreamSet.clear()
@@ -911,6 +757,10 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
   const getCurrentState = <T>(stateItem: RemeshStateItem<T>): T => {
     const stateStorage = getStateStorage(stateItem)
 
+    if (stateStorage.currentState === DefaultStateValue) {
+      throw new Error(`Unexpected reading domain.state before initializing: ${stateStorage.State.stateName}`)
+    }
+
     return stateStorage.currentState
   }
 
@@ -924,28 +774,14 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     return currentValue
   }
 
-  const getCurrentEntity = <T extends SerializableObject>(entityItem: RemeshEntityItem<T>): T => {
-    const entityStorage = getEntityStorage(entityItem)
-
-    if (entityStorage.currentEntity === null) {
-      throw new Error(`The ${entityStorage.key} of ${entityItem.Entity.entityName} is not created yet.`)
-    }
-
-    return entityStorage.currentEntity
-  }
-
   const remeshInjectedContext: RemeshInjectedContext = {
-    get: (input: RemeshStateItem<any> | RemeshEntityItem<any> | RemeshQueryAction<any, any>) => {
+    get: (input: RemeshStateItem<any> | RemeshQueryAction<any, any>) => {
       if (input.type === 'RemeshStateItem') {
         return getCurrentState(input)
       }
 
       if (input.type === 'RemeshQueryAction') {
         return getCurrentQueryValue(input)
-      }
-
-      if (input.type === 'RemeshEntityItem') {
-        return getCurrentEntity(input)
       }
 
       throw new Error(`Unexpected input in ctx.get(..): ${input}`)
@@ -978,8 +814,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
       for (const upstream of queryStorage.wipUpstreamSet) {
         if (upstream.type === 'RemeshStateStorage') {
-          shouldUpdate = true
-        } else if (upstream.type === 'RemeshEntityStorage') {
           shouldUpdate = true
         } else if (upstream.type === 'RemeshQueryStorage') {
           if (upstream.status === 'wip') {
@@ -1030,7 +864,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     queryStorage.upstreamSet = upstreamSet
 
     const queryContext: RemeshQueryContext = {
-      get: (input: RemeshStateItem<any> | RemeshEntityItem<any> | RemeshQueryAction<any, any>) => {
+      get: (input: RemeshStateItem<any> | RemeshQueryAction<any, any>) => {
         if (queryStorage.upstreamSet !== upstreamSet) {
           return remeshInjectedContext.get(input)
         }
@@ -1040,15 +874,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
           queryStorage.upstreamSet.add(upstreamStateStorage)
           upstreamStateStorage.downstreamSet.add(queryStorage)
-
-          return remeshInjectedContext.get(input)
-        }
-
-        if (input.type === 'RemeshEntityItem') {
-          const upstreamEntityStorage = getEntityStorage(input)
-
-          queryStorage.upstreamSet.add(upstreamEntityStorage)
-          upstreamEntityStorage.downstreamSet.add(queryStorage)
 
           return remeshInjectedContext.get(input)
         }
@@ -1092,11 +917,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     pendingClearSet.clear()
 
     for (const storage of storageList) {
-      if (storage.type === 'RemeshQueryStorage') {
-        clearQueryStorageIfNeeded(storage)
-      } else {
-        clearEntityStorageIfNeeded(storage)
-      }
+      clearQueryStorageIfNeeded(storage)
     }
 
     clearPendingStorageSetIfNeeded()
@@ -1170,10 +991,12 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
   const updateStateItem = <T>(stateItem: RemeshStateItem<T>, newState: T) => {
     const stateStorage = getStateStorage(stateItem)
 
-    const isEqual = stateItem.State.compare(stateStorage.currentState, newState)
+    if (stateStorage.currentState !== DefaultStateValue) {
+      const isEqual = stateItem.State.compare(stateStorage.currentState, newState)
 
-    if (isEqual) {
-      return
+      if (isEqual) {
+        return
+      }
     }
 
     stateStorage.currentState = newState
@@ -1182,36 +1005,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
     for (const downstream of stateStorage.downstreamSet) {
       downstream.wipUpstreamSet.add(stateStorage)
-      mark(downstream)
-    }
-  }
-
-  const updateEntityItem = <T extends SerializableObject>(entityItem: RemeshEntityItem<T>, newEntity: T) => {
-    const entityStorage = getEntityStorage(entityItem)
-    const Entity = entityItem.Entity
-    const key = Entity.key(newEntity)
-
-    if (key !== entityItem.key) {
-      throw new Error(`Entity key mismatch: ${entityItem.key} !== ${key}`)
-    }
-
-    if (entityStorage.currentEntity === null) {
-      entityStorage.currentEntity = newEntity
-      return
-    }
-
-    const isEqual = entityItem.Entity.compare(entityStorage.currentEntity, newEntity)
-
-    if (isEqual) {
-      return
-    }
-
-    entityStorage.currentEntity = newEntity
-
-    inspectorManager.inspectEntityStorage(InspectorType.EntityUpdated, entityStorage)
-
-    for (const downstream of entityStorage.downstreamSet) {
-      downstream.wipUpstreamSet.add(entityStorage)
       mark(downstream)
     }
   }
@@ -1268,8 +1061,6 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       handleCommandAction(output)
     } else if (output.type === 'RemeshStateItemUpdatePayload') {
       updateStateItem(output.stateItem, output.value)
-    } else if (output.type === 'RemeshEntityItemUpdatePayload') {
-      updateEntityItem(output.entityItem, output.value)
     } else if (output.type === 'RemeshEventAction') {
       pendingEmitSet.add(output)
     }

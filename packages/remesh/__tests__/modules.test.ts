@@ -206,26 +206,29 @@ describe('modules', () => {
       { id: 2, text: 'todo2', completed: false },
     ])
 
-    store.send(domain.command.AddItemCommand({ id: 2, text: 'todo2-duplicated', completed: false }))
+    store.send(domain.command.AddItemCommand({ id: 3, text: 'todo3', completed: false }))
 
     expect(store.query(domain.query.ItemListQuery())).toEqual([
       { id: 0, text: 'todo0', completed: false },
       { id: 1, text: 'todo1', completed: false },
-      { id: 2, text: 'todo2-duplicated', completed: false },
+      { id: 2, text: 'todo2', completed: false },
+      { id: 3, text: 'todo3', completed: false },
     ])
 
     store.send(domain.command.DeleteItemCommand('0'))
 
     expect(store.query(domain.query.ItemListQuery())).toEqual([
       { id: 1, text: 'todo1', completed: false },
-      { id: 2, text: 'todo2-duplicated', completed: false },
+      { id: 2, text: 'todo2', completed: false },
+      { id: 3, text: 'todo3', completed: false },
     ])
 
     store.send(domain.command.UpdateItemCommand({ id: 1, text: 'todo1-updated', completed: true }))
 
     expect(store.query(domain.query.ItemListQuery())).toEqual([
       { id: 1, text: 'todo1-updated', completed: true },
-      { id: 2, text: 'todo2-duplicated', completed: false },
+      { id: 2, text: 'todo2', completed: false },
+      { id: 3, text: 'todo3', completed: false },
     ])
 
     store.send(domain.command.UpdateItemCommand({ id: 2, text: 'todo2-updated', completed: true }))
@@ -233,13 +236,13 @@ describe('modules', () => {
     expect(store.query(domain.query.ItemListQuery())).toEqual([
       { id: 1, text: 'todo1-updated', completed: true },
       { id: 2, text: 'todo2-updated', completed: true },
+      { id: 3, text: 'todo3', completed: false },
     ])
 
     store.send(
       domain.command.AddItemListCommand([
-        { id: 3, text: 'todo3', completed: false },
-        { id: 3, text: 'todo3-duplicated', completed: false },
         { id: 4, text: 'todo4', completed: false },
+        { id: 5, text: 'todo5', completed: false },
       ]),
     )
 
@@ -248,6 +251,7 @@ describe('modules', () => {
       { id: 2, text: 'todo2-updated', completed: true },
       { id: 3, text: 'todo3', completed: false },
       { id: 4, text: 'todo4', completed: false },
+      { id: 5, text: 'todo5', completed: false },
     ])
 
     store.send(domain.command.AddItemListCommand([]))
@@ -257,9 +261,10 @@ describe('modules', () => {
       { id: 2, text: 'todo2-updated', completed: true },
       { id: 3, text: 'todo3', completed: false },
       { id: 4, text: 'todo4', completed: false },
+      { id: 5, text: 'todo5', completed: false },
     ])
 
-    store.send(domain.command.DeleteItemListCommand(['1', '2']))
+    store.send(domain.command.DeleteItemListCommand(['1', '2', '5']))
 
     expect(store.query(domain.query.ItemListQuery())).toEqual([
       { id: 3, text: 'todo3', completed: false },
