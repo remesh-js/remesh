@@ -2,6 +2,7 @@ import { Remesh, RemeshStore } from '../src'
 import { AsyncModule, AsyncData } from '../src/modules/async'
 import { ListModule } from '../src/modules/list'
 import { TreeModule } from '../src/modules/tree'
+import { HistoryModule } from '../src/modules/history'
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -688,5 +689,464 @@ describe('modules', () => {
       name: 'root',
       children: [],
     })
+  })
+
+  it('history-module', () => {
+    type Todo = {
+      id: number
+      content: string
+      completed: boolean
+    }
+
+    const TestHistoryDomain = Remesh.domain({
+      name: 'TestHistoryDomain',
+      impl: (domain) => {
+        const TodoListState = domain.state<Todo[]>({
+          name: 'TodoListState',
+          default: [],
+        })
+
+        const TodoListQuery = domain.query({
+          name: 'TodoListQuery',
+          impl: ({ get }) => {
+            return get(TodoListState())
+          },
+        })
+
+        const SetTodoListCommand = domain.command({
+          name: 'SetTodoListCommand',
+          impl: ({}, newTodoList: Todo[]) => {
+            return TodoListState().new(newTodoList)
+          },
+        })
+
+        const AddTodoCommand = domain.command({
+          name: 'SetTodoListCommand',
+          impl: ({ get }, newTodo: Todo) => {
+            const todoList = get(TodoListState())
+            return SetTodoListCommand([...todoList, newTodo])
+          },
+        })
+
+        const RemoveTodoTodoCommand = domain.command({
+          name: 'RemoveTodoTodoCommand',
+          impl: ({ get }, id: number) => {
+            const todoList = get(TodoListState())
+            const newTodoList = todoList.filter((todo) => todo.id !== id)
+            return SetTodoListCommand(newTodoList)
+          },
+        })
+
+        const ClearAllCompletedCommand = domain.command({
+          name: 'ClearAllCompletedCommand',
+          impl: ({ get }) => {
+            const todoList = get(TodoListState())
+            const newTodoList = todoList.filter((todo) => !todo.completed)
+            return SetTodoListCommand(newTodoList)
+          },
+        })
+
+        const TodoListHistoryModule = HistoryModule(domain, {
+          name: 'TodoListHistoryModule',
+          query: ({ get }) => {
+            return get(TodoListQuery())
+          },
+          command: ({}, todoList) => {
+            return SetTodoListCommand(todoList)
+          },
+        })
+
+        return {
+          query: {
+            ...TodoListHistoryModule.query,
+            TodoListQuery,
+          },
+          command: {
+            ...TodoListHistoryModule.command,
+            SetTodoListCommand,
+            AddTodoCommand,
+            RemoveTodoTodoCommand,
+            ClearAllCompletedCommand,
+          },
+          event: {
+            ...TodoListHistoryModule.event,
+          },
+        }
+      },
+    })
+
+    const store = Remesh.store()
+    const domain = store.getDomain(TestHistoryDomain())
+
+    store.igniteDomain(TestHistoryDomain())
+
+    expect(store.query(domain.query.TodoListQuery())).toEqual([])
+    expect(store.query(domain.query.HistoryListQuery())).toEqual([[]])
+
+    expect(store.query(domain.query.CanBackQuery())).toEqual(false)
+    expect(store.query(domain.query.CanForwardQuery())).toEqual(false)
+
+    const onBack = jest.fn()
+    const onForward = jest.fn()
+    const onGo = jest.fn()
+
+    store.subscribeEvent(domain.event.BackEvent, onBack)
+    store.subscribeEvent(domain.event.ForwardEvent, onForward)
+    store.subscribeEvent(domain.event.GoEvent, onGo)
+
+    store.send(
+      domain.command.AddTodoCommand({
+        id: 0,
+        content: 'todo-0',
+        completed: true,
+      }),
+    )
+
+    expect(store.query(domain.query.TodoListQuery())).toEqual([
+      {
+        id: 0,
+        content: 'todo-0',
+        completed: true,
+      },
+    ])
+
+    expect(store.query(domain.query.HistoryListQuery())).toEqual([
+      [],
+      [
+        {
+          id: 0,
+          content: 'todo-0',
+          completed: true,
+        },
+      ],
+    ])
+
+    expect(store.query(domain.query.CanBackQuery())).toEqual(true)
+    expect(store.query(domain.query.CanForwardQuery())).toEqual(false)
+    expect(onBack).toBeCalledTimes(0)
+    expect(onForward).toBeCalledTimes(0)
+    expect(onGo).toBeCalledTimes(0)
+
+    store.send(
+      domain.command.AddTodoCommand({
+        id: 1,
+        content: 'todo-1',
+        completed: false,
+      }),
+    )
+
+    expect(store.query(domain.query.TodoListQuery())).toEqual([
+      {
+        id: 0,
+        content: 'todo-0',
+        completed: true,
+      },
+      {
+        id: 1,
+        content: 'todo-1',
+        completed: false,
+      },
+    ])
+
+    expect(store.query(domain.query.HistoryListQuery())).toEqual([
+      [],
+      [
+        {
+          id: 0,
+          content: 'todo-0',
+          completed: true,
+        },
+      ],
+      [
+        {
+          id: 0,
+          content: 'todo-0',
+          completed: true,
+        },
+        {
+          id: 1,
+          content: 'todo-1',
+          completed: false,
+        },
+      ],
+    ])
+
+    expect(store.query(domain.query.CanBackQuery())).toEqual(true)
+    expect(store.query(domain.query.CanForwardQuery())).toEqual(false)
+    expect(onBack).toBeCalledTimes(0)
+    expect(onForward).toBeCalledTimes(0)
+    expect(onGo).toBeCalledTimes(0)
+
+    store.send(domain.command.BackCommand())
+
+    expect(store.query(domain.query.TodoListQuery())).toEqual([
+      {
+        id: 0,
+        content: 'todo-0',
+        completed: true,
+      },
+    ])
+
+    expect(store.query(domain.query.HistoryListQuery())).toEqual([
+      [],
+      [
+        {
+          id: 0,
+          content: 'todo-0',
+          completed: true,
+        },
+      ],
+      [
+        {
+          id: 0,
+          content: 'todo-0',
+          completed: true,
+        },
+        {
+          id: 1,
+          content: 'todo-1',
+          completed: false,
+        },
+      ],
+    ])
+
+    expect(store.query(domain.query.CanBackQuery())).toEqual(true)
+    expect(store.query(domain.query.CanForwardQuery())).toEqual(true)
+    expect(onBack).toBeCalledTimes(1)
+    expect(onForward).toBeCalledTimes(0)
+    expect(onGo).toBeCalledTimes(1)
+
+    store.send(domain.command.BackCommand())
+
+    expect(store.query(domain.query.TodoListQuery())).toEqual([])
+
+    expect(store.query(domain.query.HistoryListQuery())).toEqual([
+      [],
+      [
+        {
+          id: 0,
+          content: 'todo-0',
+          completed: true,
+        },
+      ],
+      [
+        {
+          id: 0,
+          content: 'todo-0',
+          completed: true,
+        },
+        {
+          id: 1,
+          content: 'todo-1',
+          completed: false,
+        },
+      ],
+    ])
+
+    expect(store.query(domain.query.CanBackQuery())).toEqual(false)
+    expect(store.query(domain.query.CanForwardQuery())).toEqual(true)
+    expect(onBack).toBeCalledTimes(2)
+    expect(onForward).toBeCalledTimes(0)
+    expect(onGo).toBeCalledTimes(2)
+
+    store.send(domain.command.BackCommand())
+
+    expect(store.query(domain.query.TodoListQuery())).toEqual([])
+
+    expect(store.query(domain.query.HistoryListQuery())).toEqual([
+      [],
+      [
+        {
+          id: 0,
+          content: 'todo-0',
+          completed: true,
+        },
+      ],
+      [
+        {
+          id: 0,
+          content: 'todo-0',
+          completed: true,
+        },
+        {
+          id: 1,
+          content: 'todo-1',
+          completed: false,
+        },
+      ],
+    ])
+
+    expect(store.query(domain.query.CanBackQuery())).toEqual(false)
+    expect(store.query(domain.query.CanForwardQuery())).toEqual(true)
+    expect(onBack).toBeCalledTimes(2)
+    expect(onForward).toBeCalledTimes(0)
+    expect(onGo).toBeCalledTimes(2)
+
+    store.send(domain.command.ForwardCommand())
+
+    expect(store.query(domain.query.TodoListQuery())).toEqual([
+      {
+        id: 0,
+        content: 'todo-0',
+        completed: true,
+      },
+    ])
+
+    expect(store.query(domain.query.HistoryListQuery())).toEqual([
+      [],
+      [
+        {
+          id: 0,
+          content: 'todo-0',
+          completed: true,
+        },
+      ],
+      [
+        {
+          id: 0,
+          content: 'todo-0',
+          completed: true,
+        },
+        {
+          id: 1,
+          content: 'todo-1',
+          completed: false,
+        },
+      ],
+    ])
+
+    expect(store.query(domain.query.CanBackQuery())).toEqual(true)
+    expect(store.query(domain.query.CanForwardQuery())).toEqual(true)
+    expect(onBack).toBeCalledTimes(2)
+    expect(onForward).toBeCalledTimes(1)
+    expect(onGo).toBeCalledTimes(3)
+
+    store.send(domain.command.ForwardCommand())
+
+    expect(store.query(domain.query.TodoListQuery())).toEqual([
+      {
+        id: 0,
+        content: 'todo-0',
+        completed: true,
+      },
+      {
+        id: 1,
+        content: 'todo-1',
+        completed: false,
+      },
+    ])
+
+    expect(store.query(domain.query.HistoryListQuery())).toEqual([
+      [],
+      [
+        {
+          id: 0,
+          content: 'todo-0',
+          completed: true,
+        },
+      ],
+      [
+        {
+          id: 0,
+          content: 'todo-0',
+          completed: true,
+        },
+        {
+          id: 1,
+          content: 'todo-1',
+          completed: false,
+        },
+      ],
+    ])
+
+    expect(store.query(domain.query.CanBackQuery())).toEqual(true)
+    expect(store.query(domain.query.CanForwardQuery())).toEqual(false)
+    expect(onBack).toBeCalledTimes(2)
+    expect(onForward).toBeCalledTimes(2)
+    expect(onGo).toBeCalledTimes(4)
+
+    store.send(domain.command.GoCommand(-2))
+
+    expect(store.query(domain.query.TodoListQuery())).toEqual([])
+
+    expect(store.query(domain.query.HistoryListQuery())).toEqual([
+      [],
+      [
+        {
+          id: 0,
+          content: 'todo-0',
+          completed: true,
+        },
+      ],
+      [
+        {
+          id: 0,
+          content: 'todo-0',
+          completed: true,
+        },
+        {
+          id: 1,
+          content: 'todo-1',
+          completed: false,
+        },
+      ],
+    ])
+
+    expect(store.query(domain.query.CanBackQuery())).toEqual(false)
+    expect(store.query(domain.query.CanForwardQuery())).toEqual(true)
+    expect(onBack).toBeCalledTimes(3)
+    expect(onForward).toBeCalledTimes(2)
+    expect(onGo).toBeCalledTimes(5)
+
+    store.send(
+      domain.command.AddTodoCommand({
+        id: 2,
+        content: 'todo-2',
+        completed: true,
+      }),
+    )
+
+    expect(store.query(domain.query.TodoListQuery())).toEqual([
+      {
+        id: 2,
+        content: 'todo-2',
+        completed: true,
+      },
+    ])
+
+    expect(store.query(domain.query.HistoryListQuery())).toEqual([
+      [],
+      [
+        {
+          id: 2,
+          content: 'todo-2',
+          completed: true,
+        },
+      ],
+    ])
+
+    expect(store.query(domain.query.CanBackQuery())).toEqual(true)
+    expect(store.query(domain.query.CanForwardQuery())).toEqual(false)
+    expect(onBack).toBeCalledTimes(3)
+    expect(onForward).toBeCalledTimes(2)
+    expect(onGo).toBeCalledTimes(5)
+
+    store.send(domain.command.ReplaceCommand([]))
+
+    expect(store.query(domain.query.TodoListQuery())).toEqual([
+      {
+        id: 2,
+        content: 'todo-2',
+        completed: true,
+      },
+    ])
+
+    expect(store.query(domain.query.HistoryListQuery())).toEqual([[], []])
+
+    expect(store.query(domain.query.CanBackQuery())).toEqual(true)
+    expect(store.query(domain.query.CanForwardQuery())).toEqual(false)
+    expect(onBack).toBeCalledTimes(3)
+    expect(onForward).toBeCalledTimes(2)
+    expect(onGo).toBeCalledTimes(5)
   })
 })

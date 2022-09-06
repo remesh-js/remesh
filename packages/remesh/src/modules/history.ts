@@ -10,6 +10,7 @@ import {
   RemeshDomainContext,
   RemeshQueryContext,
   Serializable,
+  SerializableArray,
   SerializableObject,
 } from '../index'
 
@@ -25,7 +26,7 @@ export type HistoryModuleOptions<T extends Serializable> = {
   default?: T[]
 }
 
-export const HistoryModule = <T extends SerializableObject>(
+export const HistoryModule = <T extends SerializableObject | SerializableArray>(
   domain: RemeshDomainContext,
   options: HistoryModuleOptions<T>,
 ) => {
@@ -77,10 +78,10 @@ export const HistoryModule = <T extends SerializableObject>(
       const index = get(CurrentIndexState())
 
       if (index === null || index === list.length - 1) {
-        return SetCommand(list.concat(state))
+        return SetCommand([...list, state])
       }
 
-      return SetCommand(list.slice(-(index + 1)).concat(state))
+      return SetCommand([...list.slice(0, index + 1), state])
     },
   })
 
@@ -91,10 +92,10 @@ export const HistoryModule = <T extends SerializableObject>(
       const index = get(CurrentIndexState())
 
       if (index === null || index === list.length - 1) {
-        return SetCommand(list.concat(state))
+        return SetCommand([...list.slice(0, -1), state])
       }
 
-      return SetCommand(list.slice(-index).concat(state))
+      return SetCommand([...list.slice(0, index), state])
     },
   })
 
@@ -151,11 +152,11 @@ export const HistoryModule = <T extends SerializableObject>(
     name: 'GoEvent',
   })
 
-  const BackEvent = domain.event({
+  const BackEvent = domain.event<number>({
     name: 'BackEvent',
   })
 
-  const ForwardEvent = domain.event({
+  const ForwardEvent = domain.event<number>({
     name: 'ForwardEvent',
   })
 
@@ -182,7 +183,7 @@ export const HistoryModule = <T extends SerializableObject>(
         CurrentIndexState().new(nextIndex),
         options.command({ get }, state),
         GoEvent(offset),
-        offset > 0 ? ForwardEvent() : BackEvent(),
+        offset > 0 ? ForwardEvent(offset) : BackEvent(offset),
       ]
     },
   })
