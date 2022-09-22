@@ -192,7 +192,7 @@ export const ListModule = <T extends SerializableObject>(
     impl: ({ get }, newItem: T) => {
       const oldList = get(ItemListState())
       const newList = updateList(oldList, newItem)
-      return ItemListState().new(newList ?? oldList.concat(newItem))
+      return ItemListState().new(newList ?? [...oldList, newItem])
     },
   })
 
