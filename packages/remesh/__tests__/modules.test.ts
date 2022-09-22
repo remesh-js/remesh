@@ -362,6 +362,73 @@ describe('modules', () => {
     ])
 
     expect(store.query(domain.query.KeyListQuery())).toEqual(['0', '1'])
+
+    store.send(
+      domain.command.UpsertItemCommand({
+        id: 0,
+        text: 'todo0-update',
+        completed: false,
+      }),
+    )
+
+    expect(store.query(domain.query.ItemListQuery())).toEqual([
+      { id: 0, text: 'todo0-update', completed: false },
+      { id: 1, text: 'todo1', completed: false },
+    ])
+
+    expect(store.query(domain.query.KeyListQuery())).toEqual(['0', '1'])
+
+    store.send(
+      domain.command.UpsertItemCommand({
+        id: 2,
+        text: 'todo2',
+        completed: false,
+      }),
+    )
+
+    expect(store.query(domain.query.ItemListQuery())).toEqual([
+      { id: 0, text: 'todo0-update', completed: false },
+      { id: 1, text: 'todo1', completed: false },
+      {
+        id: 2,
+        text: 'todo2',
+        completed: false,
+      },
+    ])
+
+    expect(store.query(domain.query.KeyListQuery())).toEqual(['0', '1', '2'])
+
+    store.send(
+      domain.command.UpsertItemListCommand([
+        {
+          id: 3,
+          text: 'todo3',
+          completed: false,
+        },
+        {
+          id: 2,
+          text: 'todo2',
+          completed: false,
+        },
+      ]),
+    )
+
+    expect(store.query(domain.query.ItemListQuery())).toEqual([
+      { id: 0, text: 'todo0-update', completed: false },
+      { id: 1, text: 'todo1', completed: false },
+      {
+        id: 2,
+        text: 'todo2',
+        completed: false,
+      },
+      {
+        id: 3,
+        text: 'todo3',
+        completed: false,
+      },
+    ])
+
+    expect(store.query(domain.query.KeyListQuery())).toEqual(['0', '1', '2', '3'])
   })
 
   it('tree-module', () => {
