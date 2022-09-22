@@ -1,5 +1,11 @@
 # remesh
 
+## 3.0.1
+
+### Patch Changes
+
+- add upsert-command for list-module
+
 ## 3.0.0
 
 ### Major Changes
