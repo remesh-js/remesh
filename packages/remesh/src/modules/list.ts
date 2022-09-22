@@ -40,6 +40,19 @@ export const ListModule = <T extends SerializableObject>(
     },
   })
 
+  const HasItemQuery = domain.query({
+    name: `${options.name}.HasItemQuery`,
+    impl: ({ get }, key: string) => {
+      const itemList = get(ItemListState())
+      for (const item of itemList) {
+        if (options.key(item) === key) {
+          return true
+        }
+      }
+      return false
+    },
+  })
+
   const KeyListQuery = domain.query({
     name: `${options.name}.KeyListQuery`,
     impl: ({ get }) => {
@@ -283,6 +296,7 @@ export const ListModule = <T extends SerializableObject>(
     },
     query: {
       KeyListQuery,
+      HasItemQuery,
       ItemQuery,
       ItemListQuery,
     },

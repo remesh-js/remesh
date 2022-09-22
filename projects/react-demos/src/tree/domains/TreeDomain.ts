@@ -45,7 +45,13 @@ export const TreeDomain = Remesh.domain({
       load: ({}, targetId: string) => {
         return loadNodes(targetId)
       },
-      onLoading: ({}, targetId) => {
+      onLoading: ({get}, targetId) => {
+        if (get(TreeStatusListModule.query.HasItemQuery(targetId))) {
+          return TreeStatusListModule.command.UpdateItemCommand({
+            type: 'loading',
+            id: targetId,
+          })
+        }
         return TreeStatusListModule.command.AddItemCommand({
           type: 'loading',
           id: targetId,
@@ -61,7 +67,7 @@ export const TreeDomain = Remesh.domain({
         ]
       },
       onFailed: ({}, _error, targetId) => {
-        return TreeStatusListModule.command.AddItemCommand({
+        return TreeStatusListModule.command.UpdateItemCommand({
           type: 'error',
           id: targetId,
         })

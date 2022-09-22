@@ -4,7 +4,7 @@ const getChildId = (parentId: string, index: number): string =>
   `${parentId !== 'root' ? `${parentId}-` : ''}${index + 1}`
 
 const generateNodes = (parentId: string): TreeData[] => {
-  let count = Math.floor(Math.random() * (4 + 1))
+  let count = Math.floor(Math.random() * 4 + 1)
 
   if (parentId === 'root') {
     count = 4
