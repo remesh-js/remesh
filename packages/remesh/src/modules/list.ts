@@ -40,16 +40,20 @@ export const ListModule = <T extends SerializableObject>(
     },
   })
 
-  const HasItemQuery = domain.query({
-    name: `${options.name}.HasItemQuery`,
+  const hasItemByKey = (itemList: T[], key: string) => {
+    for (const item of itemList) {
+      if (options.key(item) === key) {
+        return true
+      }
+    }
+    return false
+  }
+
+  const HasItemByKeyQuery = domain.query({
+    name: `${options.name}.HasItemByKeyQuery`,
     impl: ({ get }, key: string) => {
       const itemList = get(ItemListState())
-      for (const item of itemList) {
-        if (options.key(item) === key) {
-          return true
-        }
-      }
-      return false
+      return hasItemByKey(itemList, key)
     },
   })
 
@@ -91,6 +95,9 @@ export const ListModule = <T extends SerializableObject>(
     name: `${options.name}.AddItemCommand`,
     impl: ({ get }, newItem: T) => {
       const itemList = get(ItemListState())
+      if (hasItemByKey(itemList, options.key(newItem))) {
+        throw new Error(`item with key ${options.key(newItem)} is already in list ${options.name}`)
+      }
       const newList = itemList.concat(newItem)
 
       return SetListCommand(newList)
@@ -145,29 +152,47 @@ export const ListModule = <T extends SerializableObject>(
     },
   })
 
+  const updateList = (oldList: T[], newItem: T) => {
+    const key = options.key(newItem)
+    const newList = [] as T[]
+
+    let isChanged = false
+
+    for (const item of oldList) {
+      if (options.key(item) === key) {
+        newList.push(newItem)
+        isChanged = true
+      } else {
+        newList.push(item)
+      }
+    }
+
+    if (isChanged) {
+      return newList
+    }
+    return null
+  }
+
   const UpdateItemCommand = domain.command({
     name: `${options.name}.UpdateItemCommand`,
     impl: ({ get }, newItem: T) => {
       const oldList = get(ItemListState())
-      const key = options.key(newItem)
-      const newList = [] as T[]
+      const newList = updateList(oldList, newItem)
 
-      let isChanged = false
-
-      for (const item of oldList) {
-        if (options.key(item) === key) {
-          newList.push(newItem)
-          isChanged = true
-        } else {
-          newList.push(item)
-        }
-      }
-
-      if (isChanged) {
+      if (newList) {
         return ItemListState().new(newList)
       }
 
       return null
+    },
+  })
+
+  const UpsertItemCommand = domain.command({
+    name: `${options.name}.UpsertItemCommand`,
+    impl: ({ get }, newItem: T) => {
+      const oldList = get(ItemListState())
+      const newList = updateList(oldList, newItem)
+      return ItemListState().new(newList ?? oldList.concat(newItem))
     },
   })
 
@@ -197,6 +222,29 @@ export const ListModule = <T extends SerializableObject>(
       }
 
       return null
+    },
+  })
+
+  const UpsertItemListCommand = domain.command({
+    name: `${options.name}.UpdateItemListCommand`,
+    impl: ({ get }, newItems: T[]) => {
+      if (newItems.length === 0) {
+        return null
+      }
+      const oldList = get(ItemListState())
+      const newList = oldList.slice()
+      const keyList = oldList.map((item) => options.key(item))
+
+      for (const newItem of newItems) {
+        const index = keyList.lastIndexOf(options.key(newItem))
+        if (index >= 0) {
+          newList[index] = newItem
+        } else {
+          newList.push(newItem)
+        }
+      }
+
+      return ItemListState().new(newList)
     },
   })
 
@@ -288,7 +336,9 @@ export const ListModule = <T extends SerializableObject>(
       DeleteItemListCommand,
       DeleteAllCommand,
       UpdateItemCommand,
+      UpsertItemCommand,
       UpdateItemListCommand,
+      UpsertItemListCommand,
       InsertAtCommand,
       InsertBeforeCommand,
       InsertAfterCommand,
@@ -296,7 +346,7 @@ export const ListModule = <T extends SerializableObject>(
     },
     query: {
       KeyListQuery,
-      HasItemQuery,
+      HasItemByKeyQuery,
       ItemQuery,
       ItemListQuery,
     },
