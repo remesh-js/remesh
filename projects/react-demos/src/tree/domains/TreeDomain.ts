@@ -45,8 +45,8 @@ export const TreeDomain = Remesh.domain({
       load: ({}, targetId: string) => {
         return loadNodes(targetId)
       },
-      onLoading: ({}, targetId) => {
-        return TreeStatusListModule.command.AddItemCommand({
+      onLoading: ({get}, targetId) => {
+        return TreeStatusListModule.command.UpsertItemCommand({
           type: 'loading',
           id: targetId,
         })
@@ -61,7 +61,7 @@ export const TreeDomain = Remesh.domain({
         ]
       },
       onFailed: ({}, _error, targetId) => {
-        return TreeStatusListModule.command.AddItemCommand({
+        return TreeStatusListModule.command.UpdateItemCommand({
           type: 'error',
           id: targetId,
         })
