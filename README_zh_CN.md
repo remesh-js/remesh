@@ -1059,11 +1059,10 @@ const YourDomain = Remesh.domain({
 
     domain.effect({
       name: 'YourEffect',
-      impl: ({ get, fromEvent, fromQuery, fromCommand }) => {
+      impl: ({ get, fromEvent, fromQuery }) => {
         /**
          * Subscribe to events via fromEvent(..)
          * The observable it returned will emit next value when the event is emitted.
-         */
          */
         const event$ = fromEvent(YourEvent())
         /**
