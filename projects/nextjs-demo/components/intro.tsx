@@ -1,5 +1,5 @@
 import React from 'react'
-import { CMS_NAME } from '../lib/constants'
+import { CMS_NAME } from '../libs/constants'
 
 const Intro = () => {
   return (
