@@ -125,7 +125,7 @@ export type AsyncModuleOptions<T, U> = {
   mode?: 'switch' | 'merge' | 'concat' | 'exhaust'
 }
 
-export const AsyncModule = <T, U>(domain: RemeshDomainContext, options: AsyncModuleOptions<T, U>) => {
+export const AsyncModule = <T = void, U = void>(domain: RemeshDomainContext, options: AsyncModuleOptions<T, U>) => {
   const defaultValue: AsyncData<U> = 'default' in options && options.default ? options.default : AsyncData.default()
 
   const AsyncDataState = domain.state<AsyncData<U>>({
