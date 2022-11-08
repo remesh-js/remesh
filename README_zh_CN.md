@@ -388,6 +388,8 @@ root.render(
 - [如何规避 interface 引起的类型错误？](#如何规避-interface-引起的类型错误)
 - [如何在 remesh 中使用 yjs 做状态同步？](#如何在-remesh-中使用-yjs-做状态同步)
 - [如何在 React 应用中管理 remesh domain 的生存范围？](#如何在-React-应用中管理-remesh-domain-的生存范围)
+- [如何注入依赖到 remesh domain 中？](#如何注入依赖到-remesh-domain-中)
+- [如何让 remesh domain 支持 Server-side rendering?](#如何让-remesh-domain-支持-Server-side-rendering)
 
 ### 如何定义一个 domain?
 
@@ -1072,7 +1074,7 @@ const YourDomain = Remesh.domain({
         const query$ = fromQuery(YourQuery())
 
         return merge(event$, query$).pipe(map(() => [ACommand(), BCommand()]))
-      }
+      },
     })
 
     return {
@@ -1343,6 +1345,199 @@ const App = (props) => {
    */
   return <RemeshScope domains={[TestScopeDomain()]}>{props.show && <A />}</RemeshScope>
 }
+```
+
+### 如何注入依赖到 remesh domain 中？
+
+remesh 提供了从外部注入依赖到 remesh domain 中的 API——`Remesh.extern`
+
+- `extern`：一组抽象的接口定义
+- `extern-impl`: 满足 `extern` 接口的特定实现
+
+具体用法如下：
+
+```tsx
+import { Remesh } from 'remesh'
+
+export type Storage = {
+  get: <T>(key: string) => Promise<T | null>
+  set: <T>(key: string, value: T) => Promise<void>
+  clear: (key: string) => Promise<void>
+}
+
+export const Storage = Remesh.extern<Storage | null>({
+  name: 'StorageExtern',
+  default: null,
+})
+```
+
+在 remesh domain 中，像这样使用 `extern`：
+
+```tsx
+import { Remesh } from 'remesh'
+
+const TestDomain = Remesh.domain({
+  name: 'TestDomain',
+  impl: (domain) => {
+    const storage = domain.getExtern(Storage)
+
+    if (!storage) {
+      throw new Error(`Expected injected storage-impl, but got null`)
+    }
+
+    // do something
+  },
+})
+```
+
+注入 `extern-impl` 的方式如下：
+
+```tsx
+import { Remesh } from 'remesh'
+import localforage from 'localforage'
+import { Storage } from './domain-externs/storage'
+
+export const StorageImpl = Storage.impl({
+  get: (key) => {
+    return localforage.getItem(key)
+  },
+  set: async (key, value) => {
+    await localforage.setItem(key, value)
+  },
+  clear: (key) => {
+    return localforage.removeItem(key)
+  },
+})
+
+const store = Remesh.store({
+  externs: [StorageImpl], // inject StorageImpl
+})
+```
+
+在不同的环境中，可以注入不同的 `extern-impl`.
+
+### 如何让 remesh domain 支持 Server-side rendering?
+
+remesh 提供了支持服务端渲染的 API——`domain.preload`，用法如下所示：
+
+```tsx
+import { Remesh } from 'remesh'
+
+const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
+
+export type State = {
+  count: number
+}
+
+export const PreloadDomain = Remesh.domain({
+  name: 'PreloadDomain',
+  impl: (domain) => {
+    const CountState = domain.state<State>({
+      name: 'CountState',
+      default: {
+        count: 0,
+      },
+    })
+
+    const CountQuery = domain.query({
+      name: 'CountQuery',
+      impl: ({ get }) => {
+        return get(CountState())
+      },
+    })
+
+    const SetCountCommand = domain.command({
+      name: 'SetCountCommand',
+      impl: ({}, newCount: number) => {
+        return CountState().new({ count: newCount })
+      },
+    })
+
+    const IncreCommand = domain.command({
+      name: 'IncreCommand',
+      impl: ({ get }) => {
+        const state = get(CountState())
+        return CountState().new({ count: state.count + 1 })
+      },
+    })
+
+    const DecreCommand = domain.command({
+      name: 'DecreCommand',
+      impl: ({ get }) => {
+        const state = get(CountState())
+        return CountState().new({ count: state.count - 1 })
+      },
+    })
+
+    // define how to fetch data via domain.preload
+    domain.preload({
+      key: 'preload_count',
+      query: async () => {
+        await delay(500)
+        return {
+          count: Math.floor(Math.random() * 100),
+        }
+      },
+      command: ({}, data) => {
+        return CountState().new({ count: data.count })
+      },
+    })
+
+    return {
+      query: {
+        CountQuery,
+      },
+      command: {
+        SetCountCommand: SetCountCommand,
+        IncreCommand: IncreCommand,
+        DecreCommand: DecreCommand,
+      },
+    }
+  },
+})
+```
+
+在支持 SSR 的框架中，像下面这样做（以 next.js 为例）：
+
+```tsx
+export type Props = {
+  preloadedState: PreloadedState
+}
+
+export async function getServerSideProps(_context: NextPageContext) {
+  // create remesh-store.
+  const store = Remesh.store()
+
+  // preload remesh domain
+  await store.preload(PreloadDomain())
+
+  // get preloaded state
+  const preloadedState = store.getPreloadedState()
+
+  return {
+    props: {
+      preloadedState: preloadedState,
+    }, // will be passed to the page component as props
+  }
+}
+
+export default (props: Props) => {
+  return (
+    <RemeshRoot
+      options={{
+        // pass preloaded state to RemeshRoot
+        preloadedState: props.preloadedState,
+      }}
+    >
+      <Counter />
+    </RemeshRoot>
+  )
+}
+
+// or pass to remesh-store' directly
+const store = Remesh.store({
+  preloadedState,
+})
 ```
 
 ## Packages
