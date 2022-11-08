@@ -390,7 +390,7 @@ root.render(
 - [How to inject dependencies to remesh domain?](#How-to-inject-dependencies-to-remesh-domain)
 - [How do I get the remesh domain to support server-side rendering?](#How-do-I-get-the-remesh-domain-to-support-server-side-rendering)
 
-###-How-to define a domain?
+### How-to define a domain?
 
 ```typescript
 import { Remesh } from 'remesh'
