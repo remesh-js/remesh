@@ -566,6 +566,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     const domainStorage = domainStorageMap.get(key)
 
     if (domainStorage) {
+      domainStorageWeakMap.set(domainAction, domainStorage)
       return domainStorage
     }
 
