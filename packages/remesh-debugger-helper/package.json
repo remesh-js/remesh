@@ -1,6 +1,6 @@
 {
   "name": "remesh-debugger-helper",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "A debugger helper for remesh",
   "homepage": "https://remesh-js.github.io/remesh/dist/index.html",
   "repository": "github:remeshjs/remesh",

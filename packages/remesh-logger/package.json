@@ -1,6 +1,6 @@
 {
   "name": "remesh-logger",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "A logger for remesh",
   "homepage": "https://remesh-js.github.io/remesh/dist/index.html",
   "repository": "github:remeshjs/remesh",
