@@ -1,4 +1,4 @@
-import { RemeshState, RemeshStore, RemeshCommand, DefaultDomain } from '../src'
+import { RemeshState, RemeshStore, RemeshCommand, DefaultDomain, RemeshEvent } from '../src'
 import { RemeshQuery } from '../src'
 import * as utils from './utils'
 
@@ -179,5 +179,96 @@ describe('query', () => {
     promise = store.query(FrameworkFeaturesQuery())
     jest.runOnlyPendingTimers()
     await expect(promise).resolves.toStrictEqual(['ddd', 'cqrs', 'event-driven'])
+  })
+
+  it('call command/event when query value changed', () => {
+    const AState = RemeshState({
+      name: 'AState',
+      default: 0,
+    })
+
+    const BState = RemeshState({
+      name: 'BState',
+      default: '',
+    })
+
+    const AEvent = RemeshEvent<number>({
+      name: 'AEvent',
+    })
+
+    const BEvent = RemeshEvent<string>({
+      name: 'BEvent',
+    })
+
+    const SetAStateCommand = RemeshCommand({
+      name: 'SetAStateCommand',
+      impl: ({}, value: number) => {
+        return [AState().new(value), AEvent(value)]
+      },
+    })
+
+    const SetBStateCommand = RemeshCommand({
+      name: 'SetBStateCommand',
+      impl: ({}, value: string) => {
+        return [BState().new(value), BEvent(value)]
+      },
+    })
+
+    const AQuery = RemeshQuery({
+      name: 'AQuery',
+      impl: ({ get }) => {
+        return get(AState())
+      },
+    })
+
+    const BQuery = RemeshQuery({
+      name: 'BQuery',
+      impl: ({ get }) => {
+        return get(BState())
+      },
+    })
+
+    AQuery.changed(({}, { current, previous }) => {
+      return SetBStateCommand(`current:${current.toString()}, previous: ${previous}`)
+    })
+
+    const CEvent = RemeshEvent<string>({
+      name: 'CEvent',
+    })
+
+    BQuery.changed(({}, { current, previous }) => {
+      return CEvent(current)
+    })
+
+    const fn0 = jest.fn()
+    const fn1 = jest.fn()
+    const fn2 = jest.fn()
+
+    const store = RemeshStore()
+
+    store.subscribeEvent(AEvent, fn0)
+    store.subscribeEvent(BEvent, fn1)
+    store.subscribeEvent(CEvent, fn2)
+
+    expect(store.query(AQuery())).toBe(0)
+    expect(store.query(BQuery())).toBe(``)
+
+    store.send(SetAStateCommand(1))
+
+    expect(store.query(AQuery())).toBe(1)
+    expect(store.query(BQuery())).toBe(`current:1, previous: 0`)
+
+    expect(fn0).lastCalledWith(1)
+    expect(fn1).lastCalledWith(`current:1, previous: 0`)
+    expect(fn2).lastCalledWith(`current:1, previous: 0`)
+
+    store.send(SetAStateCommand(10))
+
+    expect(store.query(AQuery())).toBe(10)
+    expect(store.query(BQuery())).toBe(`current:10, previous: 1`)
+
+    expect(fn0).lastCalledWith(10)
+    expect(fn1).lastCalledWith(`current:10, previous: 1`)
+    expect(fn2).lastCalledWith(`current:10, previous: 1`)
   })
 })

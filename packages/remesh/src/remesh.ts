@@ -254,6 +254,7 @@ export type RemeshQuery<T extends Args<Serializable>, U> = {
   owner: RemeshDomainAction<any, any>
   onError?: (error: Error, value: U) => U
   compare: CompareFn<U>
+  changed: (task: RemeshCommandTask<[{ current: U; previous: U }]>) => void
   inspectable: boolean
 }
 
@@ -307,6 +308,16 @@ export const RemeshQuery = <T extends Args<Serializable>, U>(options: RemeshQuer
   Query.inspectable = options.inspectable ?? true
   Query.onError = options.onError
 
+  Query.changed = (task) => {
+    if (remeshCommandTaskStore.changed.has(Query)) {
+      return remeshCommandTaskStore.changed.get(Query)!.add(task)
+    }
+    const taskSet = new Set<RemeshCommandTask<[{ current: U; previous: U }]>>()
+    remeshCommandTaskStore.changed.set(Query, taskSet)
+    taskSet.add(task)
+    return taskSet
+  }
+
   return Query
 }
 
@@ -352,10 +363,11 @@ let commandUid = 0
 const remeshCommandTaskStore = {
   before: new WeakMap<RemeshCommand<any>, Set<RemeshCommandTask<any>>>(),
   after: new WeakMap<RemeshCommand<any>, Set<RemeshCommandTask<any>>>(),
+  changed: new WeakMap<RemeshQuery<any, any>, Set<RemeshCommandTask<any>>>(),
 }
 
-export const getCommandTaskSet = <T extends Args>(Command: RemeshCommand<T>, type: 'before' | 'after') => {
-  return remeshCommandTaskStore[type].get(Command)
+export const getCommandTaskSet = (key: unknown, type: keyof typeof remeshCommandTaskStore) => {
+  return remeshCommandTaskStore[type].get(key as any)
 }
 
 export const RemeshCommand = <T extends Args = []>(options: RemeshCommandOptions<T>): RemeshCommand<T> => {

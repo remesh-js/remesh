@@ -555,4 +555,58 @@ describe('effect', () => {
       })
     }
   })
+
+  it('call command/event when before/after a command called', () => {
+    const fn0 = jest.fn()
+    const fn1 = jest.fn()
+    const fn2 = jest.fn()
+
+    let count = 0
+
+    const ACommand = RemeshCommand({
+      name: 'ACommand',
+      impl: ({}, arg: unknown) => {
+        fn0(arg, count++)
+        return null
+      },
+    })
+
+    const BCommand = RemeshCommand({
+      name: 'BCommand',
+      impl: ({}, arg: unknown) => {
+        fn1(arg, count++)
+        return null
+      },
+    })
+
+    const CCommand = RemeshCommand({
+      name: 'CCommand',
+      impl: ({}, arg: unknown) => {
+        fn2(arg, count++)
+        return null
+      },
+    })
+
+    BCommand.before(({}, arg) => {
+      return ACommand(arg)
+    })
+
+    BCommand.after(({}, arg) => {
+      return CCommand(arg)
+    })
+
+    const store = RemeshStore()
+
+    store.send(BCommand('input0'))
+
+    expect(fn0).lastCalledWith('input0', 0)
+    expect(fn1).lastCalledWith('input0', 1)
+    expect(fn2).lastCalledWith('input0', 2)
+
+    store.send(BCommand('input1'))
+
+    expect(fn0).lastCalledWith('input1', 3)
+    expect(fn1).lastCalledWith('input1', 4)
+    expect(fn2).lastCalledWith('input1', 5)
+  })
 })

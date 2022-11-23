@@ -893,6 +893,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     }
 
     let newValue: U
+    const currentValue = queryStorage.currentValue
 
     if (!Query.onError) {
       newValue = Query.impl(queryContext, queryStorage.arg)
@@ -901,11 +902,11 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
         newValue = Query.impl(queryContext, queryStorage.arg)
       } catch (e) {
         const error = e instanceof Error ? e : new Error(`${e}`)
-        newValue = Query.onError(error, queryStorage.currentValue)
+        newValue = Query.onError(error, currentValue)
       }
     }
 
-    const isEqual = Query.compare(queryStorage.currentValue, newValue)
+    const isEqual = Query.compare(currentValue, newValue)
 
     if (isEqual) {
       return false
@@ -913,8 +914,19 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
     queryStorage.currentValue = newValue
     pendingEmitSet.add(queryStorage)
-
     inspectorManager.inspectQueryStorage(InspectorType.QueryUpdated, queryStorage)
+
+    const changedTaskSet = getCommandTaskSet(Query, 'changed')
+
+    if (changedTaskSet) {
+      const data = {
+        current: newValue,
+        previous: currentValue,
+      }
+      for (const task of changedTaskSet) {
+        handleCommandOutput(task(commandContext, data))
+      }
+    }
 
     return true
   }
