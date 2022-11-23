@@ -383,6 +383,7 @@ root.render(
 - [How to create and use remesh store directly?](#how-to-create-and-use-remesh-store-directly)
 - [How to send multiple commands or events at once?](#how-to-send-multiple-commands-or-events-at-once)
 - [How to do something before or after a command?](#How-to-do-something-before-or-after-a-command)
+- [How to do something when a query value changed?](#How-to-do-something-when-a-query-value-changed)
 - [How to time-travel or redo/undo?](#How-to-time-travel-or-redo/undo)
 - [How to avoid type error from interface?](#how-to-avoid-type-error-from-interface)
 - [How to use yjs in remesh for collaboration?](#how-to-use-yjs-in-remesh-for-collaboration)
@@ -1183,6 +1184,27 @@ const YourDomain = Remesh.domain({
     ACommand.after(({ get }, arg) => {
       // do something *after* ACommand called
       return AfterACommand()
+    })
+  },
+})
+```
+
+### How to do something when a query value changed?
+
+```typescript
+const YourDomain = Remesh.domain({
+  name: 'YourDomain',
+  impl: (domain) => {
+    const AQuery = domain.query({
+      name: 'AQuery',
+      impl: ({ get }) => {
+        // ...do something
+      },
+    })
+
+    AQuery.changed(({ get }, { current, previous }) => {
+      // do something when the value of AQuery was changed
+      return SomeCommand()
     })
   },
 })

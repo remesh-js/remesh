@@ -384,6 +384,7 @@ root.render(
 - [如何创建和直接使用 remesh store?](#如何创建和直接使用-remesh-store)
 - [如何一次性发送多个 command？](#如何一次性发送多个-command)
 - [如何在 command 之前或之后执行？](#如何在-command-之前或之后执行)
+- [如何在 query 值变化后执行？](#如何在-query-值变化后执行)
 - [如何 time-travel 或 redo/undo?](#如何-time-travel-或-redo/undo)
 - [如何规避 interface 引起的类型错误？](#如何规避-interface-引起的类型错误)
 - [如何在 remesh 中使用 yjs 做状态同步？](#如何在-remesh-中使用-yjs-做状态同步)
@@ -1183,6 +1184,27 @@ const YourDomain = Remesh.domain({
     ACommand.after(({ get }, arg) => {
       // 在 ACommand 之后执行
       return AfterACommand()
+    })
+  },
+})
+```
+
+### 如何在 query 值变化后执行？
+
+```typescript
+const YourDomain = Remesh.domain({
+  name: 'YourDomain',
+  impl: (domain) => {
+    const AQuery = domain.query({
+      name: 'AQuery',
+      impl: ({ get }) => {
+        // ...do something
+      },
+    })
+
+    AQuery.changed(({ get }, { current, previous }) => {
+      // do something when the value of AQuery was changed
+      return SomeCommand()
     })
   },
 })
