@@ -1,5 +1,17 @@
 # remesh-vue-demos
 
+## 0.0.4
+
+### Patch Changes
+
+- Updated dependencies [7d28a48]
+- Updated dependencies
+- Updated dependencies [e0ea047]
+  - remesh@3.1.0
+  - remesh-logger@3.1.0
+  - remesh-redux-devtools@3.1.0
+  - remesh-vue@3.1.0
+
 ## 0.0.3
 
 ### Patch Changes

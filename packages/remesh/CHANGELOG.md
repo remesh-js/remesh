@@ -1,5 +1,13 @@
 # remesh
 
+## 3.1.0
+
+### Minor Changes
+
+- 7d28a48: chore: add LICENSE to all packages
+- feat: add esm support
+- e0ea047: fix(remesh): fix cache miss when domainAction equipped arg
+
 ## 3.0.1
 
 ### Patch Changes

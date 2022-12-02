@@ -1,5 +1,20 @@
 # remesh-logger
 
+## 3.1.0
+
+### Minor Changes
+
+- 7d28a48: chore: add LICENSE to all packages
+- feat: add esm support
+
+### Patch Changes
+
+- Updated dependencies [7d28a48]
+- Updated dependencies
+- Updated dependencies [e0ea047]
+  - remesh@3.1.0
+  - remesh-debugger-helper@4.0.0
+
 ## 3.0.0
 
 ### Major Changes
