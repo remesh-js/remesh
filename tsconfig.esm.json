@@ -1,0 +1,32 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "module": "ESNext"
+  },
+  "references": [
+    {
+      "path": "./packages/remesh/tsconfig.esm.json"
+    },
+    {
+      "path": "./packages/remesh-react/tsconfig.esm.json"
+    },
+    {
+      "path": "./packages/remesh-vue/tsconfig.esm.json"
+    },
+    {
+      "path": "./packages/remesh-redux-devtools/tsconfig.esm.json"
+    },
+    {
+      "path": "./packages/remesh-logger/tsconfig.esm.json"
+    },
+    {
+      "path": "./packages/remesh-yjs/tsconfig.esm.json"
+    },
+    {
+      "path": "./packages/remesh-debugger-helper/tsconfig.esm.json"
+    }
+  ],
+  "include": ["./packages"],
+  "exclude": ["./packages/*/__tests__/*"]
+}

@@ -1,1 +1,1 @@
-module.exports = require('../dist/modules/async')
+module.exports = require('../cjs/modules/async')

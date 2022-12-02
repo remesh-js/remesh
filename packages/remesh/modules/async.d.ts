@@ -1,1 +1,1 @@
-export * from '../dist/modules/async'
+export * from '../cjs/modules/async'

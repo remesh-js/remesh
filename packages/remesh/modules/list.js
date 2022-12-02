@@ -1,1 +1,1 @@
-module.exports = require('../dist/modules/list')
+module.exports = require('../cjs/modules/list')

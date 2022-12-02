@@ -9,16 +9,16 @@
   },
   "references": [
     {
-      "path": "../../packages/remesh/tsconfig.json"
+      "path": "../../packages/remesh/tsconfig.esm.json"
     },
     {
-      "path": "../../packages/remesh-vue/tsconfig.json"
+      "path": "../../packages/remesh-vue/tsconfig.esm.json"
     },
     {
-      "path": "../../packages/remesh-redux-devtools/tsconfig.json"
+      "path": "../../packages/remesh-redux-devtools/tsconfig.esm.json"
     },
     {
-      "path": "../../packages/remesh-logger/tsconfig.json"
+      "path": "../../packages/remesh-logger/tsconfig.esm.json"
     },
     {
       "path": "../domains/tsconfig.json"

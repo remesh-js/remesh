@@ -6,10 +6,20 @@
   "repository": "github:remeshjs/remesh",
   "bugs": "https://github.com/remesh-js/remesh/issues",
   "author": "https://github.com/Lucifier129",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "cjs/index.js",
+  "types": "cjs/index.d.ts",
+  "module": "esm/index.mjs",
+  "exports": {
+    ".": {
+      "types": "./cjs/index.d.ts",
+      "import": "./esm/index.mjs",
+      "require": "./cjs/index.js"
+    },
+    "./package.json": "./package.json"
+  },
   "files": [
-    "dist",
+    "cjs",
+    "esm",
     "src"
   ],
   "scripts": {

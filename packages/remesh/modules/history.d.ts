@@ -1,1 +1,1 @@
-export * from '../dist/modules/history'
+export * from '../cjs/modules/history'

@@ -1,0 +1,32 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "module": "CommonJS"
+  },
+  "references": [
+    {
+      "path": "./packages/remesh/tsconfig.cjs.json"
+    },
+    {
+      "path": "./packages/remesh-react/tsconfig.cjs.json"
+    },
+    {
+      "path": "./packages/remesh-vue/tsconfig.cjs.json"
+    },
+    {
+      "path": "./packages/remesh-debugger-helper/tsconfig.cjs.json"
+    },
+    {
+      "path": "./packages/remesh-redux-devtools/tsconfig.cjs.json"
+    },
+    {
+      "path": "./packages/remesh-logger/tsconfig.cjs.json"
+    },
+    {
+      "path": "./packages/remesh-yjs/tsconfig.cjs.json"
+    }
+  ],
+  "include": ["./packages"],
+  "exclude": ["./packages/*/__tests__/*"]
+}

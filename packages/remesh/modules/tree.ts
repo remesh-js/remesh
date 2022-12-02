@@ -1,1 +1,1 @@
-export * from '../dist/modules/tree'
+export * from '../cjs/modules/tree'

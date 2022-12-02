@@ -8,7 +8,7 @@
   },
   "references": [
     {
-      "path": "../../packages/remesh/tsconfig.json"
+      "path": "../../packages/remesh/tsconfig.esm.json"
     }
   ],
   "include": ["src"]

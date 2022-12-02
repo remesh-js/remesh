@@ -2,14 +2,11 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "rootDir": "./src",
-    "outDir": "./dist",
+    "outDir": "./esm",
     "composite": true,
-    "module": "CommonJS"
+    "module": "ES2020",
+    "target": "ES2020"
   },
-  "references": [
-    {
-      "path": "../remesh/tsconfig.json"
-    }
-  ],
+  "references": [],
   "include": ["src"]
 }

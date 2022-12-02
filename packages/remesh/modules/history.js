@@ -1,1 +1,1 @@
-module.exports = require('../dist/modules/history')
+module.exports = require('../cjs/modules/history')

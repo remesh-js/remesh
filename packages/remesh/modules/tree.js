@@ -1,1 +1,1 @@
-module.exports = require('../dist/modules/tree')
+module.exports = require('../cjs/modules/tree')
