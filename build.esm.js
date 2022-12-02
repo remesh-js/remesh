@@ -40,6 +40,7 @@ const replaceImportStatement = (source, dirname) => {
     return value.replace(/"(.*)"/, addMjs).replace(/'(.*)'/, addMjs)
   })
 }
+
 const replaceFiles = async () => {
   const files = await globby('./packages/**/*/esm/**/*.js', {
     absolute: true,
