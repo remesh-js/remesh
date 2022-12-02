@@ -12,7 +12,6 @@ importers:
       '@typescript-eslint/parser': ^5.23.0
       codecov: ^3.8.3
       commitlint: ^17.0.3
-      esbuild: ^0.15.16
       eslint: ^8.15.0
       eslint-config-prettier: ^8.5.0
       eslint-plugin-jest: ^26.1.5
@@ -38,7 +37,6 @@ importers:
       '@typescript-eslint/parser': 5.45.0_eslint@8.28.0+typescript@4.9.3
       codecov: 3.8.3
       commitlint: 17.3.0
-      esbuild: 0.15.16
       eslint: 8.28.0
       eslint-config-prettier: 8.5.0_eslint@8.28.0
       eslint-plugin-jest: 26.9.0_4a2c0f5f1c112447394eee87a06c26f0
@@ -53,7 +51,7 @@ importers:
       npm-run-all: 4.1.5
       prettier: 2.8.0
       shx: 0.3.4
-      ts-jest: 27.1.5_522535408b0e1c1f1377bb2683a4138c
+      ts-jest: 27.1.5_3cc72b4eacf59506df4364205d6261ba
       typescript: 4.9.3
 
   packages/remesh:
@@ -71,7 +69,7 @@ importers:
       shallowequal: 1.1.0
       tslib: 2.4.1
     devDependencies:
-      '@types/node': 16.18.3
+      '@types/node': 16.18.4
       '@types/shallowequal': 1.1.1
       rimraf: 3.0.2
       rxjs: 7.5.7
@@ -80,28 +78,28 @@ importers:
   packages/remesh-debugger-helper:
     specifiers:
       '@types/node': ^16.7.2
-      remesh: ^3.0.0
+      remesh: ^3.1.0
       tslib: ^2.3.1
       typescript: ^4.3.2
     dependencies:
       tslib: 2.4.1
     devDependencies:
-      '@types/node': 16.18.3
+      '@types/node': 16.18.4
       remesh: link:../remesh
       typescript: 4.9.3
 
   packages/remesh-logger:
     specifiers:
       '@types/node': ^16.7.2
-      remesh: ^3.0.0
-      remesh-debugger-helper: ^3.0.0
+      remesh: ^3.1.0
+      remesh-debugger-helper: ^3.1.0
       tslib: ^2.3.1
       typescript: ^4.3.2
     dependencies:
       remesh-debugger-helper: link:../remesh-debugger-helper
       tslib: 2.4.1
     devDependencies:
-      '@types/node': 16.18.3
+      '@types/node': 16.18.4
       remesh: link:../remesh
       typescript: 4.9.3
 
@@ -110,19 +108,19 @@ importers:
       '@types/node': ^16.7.2
       '@types/react': ^18.0.3
       '@types/react-dom': ^18.0.3
-      '@types/use-sync-external-store': ^0.0.3 || ^1.0.0
+      '@types/use-sync-external-store': ^0.0.3
       react: ^18.1.0
       react-dom: ^18.1.0
-      remesh: ^3.0.0
+      remesh: ^3.1.0
       rimraf: ^3.0.2
       tslib: ^2.3.1
       typescript: ^4.3.2
-      use-sync-external-store: ^1.0.0
+      use-sync-external-store: ^1.2.0
     dependencies:
       tslib: 2.4.1
       use-sync-external-store: 1.2.0_react@18.2.0
     devDependencies:
-      '@types/node': 16.18.3
+      '@types/node': 16.18.4
       '@types/react': 18.0.25
       '@types/react-dom': 18.0.9
       '@types/use-sync-external-store': 0.0.3
@@ -137,8 +135,8 @@ importers:
       '@redux-devtools/extension': ^3.2.2
       '@types/node': ^16.7.2
       redux: ^4.1.2
-      remesh: ^3.0.0
-      remesh-debugger-helper: ^3.0.0
+      remesh: ^3.1.0
+      remesh-debugger-helper: ^3.1.0
       tslib: ^2.3.1
       typescript: ^4.3.2
     dependencies:
@@ -146,7 +144,7 @@ importers:
       remesh-debugger-helper: link:../remesh-debugger-helper
       tslib: 2.4.1
     devDependencies:
-      '@types/node': 16.18.3
+      '@types/node': 16.18.4
       redux: 4.2.0
       remesh: link:../remesh
       typescript: 4.9.3
@@ -154,14 +152,14 @@ importers:
   packages/remesh-vue:
     specifiers:
       '@types/node': ^16.7.2
-      remesh: ^3.0.0
+      remesh: ^3.1.0
       tslib: ^2.3.1
       typescript: ^4.3.2
       vue: ^3.2.33
     dependencies:
       tslib: 2.4.1
     devDependencies:
-      '@types/node': 16.18.3
+      '@types/node': 16.18.4
       remesh: link:../remesh
       typescript: 4.9.3
       vue: 3.2.45
@@ -169,16 +167,16 @@ importers:
   packages/remesh-yjs:
     specifiers:
       '@types/node': ^16.7.2
-      remesh: ^3.0.0
+      remesh: ^3.1.0
       rxjs: ^7.0.0
       tslib: ^2.3.1
       typescript: ^4.3.2
       yjs: ^13.5.41
     dependencies:
       tslib: 2.4.1
-      yjs: 13.5.42
+      yjs: 13.5.43
     devDependencies:
-      '@types/node': 16.18.3
+      '@types/node': 16.18.4
       remesh: link:../remesh
       rxjs: 7.5.7
       typescript: 4.9.3
@@ -231,10 +229,10 @@ importers:
       react-dom: ^18.1.0
       remark: 14.0.2
       remark-html: 15.0.1
-      remesh: ^3.0.0
-      remesh-logger: ^3.0.0
-      remesh-react: ^3.0.0
-      remesh-redux-devtools: ^3.0.0
+      remesh: ^3.1.0
+      remesh-logger: ^3.1.0
+      remesh-react: ^3.1.0
+      remesh-redux-devtools: ^3.1.0
       rxjs: ^7.0.0
       tailwindcss: ^3.0.5
       typescript: ^4.2.4
@@ -278,12 +276,12 @@ importers:
       react-error-boundary: ^3.1.4
       react-router: ^6.2.2
       react-router-dom: ^6.2.2
-      remesh: ^3.0.0
+      remesh: ^3.1.0
       remesh-domains-for-demos: ^1.0.3
-      remesh-logger: ^3.0.0
-      remesh-react: ^3.0.0
-      remesh-redux-devtools: ^3.0.0
-      remesh-yjs: ^3.0.0
+      remesh-logger: ^3.1.0
+      remesh-react: ^3.1.0
+      remesh-redux-devtools: ^3.1.0
+      remesh-yjs: ^3.1.0
       rimraf: ^3.0.2
       rxjs: ^7.0.0
       todomvc-app-css: ^2.4.2
@@ -297,8 +295,8 @@ importers:
       react: 18.2.0
       react-dom: 18.2.0_react@18.2.0
       react-error-boundary: 3.1.4_react@18.2.0
-      react-router: 6.4.3_react@18.2.0
-      react-router-dom: 6.4.3_react-dom@18.2.0+react@18.2.0
+      react-router: 6.4.4_react@18.2.0
+      react-router-dom: 6.4.4_react-dom@18.2.0+react@18.2.0
       remesh: link:../../packages/remesh
       remesh-domains-for-demos: link:../domains
       remesh-logger: link:../../packages/remesh-logger
@@ -309,10 +307,10 @@ importers:
       todomvc-app-css: 2.4.2
       tslib: 2.4.1
       y-webrtc: 10.2.3
-      yjs: 13.5.42
+      yjs: 13.5.43
     devDependencies:
       '@rollup/plugin-node-resolve': 13.3.0
-      '@types/node': 16.18.3
+      '@types/node': 16.18.4
       '@types/react': 18.0.25
       '@types/react-dom': 18.0.9
       '@vanilla-extract/css': 1.9.2
@@ -328,11 +326,11 @@ importers:
       '@vitejs/plugin-vue': ^2.3.1
       '@vueuse/core': ^8.3.1
       fast-glob: ^3.2.11
-      remesh: ^3.0.0
+      remesh: ^3.1.0
       remesh-domains-for-demos: ^1.0.3
-      remesh-logger: ^3.0.0
-      remesh-redux-devtools: ^3.0.0
-      remesh-vue: ^3.0.0
+      remesh-logger: ^3.1.0
+      remesh-redux-devtools: ^3.1.0
+      remesh-vue: ^3.1.0
       rxjs: ^7.5.5
       typescript: ^4.5.4
       vite: ^2.9.5
@@ -1018,15 +1016,15 @@ packages:
       '@commitlint/execute-rule': 17.0.0
       '@commitlint/resolve-extends': 17.3.0
       '@commitlint/types': 17.0.0
-      '@types/node': 14.18.33
+      '@types/node': 14.18.34
       chalk: 4.1.2
       cosmiconfig: 7.1.0
-      cosmiconfig-typescript-loader: 4.2.0_838fbd849dec98a5874ec44c3c0c67e0
+      cosmiconfig-typescript-loader: 4.2.0_33d2a809a3faaaff6f928023b89c6baa
       lodash.isplainobject: 4.0.6
       lodash.merge: 4.6.2
       lodash.uniq: 4.5.0
       resolve-from: 5.0.0
-      ts-node: 10.9.1_52e8ea4883ee4024ccab466d51c0cf73
+      ts-node: 10.9.1_2b2d9cd807dfbc3d01f2996e04d2a2b6
       typescript: 4.9.3
     transitivePeerDependencies:
       - '@swc/core'
@@ -1125,8 +1123,8 @@ packages:
       source-map-support: 0.5.21
     dev: true
 
-  /@esbuild-kit/esm-loader/2.5.3:
-    resolution: {integrity: sha512-7tPwjMtiCgJXDDmW5/HT0wXYVlY0W6M29C0KB8R7fuNDRxUC9+hB5pYNbRx6DhOYR8IGb9z//ozaQK9ulVEGLg==}
+  /@esbuild-kit/esm-loader/2.5.4:
+    resolution: {integrity: sha512-afmtLf6uqxD5IgwCzomtqCYIgz/sjHzCWZFvfS5+FzeYxOURPUo4QcHtqJxbxWOMOogKriZanN/1bJQE/ZL93A==}
     dependencies:
       '@esbuild-kit/core-utils': 3.0.0
       get-tsconfig: 4.2.0
@@ -1217,7 +1215,7 @@ packages:
     engines: {node: ^10.13.0 || ^12.13.0 || ^14.15.0 || >=15.0.0}
     dependencies:
       '@jest/types': 27.5.1
-      '@types/node': 18.11.9
+      '@types/node': 18.11.10
       chalk: 4.1.2
       jest-message-util: 27.5.1
       jest-util: 27.5.1
@@ -1238,7 +1236,7 @@ packages:
       '@jest/test-result': 27.5.1
       '@jest/transform': 27.5.1
       '@jest/types': 27.5.1
-      '@types/node': 18.11.9
+      '@types/node': 18.11.10
       ansi-escapes: 4.3.2
       chalk: 4.1.2
       emittery: 0.8.1
@@ -1275,7 +1273,7 @@ packages:
     dependencies:
       '@jest/fake-timers': 27.5.1
       '@jest/types': 27.5.1
-      '@types/node': 18.11.9
+      '@types/node': 18.11.10
       jest-mock: 27.5.1
     dev: true
 
@@ -1285,7 +1283,7 @@ packages:
     dependencies:
       '@jest/types': 27.5.1
       '@sinonjs/fake-timers': 8.1.0
-      '@types/node': 18.11.9
+      '@types/node': 18.11.10
       jest-message-util: 27.5.1
       jest-mock: 27.5.1
       jest-util: 27.5.1
@@ -1314,7 +1312,7 @@ packages:
       '@jest/test-result': 27.5.1
       '@jest/transform': 27.5.1
       '@jest/types': 27.5.1
-      '@types/node': 18.11.9
+      '@types/node': 18.11.10
       chalk: 4.1.2
       collect-v8-coverage: 1.0.1
       exit: 0.1.2
@@ -1409,7 +1407,7 @@ packages:
     dependencies:
       '@types/istanbul-lib-coverage': 2.0.4
       '@types/istanbul-reports': 3.0.1
-      '@types/node': 18.11.9
+      '@types/node': 18.11.10
       '@types/yargs': 16.0.4
       chalk: 4.1.2
     dev: true
@@ -1631,8 +1629,8 @@ packages:
       redux: 4.2.0
     dev: false
 
-  /@remix-run/router/1.0.3:
-    resolution: {integrity: sha512-ceuyTSs7PZ/tQqi19YZNBc5X7kj1f8p+4DIyrcIYFY9h+hd1OKm4RqtiWldR9eGEvIiJfsqwM4BsuCtRIuEw6Q==}
+  /@remix-run/router/1.0.4:
+    resolution: {integrity: sha512-gTL8H5USTAKOyVA4xczzDJnC3HMssdFa3tRlwBicXynx9XfiXwneHnYQogwSKpdCkjXISrEKSTtX62rLpNEVQg==}
     engines: {node: '>=14'}
     dev: false
 
@@ -1750,7 +1748,7 @@ packages:
   /@types/graceful-fs/4.1.5:
     resolution: {integrity: sha512-anKkLmZZ+xm4p8JWBf4hElkM4XR+EZeA2M9BAkkTldmcyDY4mbdIJnRghDJH3Ov5ooY7/UAoENtmdMSkaAd7Cw==}
     dependencies:
-      '@types/node': 18.11.9
+      '@types/node': 18.11.10
     dev: true
 
   /@types/hast/2.3.4:
@@ -1817,20 +1815,20 @@ packages:
     resolution: {integrity: sha512-J8xLz7q2OFulZ2cyGTLE1TbbZcjpno7FaN6zdJNrgAdrJ+DZzh/uFR6YrTb4C+nXakvud8Q4+rbhoIWlYQbUFQ==}
     dev: true
 
-  /@types/node/14.18.33:
-    resolution: {integrity: sha512-qelS/Ra6sacc4loe/3MSjXNL1dNQ/GjxNHVzuChwMfmk7HuycRLVQN2qNY3XahK+fZc5E2szqQSKUyAF0E+2bg==}
+  /@types/node/14.18.34:
+    resolution: {integrity: sha512-hcU9AIQVHmPnmjRK+XUUYlILlr9pQrsqSrwov/JK1pnf3GTQowVBhx54FbvM0AU/VXGH4i3+vgXS5EguR7fysA==}
     dev: true
 
   /@types/node/15.14.9:
     resolution: {integrity: sha512-qjd88DrCxupx/kJD5yQgZdcYKZKSIGBVDIBE1/LTGcNm3d2Np/jxojkdePDdfnBHJc5W7vSMpbJ1aB7p/Py69A==}
     dev: true
 
-  /@types/node/16.18.3:
-    resolution: {integrity: sha512-jh6m0QUhIRcZpNv7Z/rpN+ZWXOicUUQbSoWks7Htkbb9IjFQj4kzcX/xFCkjstCj5flMsN8FiSvt+q+Tcs4Llg==}
+  /@types/node/16.18.4:
+    resolution: {integrity: sha512-9qGjJ5GyShZjUfx2ArBIGM+xExdfLvvaCyQR0t6yRXKPcWCVYF/WemtX/uIU3r7FYECXRXkIiw2Vnhn6y8d+pw==}
     dev: true
 
-  /@types/node/18.11.9:
-    resolution: {integrity: sha512-CRpX21/kGdzjOpFsZSkcrXMGIBWMGNIHXXBVFSH+ggkftxg+XYP20TESbh+zFvFj3EQOl5byk0HTRn1IL6hbqg==}
+  /@types/node/18.11.10:
+    resolution: {integrity: sha512-juG3RWMBOqcOuXC643OAdSA525V44cVgGV6dUDuiFtss+8Fk5x1hI93Rsld43VeJVIeqlP9I7Fn9/qaVqoEAuQ==}
     dev: true
 
   /@types/normalize-package-data/2.4.1:
@@ -1866,7 +1864,7 @@ packages:
   /@types/resolve/1.17.1:
     resolution: {integrity: sha512-yy7HuzQhj0dhGpD8RLXSZWEkLsV9ibvxvi6EiJ3bkqLAO1RGo0WbkWQiwpRlSFymTJRz0d3k5LM3kkx8ArDbLw==}
     dependencies:
-      '@types/node': 16.18.3
+      '@types/node': 16.18.4
     dev: true
 
   /@types/scheduler/0.16.2:
@@ -2962,7 +2960,7 @@ packages:
     resolution: {integrity: sha512-ASFBup0Mz1uyiIjANan1jzLQami9z1PoYSZCiiYW2FczPbenXc45FZdBZLzOT+r6+iciuEModtmCti+hjaAk0A==}
     dev: true
 
-  /cosmiconfig-typescript-loader/4.2.0_838fbd849dec98a5874ec44c3c0c67e0:
+  /cosmiconfig-typescript-loader/4.2.0_33d2a809a3faaaff6f928023b89c6baa:
     resolution: {integrity: sha512-NkANeMnaHrlaSSlpKGyvn2R4rqUDeE/9E5YHx+b4nwo0R8dZyAqcih8/gxpCZvqWP9Vf6xuLpMSzSgdVEIM78g==}
     engines: {node: '>=12', npm: '>=6'}
     peerDependencies:
@@ -2971,9 +2969,9 @@ packages:
       ts-node: '>=10'
       typescript: '>=3'
     dependencies:
-      '@types/node': 14.18.33
+      '@types/node': 14.18.34
       cosmiconfig: 7.1.0
-      ts-node: 10.9.1_52e8ea4883ee4024ccab466d51c0cf73
+      ts-node: 10.9.1_2b2d9cd807dfbc3d01f2996e04d2a2b6
       typescript: 4.9.3
     dev: true
 
@@ -4034,7 +4032,7 @@ packages:
     resolution: {integrity: sha512-EzV94NYKoO09GLXGjXj9JIlXijVck4ONSr5wiCWDvhsvj5jxSrzTmRU/9C1DyB6uToszLs8aifA6NQ7lEQdvFw==}
     engines: {node: '>= 0.8'}
     dependencies:
-      '@types/node': 16.18.3
+      '@types/node': 16.18.4
       require-like: 0.1.2
     dev: true
 
@@ -4889,7 +4887,7 @@ packages:
       '@jest/environment': 27.5.1
       '@jest/test-result': 27.5.1
       '@jest/types': 27.5.1
-      '@types/node': 18.11.9
+      '@types/node': 18.11.10
       chalk: 4.1.2
       co: 4.6.0
       dedent: 0.7.0
@@ -5024,7 +5022,7 @@ packages:
       '@jest/environment': 27.5.1
       '@jest/fake-timers': 27.5.1
       '@jest/types': 27.5.1
-      '@types/node': 18.11.9
+      '@types/node': 18.11.10
       jest-mock: 27.5.1
       jest-util: 27.5.1
       jsdom: 16.7.0
@@ -5042,7 +5040,7 @@ packages:
       '@jest/environment': 27.5.1
       '@jest/fake-timers': 27.5.1
       '@jest/types': 27.5.1
-      '@types/node': 18.11.9
+      '@types/node': 18.11.10
       jest-mock: 27.5.1
       jest-util: 27.5.1
     dev: true
@@ -5063,7 +5061,7 @@ packages:
     dependencies:
       '@jest/types': 27.5.1
       '@types/graceful-fs': 4.1.5
-      '@types/node': 18.11.9
+      '@types/node': 18.11.10
       anymatch: 3.1.3
       fb-watchman: 2.0.2
       graceful-fs: 4.2.10
@@ -5085,7 +5083,7 @@ packages:
       '@jest/source-map': 27.5.1
       '@jest/test-result': 27.5.1
       '@jest/types': 27.5.1
-      '@types/node': 18.11.9
+      '@types/node': 18.11.10
       chalk: 4.1.2
       co: 4.6.0
       expect: 27.5.1
@@ -5140,7 +5138,7 @@ packages:
     engines: {node: ^10.13.0 || ^12.13.0 || ^14.15.0 || >=15.0.0}
     dependencies:
       '@jest/types': 27.5.1
-      '@types/node': 18.11.9
+      '@types/node': 18.11.10
     dev: true
 
   /jest-pnp-resolver/1.2.3_jest-resolve@27.5.1:
@@ -5196,7 +5194,7 @@ packages:
       '@jest/test-result': 27.5.1
       '@jest/transform': 27.5.1
       '@jest/types': 27.5.1
-      '@types/node': 18.11.9
+      '@types/node': 18.11.10
       chalk: 4.1.2
       emittery: 0.8.1
       graceful-fs: 4.2.10
@@ -5253,7 +5251,7 @@ packages:
     resolution: {integrity: sha512-jZCyo6iIxO1aqUxpuBlwTDMkzOAJS4a3eYz3YzgxxVQFwLeSA7Jfq5cbqCY+JLvTDrWirgusI/0KwxKMgrdf7w==}
     engines: {node: ^10.13.0 || ^12.13.0 || ^14.15.0 || >=15.0.0}
     dependencies:
-      '@types/node': 18.11.9
+      '@types/node': 18.11.10
       graceful-fs: 4.2.10
     dev: true
 
@@ -5292,7 +5290,7 @@ packages:
     engines: {node: ^10.13.0 || ^12.13.0 || ^14.15.0 || >=15.0.0}
     dependencies:
       '@jest/types': 27.5.1
-      '@types/node': 18.11.9
+      '@types/node': 18.11.10
       chalk: 4.1.2
       ci-info: 3.7.0
       graceful-fs: 4.2.10
@@ -5317,7 +5315,7 @@ packages:
     dependencies:
       '@jest/test-result': 27.5.1
       '@jest/types': 27.5.1
-      '@types/node': 18.11.9
+      '@types/node': 18.11.10
       ansi-escapes: 4.3.2
       chalk: 4.1.2
       jest-util: 27.5.1
@@ -5328,7 +5326,7 @@ packages:
     resolution: {integrity: sha512-7vuh85V5cdDofPyxn58nrPjBktZo0u9x1g8WtjQol+jZDaE+fhN+cIvTj11GndBnMnyfrUOG1sZQxCdjKh+DKg==}
     engines: {node: '>= 10.13.0'}
     dependencies:
-      '@types/node': 18.11.9
+      '@types/node': 18.11.10
       merge-stream: 2.0.0
       supports-color: 8.1.1
     dev: true
@@ -5510,8 +5508,8 @@ packages:
       type-check: 0.4.0
     dev: true
 
-  /lib0/0.2.54:
-    resolution: {integrity: sha512-ZNW/Vu53czEwr0YoFcOiuqg8FAQ7mDfPNpPuPsub5ng2RmAm7mwKU9vJtsLCf5ALn43Ut8aHK1Dqs8ewz2NXNQ==}
+  /lib0/0.2.55:
+    resolution: {integrity: sha512-uXRSwbNse56mVwRwmVUebDKzmK6hcY3VUq3Es0DpXK1/5y9zTHwIpsvFBRkjl8F5hGCpGWhhMtCKZ145I9TWpQ==}
     engines: {node: '>=14'}
     dependencies:
       isomorphic.js: 0.2.5
@@ -6732,26 +6730,26 @@ packages:
     engines: {node: '>=0.10.0'}
     dev: true
 
-  /react-router-dom/6.4.3_react-dom@18.2.0+react@18.2.0:
-    resolution: {integrity: sha512-MiaYQU8CwVCaOfJdYvt84KQNjT78VF0TJrA17SIQgNHRvLnXDJO6qsFqq8F/zzB1BWZjCFIrQpu4QxcshitziQ==}
+  /react-router-dom/6.4.4_react-dom@18.2.0+react@18.2.0:
+    resolution: {integrity: sha512-0Axverhw5d+4SBhLqLpzPhNkmv7gahUwlUVIOrRLGJ4/uwt30JVajVJXqv2Qr/LCwyvHhQc7YyK1Do8a9Jj7qA==}
     engines: {node: '>=14'}
     peerDependencies:
       react: '>=16.8'
       react-dom: '>=16.8'
     dependencies:
-      '@remix-run/router': 1.0.3
+      '@remix-run/router': 1.0.4
       react: 18.2.0
       react-dom: 18.2.0_react@18.2.0
-      react-router: 6.4.3_react@18.2.0
+      react-router: 6.4.4_react@18.2.0
     dev: false
 
-  /react-router/6.4.3_react@18.2.0:
-    resolution: {integrity: sha512-BT6DoGn6aV1FVP5yfODMOiieakp3z46P1Fk0RNzJMACzE7C339sFuHebfvWtnB4pzBvXXkHP2vscJzWRuUjTtA==}
+  /react-router/6.4.4_react@18.2.0:
+    resolution: {integrity: sha512-SA6tSrUCRfuLWeYsTJDuriRqfFIsrSvuH7SqAJHegx9ZgxadE119rU8oOX/rG5FYEthpdEaEljdjDlnBxvfr+Q==}
     engines: {node: '>=14'}
     peerDependencies:
       react: '>=16.8'
     dependencies:
-      '@remix-run/router': 1.0.3
+      '@remix-run/router': 1.0.4
       react: 18.2.0
     dev: false
 
@@ -7638,7 +7636,7 @@ packages:
     resolution: {integrity: sha512-AqTiAOLcj85xS7vQ8QkAV41hPDIJ71XJB4RCUrzo/1GM2CQwhkJGaf9Hgr7BOugMRpgGUrqRg/DrBDl4H40+8g==}
     dev: false
 
-  /ts-jest/27.1.5_522535408b0e1c1f1377bb2683a4138c:
+  /ts-jest/27.1.5_3cc72b4eacf59506df4364205d6261ba:
     resolution: {integrity: sha512-Xv6jBQPoBEvBq/5i2TeSG9tt/nqkbpcurrEG1b+2yfBrcJelOZF9Ml6dmyMh7bcW9JyFbRYpR5rxROSlBLTZHA==}
     engines: {node: ^10.13.0 || ^12.13.0 || ^14.15.0 || >=15.0.0}
     hasBin: true
@@ -7661,7 +7659,6 @@ packages:
     dependencies:
       '@types/jest': 27.5.2
       bs-logger: 0.2.6
-      esbuild: 0.15.16
       fast-json-stable-stringify: 2.1.0
       jest: 27.5.1
       jest-util: 27.5.1
@@ -7673,7 +7670,7 @@ packages:
       yargs-parser: 20.2.9
     dev: true
 
-  /ts-node/10.9.1_52e8ea4883ee4024ccab466d51c0cf73:
+  /ts-node/10.9.1_2b2d9cd807dfbc3d01f2996e04d2a2b6:
     resolution: {integrity: sha512-NtVysVPkxxrwFGUUxGYhfux8k78pQB3JqYBXlLRZgdGUqTO5wU/UyHop5p70iEbGhB7q5KmiZiU0Y3KlJrScEw==}
     hasBin: true
     peerDependencies:
@@ -7692,7 +7689,7 @@ packages:
       '@tsconfig/node12': 1.0.11
       '@tsconfig/node14': 1.0.3
       '@tsconfig/node16': 1.0.3
-      '@types/node': 14.18.33
+      '@types/node': 14.18.34
       acorn: 8.8.1
       acorn-walk: 8.2.0
       arg: 4.1.3
@@ -7727,7 +7724,7 @@ packages:
     dependencies:
       '@esbuild-kit/cjs-loader': 2.4.1
       '@esbuild-kit/core-utils': 3.0.0
-      '@esbuild-kit/esm-loader': 2.5.3
+      '@esbuild-kit/esm-loader': 2.5.4
     optionalDependencies:
       fsevents: 2.3.2
     dev: true
@@ -8201,7 +8198,7 @@ packages:
   /y-protocols/1.0.5:
     resolution: {integrity: sha512-Wil92b7cGk712lRHDqS4T90IczF6RkcvCwAD0A2OPg+adKmOe+nOiT/N2hvpQIWS3zfjmtL4CPaH5sIW1Hkm/A==}
     dependencies:
-      lib0: 0.2.54
+      lib0: 0.2.55
     dev: false
 
   /y-webrtc/10.2.3:
@@ -8209,7 +8206,7 @@ packages:
     engines: {node: '>=12'}
     hasBin: true
     dependencies:
-      lib0: 0.2.54
+      lib0: 0.2.55
       simple-peer: 9.11.1
       y-protocols: 1.0.5
     optionalDependencies:
@@ -8303,10 +8300,10 @@ packages:
       yargs-parser: 21.1.1
     dev: true
 
-  /yjs/13.5.42:
-    resolution: {integrity: sha512-3aYBPeUSBUCs/vCOYolbyzhsQ6IDm1DeJgfhHVbW+6kq8YhWjkk2SUhYtBxd3lZPNsqmJGzYH9shKINhSVbEzw==}
+  /yjs/13.5.43:
+    resolution: {integrity: sha512-NJqWuiDOseYjkhnSVo55z+FZD6TsOJBZfMbH2I4OCm5vsgY7TESUjUGb7Pt1lljvvdSfBVj8CxQqZAnVxe5Iyg==}
     dependencies:
-      lib0: 0.2.54
+      lib0: 0.2.55
     dev: false
 
   /yn/3.1.1:
