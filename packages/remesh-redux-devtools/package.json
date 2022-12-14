@@ -1,6 +1,6 @@
 {
   "name": "remesh-redux-devtools",
-  "version": "3.1.1",
+  "version": "4.0.0",
   "description": "Redux devtools adapter for remesh",
   "homepage": "https://remesh-js.github.io/remesh/dist/index.html",
   "repository": "github:remeshjs/remesh",
@@ -24,17 +24,17 @@
   ],
   "scripts": {},
   "peerDependencies": {
-    "remesh": "^3.1.0"
+    "remesh": "^4.0.0"
   },
   "dependencies": {
     "@redux-devtools/extension": "^3.2.2",
-    "remesh-debugger-helper": "^3.1.0",
+    "remesh-debugger-helper": "^4.0.0",
     "tslib": "^2.3.1"
   },
   "devDependencies": {
     "@types/node": "^16.7.2",
     "redux": "^4.1.2",
-    "remesh": "^3.1.0",
+    "remesh": "^4.0.0",
     "typescript": "^4.3.2"
   },
   "publishConfig": {

@@ -1,5 +1,16 @@
 # remesh-vue-demos
 
+## 0.0.5
+
+### Patch Changes
+
+- Updated dependencies
+  - remesh@4.0.0
+  - remesh-logger@4.0.0
+  - remesh-redux-devtools@4.0.0
+  - remesh-vue@4.0.0
+  - remesh-domains-for-demos@1.0.4
+
 ## 0.0.4
 
 ### Patch Changes

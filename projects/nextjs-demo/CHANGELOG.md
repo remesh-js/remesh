@@ -4,6 +4,16 @@
 
 ### Patch Changes
 
+- Updated dependencies
+  - remesh@4.0.0
+  - remesh-logger@4.0.0
+  - remesh-react@4.0.0
+  - remesh-redux-devtools@4.0.0
+
+## null
+
+### Patch Changes
+
 - Updated dependencies [7d28a48]
 - Updated dependencies
 - Updated dependencies [e0ea047]

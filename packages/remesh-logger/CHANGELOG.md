@@ -1,5 +1,17 @@
 # remesh-logger
 
+## 4.0.0
+
+### Major Changes
+
+- add esm supports
+
+### Patch Changes
+
+- Updated dependencies
+  - remesh@4.0.0
+  - remesh-debugger-helper@4.0.0
+
 ## 3.1.0
 
 ### Minor Changes

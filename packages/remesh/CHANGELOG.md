@@ -1,5 +1,11 @@
 # remesh
 
+## 4.0.0
+
+### Major Changes
+
+- add esm supports
+
 ## 3.1.0
 
 ### Minor Changes
