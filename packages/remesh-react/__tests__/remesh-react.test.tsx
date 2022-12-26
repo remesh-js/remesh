@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { act } from 'react-dom/test-utils'
 import ReactDOM, { Root } from 'react-dom/client'
+import { map } from 'rxjs/operators'
 
 import { Remesh } from 'remesh'
 
@@ -87,8 +88,8 @@ describe('remesh-react', () => {
     )
   }
 
-  it('should work', () => {
-    act(() => {
+  it('should work', async () => {
+    await act(() => {
       root.render(
         <RemeshRoot>
           <TestComponent />
@@ -101,7 +102,7 @@ describe('remesh-react', () => {
 
     const button = container.querySelector('button') as HTMLButtonElement
 
-    act(() => {
+    await act(() => {
       button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     })
 
@@ -111,7 +112,7 @@ describe('remesh-react', () => {
     expect(countEventListener).toHaveBeenCalledWith(1)
   })
 
-  it('can use RemeshScope to keep domain alive', () => {
+  it('can use RemeshScope to keep domain alive', async () => {
     const TestScopeDomain = Remesh.domain({
       name: 'TestScopeDomain',
       impl: (domain) => {
@@ -181,7 +182,7 @@ describe('remesh-react', () => {
       )
     }
 
-    act(() => {
+    await act(() => {
       root.render(<App />)
     })
 
@@ -192,7 +193,7 @@ describe('remesh-react', () => {
     expect(insideButton.innerHTML).toBe('0')
     expect(outsideButton.innerHTML).toBe('0')
 
-    act(() => {
+    await act(() => {
       insideButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
       outsideButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     })
@@ -200,7 +201,7 @@ describe('remesh-react', () => {
     expect(insideButton.innerHTML).toBe('1')
     expect(outsideButton.innerHTML).toBe('1')
 
-    act(() => {
+    await act(() => {
       toggleButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     })
 
@@ -210,7 +211,7 @@ describe('remesh-react', () => {
     expect(insideButton).toBe(null)
     expect(outsideButton).toBe(null)
 
-    act(() => {
+    await act(() => {
       toggleButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     })
 
@@ -220,12 +221,77 @@ describe('remesh-react', () => {
     expect(insideButton.innerHTML).toBe('1')
     expect(outsideButton.innerHTML).toBe('0')
 
-    act(() => {
+    await act(() => {
       insideButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
       outsideButton.dispatchEvent(new MouseEvent('click', { bubbles: true }))
     })
 
     expect(insideButton.innerHTML).toBe('2')
     expect(outsideButton.innerHTML).toBe('1')
+  })
+
+  it('can subscirbe domain-query via fromQuery and useRemeshQuery at the same time', async () => {
+    const fn = jest.fn()
+    const TestSubscribeDomain = Remesh.domain({
+      name: 'TestSubscribeDomain',
+      impl: (domain) => {
+        const testDomain = domain.getDomain(TestDomain())
+
+        domain.effect({
+          name: 'TestSubscribeEffect',
+          impl: ({ fromQuery }) => {
+            return fromQuery(testDomain.query.CountQuery()).pipe(
+              map((count) => {
+                fn(`fromEffect: ${count}`)
+                return null
+              }),
+            )
+          },
+        })
+
+        return {
+          ...testDomain,
+        }
+      },
+    })
+
+    const App = () => {
+      const send = useRemeshSend()
+      const domain = useRemeshDomain(TestSubscribeDomain())
+      const count = useRemeshQuery(domain.query.CountQuery())
+
+      const handleIncre = () => {
+        send(domain.command.SetCountCommand(count + 1))
+      }
+
+      return (
+        <div>
+          <span id="count">{count}</span>
+          <button id="incre" onClick={handleIncre}>
+            +1
+          </button>
+        </div>
+      )
+    }
+
+    await act(() => {
+      root.render(
+        <RemeshRoot>
+          <App />
+        </RemeshRoot>,
+      )
+    })
+
+    const button = document.getElementById('incre') as HTMLButtonElement
+    const countElem = document.getElementById('count') as HTMLSpanElement
+
+    expect(countElem.textContent).toBe('0')
+
+    await act(() => {
+      button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    })
+
+    expect(countElem.textContent).toBe('1')
+    expect(fn).toBeCalledWith(`fromEffect: 1`)
   })
 })
