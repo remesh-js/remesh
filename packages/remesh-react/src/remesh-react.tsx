@@ -1,4 +1,4 @@
-import { useEffect, useRef, useContext, createContext, ReactNode, useCallback, useMemo } from 'react'
+import { useLayoutEffect, useRef, useContext, createContext, ReactNode, useCallback, useMemo } from 'react'
 
 import { useSyncExternalStore } from 'use-sync-external-store/shim'
 
@@ -92,14 +92,14 @@ export const useRemeshQuery = function <T extends Args<Serializable>, U>(queryAc
 
   const queryKey = store.getKey(queryAction)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     return () => {
       subscriptionRef.current?.unsubscribe()
       subscriptionRef.current = null
     }
   }, [store, queryKey])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (subscriptionRef.current !== null) {
       return
     }
@@ -118,11 +118,11 @@ export const useRemeshEvent = function <T extends Args, U>(
   const store = useRemeshStore()
   const callbackRef = useRef(callback)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     callbackRef.current = callback
   })
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const subscription = store.subscribeEvent(Event, (data) => {
       callbackRef.current(data)
     })
@@ -144,21 +144,21 @@ export const useRemeshDomain = function <T extends RemeshDomainDefinition, U ext
   const store = useRemeshStore()
   const domain = store.getDomain(domainAction)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     store.igniteDomain(domainAction)
   }, [store, domainAction])
 
   const domainKey = store.getKey(domainAction)
   const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     return () => {
       subscriptionRef.current?.unsubscribe()
       subscriptionRef.current = null
     }
   }, [store, domainKey])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (subscriptionRef.current !== null) {
       return
     }

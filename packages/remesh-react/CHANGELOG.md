@@ -1,5 +1,11 @@
 # remesh-react
 
+## 4.0.1
+
+### Patch Changes
+
+- use useLayoutEffect instead of useEffect to ignite domain earlier
+
 ## 4.0.0
 
 ### Major Changes
