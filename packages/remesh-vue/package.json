@@ -3,7 +3,7 @@
   "version": "4.0.0",
   "description": "Vue adapter for remesh",
   "homepage": "https://remesh-js.github.io/remesh/dist/index.html",
-  "repository": "github:remeshjs/remesh",
+  "repository": "github:remesh-js/remesh",
   "bugs": "https://github.com/remesh-js/remesh/issues",
   "author": "https://github.com/Lucifier129",
   "main": "cjs/index.js",
