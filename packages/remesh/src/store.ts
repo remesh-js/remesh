@@ -570,19 +570,19 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
       return domainStorage
     }
 
-    const cachedStorage = domainStorageWeakMap.get(domainAction)
+    const cachedDomainStorage = domainStorageWeakMap.get(domainAction)
 
-    if (cachedStorage) {
-      cachedStorage.ignited = false
-      cachedStorage.isDiscarding = false
-      domainStorageMap.set(cachedStorage.key, cachedStorage)
+    if (cachedDomainStorage) {
+      cachedDomainStorage.ignited = false
+      cachedDomainStorage.isDiscarding = false
+      domainStorageMap.set(cachedDomainStorage.key, cachedDomainStorage)
 
-      for (const upstreamDomainStorage of cachedStorage.upstreamSet) {
-        upstreamDomainStorage.downstreamSet.add(cachedStorage)
+      for (const upstreamDomainStorage of cachedDomainStorage.upstreamSet) {
+        upstreamDomainStorage.downstreamSet.add(cachedDomainStorage)
       }
 
-      inspectorManager.inspectDomainStorage(InspectorType.DomainReused, cachedStorage)
-      return cachedStorage
+      inspectorManager.inspectDomainStorage(InspectorType.DomainReused, cachedDomainStorage)
+      return cachedDomainStorage
     }
 
     return createDomainStorage(domainAction)
@@ -1051,7 +1051,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
     const { Command, arg } = commandAction
 
-    const fn = Command.impl as (context: RemeshCommandContext, arg: T[0]) => RemeshCommandOutput
+    const fn = Command.impl
 
     const beforeTaskSet = getCommandTaskSet(Command, 'before')
 
@@ -1086,7 +1086,20 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     } else if (output.type === 'RemeshStateItemUpdatePayload') {
       updateStateItem(output.stateItem, output.value)
     } else if (output.type === 'RemeshEventAction') {
-      pendingEmitSet.add(output)
+      handleRemeshEventAction(output)
+    }
+  }
+
+  const handleRemeshEventAction = <T extends Args, U>(eventAction: RemeshEventAction<T, U>) => {
+    const Event = eventAction.Event
+    const emittedTaskSet = getCommandTaskSet(Event, 'emitted')
+
+    pendingEmitSet.add(eventAction)
+
+    if (emittedTaskSet) {
+      for (const task of emittedTaskSet) {
+        handleCommandOutput(task(commandContext, eventAction.arg))
+      }
     }
   }
 
@@ -1197,10 +1210,17 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     }
 
     for (const effect of domainStorage.effectList) {
-      const effectResult = effect.impl(effectContext)
-      if (effectResult === null) {
-        continue
-      }
+      igniteDomainEffect(domainStorage, effect)
+    }
+  }
+
+  const igniteDomainEffect = <T extends RemeshDomainDefinition, U extends Args<Serializable>>(
+    domainStorage: RemeshDomainStorage<T, U>,
+    effect: RemeshEffect,
+  ) => {
+    const effectResult = effect.impl(effectContext)
+
+    if (effectResult) {
       const subscription = from(effectResult).subscribe(handleEffectOutput)
       domainStorage.effectMap.set(effect, subscription)
     }

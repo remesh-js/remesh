@@ -37,6 +37,7 @@ export type RemeshEvent<T extends Args, U> = {
   eventName: DomainConceptName<'Event'>
   impl?: (context: RemeshEventContext, arg: T[0]) => U
   (...args: T): RemeshEventAction<T, U>
+  emitted: (task: RemeshCommandTask<T>) => void
   owner: RemeshDomainAction<any, any>
   inspectable: boolean
   toSubscribeOnlyEvent: () => RemeshSubscribeOnlyEvent<T, U>
@@ -82,6 +83,16 @@ export function RemeshEvent<T extends Args, U>(
 
   if ('impl' in options) {
     Event.impl = options.impl as unknown as typeof Event.impl
+  }
+
+  Event.emitted = (task) => {
+    if (remeshCommandTaskStore.emitted.has(Event)) {
+      return remeshCommandTaskStore.emitted.get(Event)!.add(task)
+    }
+    const taskSet = new Set<RemeshCommandTask<T>>()
+    remeshCommandTaskStore.emitted.set(Event, taskSet)
+    taskSet.add(task)
+    return taskSet
   }
 
   return Event
@@ -342,7 +353,7 @@ export type RemeshCommand<T extends Args> = {
   type: 'RemeshCommand'
   commandId: number
   commandName: DomainConceptName<'Command'>
-  impl: (context: RemeshCommandContext, ...args: T) => RemeshCommandOutput
+  impl: (context: RemeshCommandContext, arg: T[0]) => RemeshCommandOutput
   (...args: T): RemeshCommandAction<T>
   owner: RemeshDomainAction<any, any>
   before: (task: RemeshCommandTask<T>) => void
@@ -364,6 +375,7 @@ const remeshCommandTaskStore = {
   before: new WeakMap<RemeshCommand<any>, Set<RemeshCommandTask<any>>>(),
   after: new WeakMap<RemeshCommand<any>, Set<RemeshCommandTask<any>>>(),
   changed: new WeakMap<RemeshQuery<any, any>, Set<RemeshCommandTask<any>>>(),
+  emitted: new WeakMap<RemeshEvent<any, any>, Set<RemeshCommandTask<any>>>(),
 }
 
 export const getCommandTaskSet = (key: unknown, type: keyof typeof remeshCommandTaskStore) => {
@@ -384,7 +396,7 @@ export const RemeshCommand = <T extends Args = []>(options: RemeshCommandOptions
   Command.type = 'RemeshCommand'
   Command.commandId = commandId
   Command.commandName = options.name
-  Command.impl = options.impl
+  Command.impl = options.impl as RemeshCommand<T>['impl']
   Command.owner = DefaultDomain()
   Command.inspectable = options.inspectable ?? true
 
