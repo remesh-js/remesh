@@ -22,17 +22,20 @@
 - [如何在 domain 中管理一个 list?](#如何在-domain-中管理一个-list)
 - [如何定义一个 custom module 以跨 domains 重用 logic?](#如何定义一个-custom-module-以跨-domains-重用-logic)
 - [如何访问其它 domains?](#如何访问其它-domains)
+- [如何释放其它 Doamins?](#如何释放其它-doamins)
 - [如何在 domain-effect 中订阅 events 或 queries 或 commands?](#如何在-domain-effect-中订阅-events-或-queries-或-commands)
 - [如何创建和直接使用 remesh store?](#如何创建和直接使用-remesh-store)
 - [如何一次性发送多个 command？](#如何一次性发送多个-command)
 - [如何在 command 之前或之后执行？](#如何在-command-之前或之后执行)
 - [如何在 query 值变化后执行？](#如何在-query-值变化后执行)
+- [如何在事件触发后执行？](#如何在事件触发后执行)
 - [如何 time-travel 或 redo/undo?](#如何-time-travel-或-redo/undo)
 - [如何规避 interface 引起的类型错误？](#如何规避-interface-引起的类型错误)
 - [如何在 remesh 中使用 yjs 做状态同步？](#如何在-remesh-中使用-yjs-做状态同步)
 - [如何在 React 应用中管理 remesh domain 的生存范围？](#如何在-React-应用中管理-remesh-domain-的生存范围)
 - [如何注入依赖到 remesh domain 中？](#如何注入依赖到-remesh-domain-中)
 - [如何让 remesh domain 支持 Server-side rendering?](#如何让-remesh-domain-支持-Server-side-rendering)
+- [如何获取 Domain 的返回值类型?](#如何获取-Domain-的返回值类型)
 
 ## 如何定义一个 domain?
 
@@ -674,6 +677,34 @@ const MainDomain = Remesh.domain({
 })
 ```
 
+## 如何释放其它 Doamins?
+
+用 `domain.getDomain` 可以访问其它 domains，但它同时也会储存这些 domains。
+
+如果不再需要一个 domain，可以用 `domain.forgetDomain` 释放它。
+
+```typescript
+import { Remesh } from 'Remesh'
+
+const MainDomain = Remesh.domain({
+  name: 'MainDomain',
+  impl: (domain) => {
+    /**
+     * Accessing other domains via domain.getDomain(..)
+     */
+    let aDomain = domain.getDomain(ADomain())
+
+    /**
+     * Forget other domains via domain.forgetDomain(..)
+     */
+    domain.forgetDomain(ADomain())
+    aDomain = null
+
+    return {}
+  },
+})
+```
+
 ## 如何在 domain-effect 中订阅 events 或 queries?
 
 ```typescript
@@ -846,6 +877,24 @@ const YourDomain = Remesh.domain({
 
     AQuery.changed(({ get }, { current, previous }) => {
       // do something when the value of AQuery was changed
+      return SomeCommand()
+    })
+  },
+})
+```
+
+## 如何在事件触发后执行？
+
+```typescript
+const YourDomain = Remesh.domain({
+  name: 'YourDomain',
+  impl: (domain) => {
+    const AEvent = domain.event({
+      name: 'AEvent',
+    })
+
+    AQuery.emitted(({ get }, { current, previous }) => {
+      // do something when event was emitted
       return SomeCommand()
     })
   },
@@ -1202,4 +1251,33 @@ export default (props: Props) => {
 const store = Remesh.store({
   preloadedState,
 })
+```
+
+## 如何获取 Domain 的返回值类型?
+
+```ts
+import { Remesh, DomainTypeOf } from 'Remesh'
+
+const ADomain = Remesh.domain({
+  name: 'ADomain',
+  impl: (domain) => {
+    return {
+      query: {
+        AQuery,
+      }
+      command: {
+        ACommand,
+      },
+      event: {
+        AEvent
+      }
+    }
+  },
+})
+
+// infer the return type of a domain
+type ADomainType = DomainTypeOf<typeof ADomain>
+
+ADomainType['query'] // { AQuery }
+ADomainType['command'] // { ACommand }
 ```

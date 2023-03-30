@@ -22,17 +22,20 @@
 - [How to manage a list in domain?](#how-to-manage-a-list-in-domain)
 - [How to define a custom module for reusing logic between domains?](#how-to-define-a-custom-module-for-reusing-logic-between-domains)
 - [How to access other domains?](#how-to-access-other-domains)
+- [How to forget other domains?](#how-to-forget-other-domains)
 - [How to subscribe to events or queries or commands in domain-effect?](#how-to-subscribe-to-events-or-queries-or-commands-in-domain-effect)
 - [How to create and use remesh store directly?](#how-to-create-and-use-remesh-store-directly)
 - [How to send multiple commands or events at once?](#how-to-send-multiple-commands-or-events-at-once)
 - [How to do something before or after a command?](#How-to-do-something-before-or-after-a-command)
-- [How to do something when a query value changed?](#How-to-do-something-when-a-query-value-changed)
+- [How to do something when a query value was changed?](#How-to-do-something-when-a-query-value-was-changed)
+- [How to do somehing when an event was emitted?](#How-to-do-somehing-when-an-event-was-emitted)
 - [How to time-travel or redo/undo?](#How-to-time-travel-or-redo/undo)
 - [How to avoid type error from interface?](#how-to-avoid-type-error-from-interface)
 - [How to use yjs in remesh for collaboration?](#how-to-use-yjs-in-remesh-for-collaboration)
 - [How do I manage the scope of the remesh domain in my React application?](#how-do-i-manage-the-scope-of-the-remesh-domain-in-my-React-application)
 - [How to inject dependencies to remesh domain?](#How-to-inject-dependencies-to-remesh-domain)
 - [How do I get the remesh domain to support server-side rendering?](#How-do-I-get-the-remesh-domain-to-support-server-side-rendering)
+- [How to get the return type of a domain?](#How-to-get-the-return-type-of-a-domain)
 
 ## How-to define a domain?
 
@@ -674,6 +677,34 @@ const MainDomain = Remesh.domain({
 })
 ```
 
+## How to forget other domains?
+
+The `domain.getDomain` function can be used to access other domains, but it will store those domains in memory.
+
+If we no longer need a domain, we can use `domain.forgetDomain` to release it.
+
+```typescript
+import { Remesh } from 'Remesh'
+
+const MainDomain = Remesh.domain({
+  name: 'MainDomain',
+  impl: (domain) => {
+    /**
+     * Accessing other domains via domain.getDomain(..)
+     */
+    let aDomain = domain.getDomain(ADomain())
+
+    /**
+     * Forget other domains via domain.forgetDomain(..)
+     */
+    domain.forgetDomain(ADomain())
+    aDomain = null
+
+    return {}
+  },
+})
+```
+
 ## How to subscribe to events or queries in domain-effect?
 
 ```typescript
@@ -832,7 +863,7 @@ const YourDomain = Remesh.domain({
 })
 ```
 
-## How to do something when a query value changed?
+## How to do something when a query value was changed?
 
 ```typescript
 const YourDomain = Remesh.domain({
@@ -847,6 +878,24 @@ const YourDomain = Remesh.domain({
 
     AQuery.changed(({ get }, { current, previous }) => {
       // do something when the value of AQuery was changed
+      return SomeCommand()
+    })
+  },
+})
+```
+
+## How to do somehing when an event was emitted?
+
+```typescript
+const YourDomain = Remesh.domain({
+  name: 'YourDomain',
+  impl: (domain) => {
+    const AEvent = domain.event({
+      name: 'AEvent',
+    })
+
+    AQuery.emitted(({ get }, { current, previous }) => {
+      // do something when event was emitted
       return SomeCommand()
     })
   },
@@ -1203,4 +1252,33 @@ export default (props: Props) => {
 const store = Remesh.store({
   preloadedState,
 })
+```
+
+## How to get the return type of a domain?
+
+```ts
+import { Remesh, DomainTypeOf } from 'Remesh'
+
+const ADomain = Remesh.domain({
+  name: 'ADomain',
+  impl: (domain) => {
+    return {
+      query: {
+        AQuery,
+      }
+      command: {
+        ACommand,
+      },
+      event: {
+        AEvent
+      }
+    }
+  },
+})
+
+// infer the return type of a domain
+type ADomainType = DomainTypeOf<typeof ADomain>
+
+ADomainType['query'] // { AQuery }
+ADomainType['command'] // { ACommand }
 ```
