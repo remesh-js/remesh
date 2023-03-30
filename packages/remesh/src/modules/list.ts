@@ -1,15 +1,12 @@
-import { Remesh, RemeshDomainContext, DomainConceptName, SerializableObject } from '../index'
+import { Remesh, RemeshDomainContext, DomainConceptName } from '../index'
 
-export type ListModuleOptions<T extends SerializableObject> = {
+export type ListModuleOptions<T> = {
   name: DomainConceptName<'ListModule'>
   key: (item: T) => string
   default?: T[]
 }
 
-export const ListModule = <T extends SerializableObject>(
-  domain: RemeshDomainContext,
-  options: ListModuleOptions<T>,
-) => {
+export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOptions<T>) => {
   const ItemListState = domain.state<T[]>({
     name: `${options.name}.ItemListState`,
     default: options.default ?? [],

@@ -1,5 +1,7 @@
-import { RemeshDomain, RemeshStore } from '../src'
+import { ListModule } from '../src/modules/list'
+import { DomainTypeOf, RemeshDomain, RemeshStore } from '../src'
 import * as utils from './utils'
+import { Observable } from 'rxjs'
 
 let store: ReturnType<typeof RemeshStore>
 beforeEach(() => {
@@ -188,5 +190,279 @@ describe('domain', () => {
 
     expect(store.query(contentDomain.query.DisplayContentQuery())).toBe('content: remesh')
     expect(changed).toHaveBeenCalled()
+  })
+
+  it('support domain.forgetDomain', () => {
+    const forget = jest.fn()
+    type Todo = {
+      id: number
+      content: string
+      completed: boolean
+    }
+    const TodoListDomain = RemeshDomain({
+      name: 'TodoListDomain',
+      impl: (domain, key: string) => {
+        const TodoListModule = ListModule<Todo>(domain, {
+          name: 'TodoListModule',
+          key: (item) => item.id.toString(),
+        })
+
+        domain.effect({
+          name: 'ForgetEffect',
+          impl: () => {
+            return new Observable(() => {
+              return () => {
+                forget(key)
+              }
+            })
+          },
+        })
+
+        return {
+          ...TodoListModule,
+        }
+      },
+    })
+
+    type TodoListDomainType = DomainTypeOf<typeof TodoListDomain>
+
+    const AppDomain = RemeshDomain({
+      name: 'AppDomain',
+      impl: (domain) => {
+        const TodoListDomainListModule = ListModule<{ key: string; todoListDomain: TodoListDomainType }>(domain, {
+          name: 'TodoListDomainListModule',
+          key: (item) => item.key,
+          default: [],
+        })
+
+        const AppStateQuery = domain.query({
+          name: 'AppStateQuery',
+          impl: ({ get }) => {
+            const todoListDomainList = get(TodoListDomainListModule.query.ItemListQuery())
+            return todoListDomainList.map((item) => {
+              return {
+                key: item.key,
+                todoList: get(item.todoListDomain.query.ItemListQuery()),
+              }
+            })
+          },
+        })
+
+        const AddTodoListCommand = domain.command({
+          name: 'AddTodoListCommand',
+          impl: ({ get }, key: string) => {
+            const todoListDomainList = get(TodoListDomainListModule.query.ItemListQuery())
+            const target = todoListDomainList.find((item) => item.key === key)
+
+            if (target) {
+              return null
+            }
+
+            const todoListDomain = domain.getDomain(TodoListDomain(key))
+
+            return TodoListDomainListModule.command.AddItemCommand({
+              key,
+              todoListDomain,
+            })
+          },
+        })
+
+        const DeleteTodoListCommand = domain.command({
+          name: 'AddTodoListCommand',
+          impl: ({ get }, key: string) => {
+            const todoListDomainList = get(TodoListDomainListModule.query.ItemListQuery())
+            const target = todoListDomainList.find((item) => item.key === key)
+
+            if (target) {
+              domain.forgetDomain(TodoListDomain(key))
+              return TodoListDomainListModule.command.DeleteItemCommand(key)
+            }
+
+            return null
+          },
+        })
+
+        const AddItemCommand = domain.command({
+          name: 'AddItemCommand',
+          impl: ({ get }, { key, item }: { key: String; item: Todo }) => {
+            const todoListDomainList = get(TodoListDomainListModule.query.ItemListQuery())
+            const target = todoListDomainList.find((item) => item.key === key)
+
+            if (target) {
+              return target.todoListDomain.command.AddItemCommand(item)
+            }
+
+            return null
+          },
+        })
+
+        const DeleteItemCommand = domain.command({
+          name: 'DeleteItemCommand',
+          impl: ({ get }, { key, id }: { key: String; id: number }) => {
+            const todoListDomainList = get(TodoListDomainListModule.query.ItemListQuery())
+            const target = todoListDomainList.find((item) => item.key === key)
+
+            if (target) {
+              return target.todoListDomain.command.DeleteItemCommand(id.toString())
+            }
+
+            return null
+          },
+        })
+
+        return {
+          query: {
+            AppStateQuery,
+          },
+          command: {
+            AddItemCommand,
+            DeleteItemCommand,
+            AddTodoListCommand,
+            DeleteTodoListCommand,
+          },
+        }
+      },
+    })
+
+    const store = RemeshStore()
+    const appDomain = store.getDomain(AppDomain())
+
+    store.igniteDomain(AppDomain())
+
+    expect(store.query(appDomain.query.AppStateQuery())).toEqual([])
+
+    store.send(appDomain.command.AddTodoListCommand('todo-list-0'))
+
+    expect(forget).toHaveBeenCalledTimes(0)
+    expect(store.query(appDomain.query.AppStateQuery())).toEqual([
+      {
+        key: 'todo-list-0',
+        todoList: [],
+      },
+    ])
+
+    store.send(appDomain.command.AddTodoListCommand('todo-list-1'))
+
+    expect(forget).toHaveBeenCalledTimes(0)
+    expect(store.query(appDomain.query.AppStateQuery())).toEqual([
+      {
+        key: 'todo-list-0',
+        todoList: [],
+      },
+      {
+        key: 'todo-list-1',
+        todoList: [],
+      },
+    ])
+
+    store.send(
+      appDomain.command.AddItemCommand({
+        key: 'todo-list-1',
+        item: {
+          id: 0,
+          content: 'content0',
+          completed: true,
+        },
+      }),
+    )
+
+    expect(forget).toHaveBeenCalledTimes(0)
+    expect(store.query(appDomain.query.AppStateQuery())).toEqual([
+      {
+        key: 'todo-list-0',
+        todoList: [],
+      },
+      {
+        key: 'todo-list-1',
+        todoList: [
+          {
+            id: 0,
+            content: 'content0',
+            completed: true,
+          },
+        ],
+      },
+    ])
+
+    store.send(
+      appDomain.command.AddItemCommand({
+        key: 'todo-list-0',
+        item: {
+          id: 1,
+          content: 'content1',
+          completed: false,
+        },
+      }),
+    )
+
+    expect(forget).toHaveBeenCalledTimes(0)
+    expect(store.query(appDomain.query.AppStateQuery())).toEqual([
+      {
+        key: 'todo-list-0',
+        todoList: [
+          {
+            id: 1,
+            content: 'content1',
+            completed: false,
+          },
+        ],
+      },
+      {
+        key: 'todo-list-1',
+        todoList: [
+          {
+            id: 0,
+            content: 'content0',
+            completed: true,
+          },
+        ],
+      },
+    ])
+
+    store.send(
+      appDomain.command.DeleteItemCommand({
+        key: 'todo-list-0',
+        id: 1,
+      }),
+    )
+
+    expect(forget).toHaveBeenCalledTimes(0)
+    expect(store.query(appDomain.query.AppStateQuery())).toEqual([
+      {
+        key: 'todo-list-0',
+        todoList: [],
+      },
+      {
+        key: 'todo-list-1',
+        todoList: [
+          {
+            id: 0,
+            content: 'content0',
+            completed: true,
+          },
+        ],
+      },
+    ])
+
+    store.send(appDomain.command.DeleteTodoListCommand('todo-list-0'))
+
+    expect(forget).toHaveBeenCalledWith('todo-list-0')
+    expect(store.query(appDomain.query.AppStateQuery())).toEqual([
+      {
+        key: 'todo-list-1',
+        todoList: [
+          {
+            id: 0,
+            content: 'content0',
+            completed: true,
+          },
+        ],
+      },
+    ])
+
+    store.send(appDomain.command.DeleteTodoListCommand('todo-list-1'))
+
+    expect(forget).toHaveBeenCalledWith('todo-list-1')
+    expect(store.query(appDomain.query.AppStateQuery())).toEqual([])
   })
 })

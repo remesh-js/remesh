@@ -495,6 +495,14 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
         return upstreamDomainStorage.domain
       },
+      forgetDomain: (upstreamDomainAction) => {
+        const upstreamDomainStorage = getDomainStorage(upstreamDomainAction)
+
+        upstreamSet.delete(upstreamDomainStorage)
+        upstreamDomainStorage.downstreamSet.delete(currentDomainStorage)
+
+        clearDomainStorageIfNeeded(upstreamDomainStorage)
+      },
       getExtern: (Extern) => {
         return getExternCurrentValue(Extern)
       },

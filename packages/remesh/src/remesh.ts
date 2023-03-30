@@ -505,7 +505,17 @@ export type RemeshDomainContext = {
   ) => {
     [key in keyof VerifiedRemeshDomainDefinition<T>]: VerifiedRemeshDomainDefinition<T>[key]
   }
+  forgetDomain: <T extends RemeshDomainDefinition, U extends Args<Serializable>>(
+    domainAction: RemeshDomainAction<T, U>,
+  ) => void
 }
+
+export type DomainTypeOf<T extends RemeshDomain<RemeshDomainDefinition, any>> = T extends RemeshDomain<
+  infer Definition,
+  any
+>
+  ? VerifiedRemeshDomainDefinition<Definition>
+  : never
 
 export type RemeshEvents = {
   [key: string]: RemeshEvent<any, any> | RemeshSubscribeOnlyEvent<any, any>
