@@ -1,5 +1,11 @@
 # remesh
 
+## 4.1.0
+
+### Minor Changes
+
+- support domain.forgetDomain, support Event.emitted(task), support infer DomainTypeOf<Domain>
+
 ## 4.0.0
 
 ### Major Changes
