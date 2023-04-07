@@ -4,8 +4,6 @@
     "allowSyntheticDefaultImports": true,
     "declaration": true,
     "downlevelIteration": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
     "importHelpers": true,
     "module": "esnext",
     "moduleResolution": "node",

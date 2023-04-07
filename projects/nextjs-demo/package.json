@@ -16,7 +16,6 @@
     "react-dom": "^18.1.0",
     "remark": "14.0.2",
     "remark-html": "15.0.1",
-    "typescript": "^4.2.4",
     "remesh": "^4.0.0",
     "remesh-logger": "^4.0.0",
     "remesh-react": "^4.0.0",
