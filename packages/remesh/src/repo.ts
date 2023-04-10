@@ -52,8 +52,8 @@ export type AddManyMutation<T extends AnyRepo> = {
   payload: InferRepo<T>[]
 }
 
-export type UpdateMutationPayload<T extends AnyRepo> = Partial<Omit<InferRepo<T>, T['key']>> & {
-  [key in T['key']]: InferRepo<T>[T['key']]
+export type UpdateMutationPayload<T extends AnyRepo> = Partial<Omit<InferRepo<T>, T['primaryKey']>> & {
+  [key in T['primaryKey']]: InferRepo<T>[T['primaryKey']]
 }
 
 export type RepoUpdateMutationFn<T extends AnyRepo> = (entity: InferRepo<T>) => InferRepo<T>
@@ -162,12 +162,25 @@ export abstract class Repo<T extends object> {
     }
   }
   __type!: {
-    [key in Filter<keyof T, this['includes'], this['excludes']> | this['key']]: key extends keyof T ? T[key] : never
+    [key in Filter<keyof T, this['includes'], this['excludes']> | this['primaryKey']]: key extends keyof T
+      ? T[key]
+      : never
   }
-  abstract key: FilterKeyField<T>
-  __keyType!: this['key'] extends keyof T ? T[this['key']] : never
+  abstract primaryKey: FilterKeyField<T>
+  foreignKeys?: readonly (keyof T)[]
+  __keyType!: this['primaryKey'] extends keyof T ? T[this['primaryKey']] : never
   includes?: readonly (keyof T)[]
   excludes?: readonly (keyof T)[]
+}
+
+export type FieldDescriptors<T extends object> = {
+  [key in keyof T]: true | FieldDescriptor<T[key]>
+}
+
+export type FieldDescriptor<T> = {
+  isPrimaryKey?: boolean
+  isForeignKey?: boolean
+  isAutoIncrement?: T extends number ? boolean : never
 }
 
 export interface QueryFn {
@@ -185,17 +198,86 @@ export interface MutationFn {
   <T extends AnyRepo>(query: DeleteManyMutation<T>): (T['__type'] | null)[]
 }
 
-export type Context = {
-  query: QueryFn
-  mutation: MutationFn
+export interface UserFn {
+  <T extends Domain>(DomainCtor: new (context: DomainContext) => T): T
+  <T extends AnyRepo>(RepoCtor: new () => T): BoundedRepo<T>
 }
 
-export abstract class State {
-  query?: {
-    [key: string]: new () => Query
+export abstract class Domain {
+  protected query: QueryFn
+  protected mutation: MutationFn
+  protected use: UserFn
+  constructor(context: DomainContext) {
+    this.query = context.query
+    this.mutation = context.mutation
+    this.use = context.use
   }
-  command?: {
-    [key: string]: new () => Command
+}
+
+export type DomainContext = {
+  query: QueryFn
+  mutation: MutationFn
+  use: UserFn
+}
+
+export const query = () => {
+  return <This extends Domain, Arg extends Serializable, Return>(
+    target: (this: This, arg: Arg) => Return,
+    context: ClassMethodDecoratorContext<This, (this: This, arg: Arg) => Return>,
+  ) => {
+    const methodName = String(context.name)
+
+    function replacementMethod(this: This, arg: Arg): Return {
+      console.log(`LOG: Entering method '${methodName}'.`)
+      const result = target.call(this, arg)
+      console.log(`LOG: Exiting method '${methodName}'.`)
+      return result
+    }
+
+    return replacementMethod
+  }
+}
+
+export const command = () => {
+  return <This extends Domain, Args extends any[]>(
+    target: (this: This, ...args: Args) => void,
+    context: ClassMethodDecoratorContext<This, (this: This, ...args: Args) => void>,
+  ) => {
+    const methodName = String(context.name)
+
+    function replacementMethod(this: This, ...args: Args): void {
+      console.log(`LOG: Entering method '${methodName}'.`)
+      const result = target.call(this, ...args)
+      console.log(`LOG: Exiting method '${methodName}'.`)
+      return result
+    }
+
+    return replacementMethod
+  }
+}
+
+export abstract class Event<T extends Serializable = void> {
+  event: T
+  constructor(event: T) {
+    this.event = event
+  }
+}
+
+export const event = <T extends Serializable>(EventCtor: new (event: T) => Event<T>) => {
+  return <This extends Domain>(
+    target: (this: This, event: T) => void,
+    context: ClassMethodDecoratorContext<This, (this: This, event: T) => void>,
+  ) => {
+    const methodName = String(context.name)
+
+    function replacementMethod(this: This, event: T): void {
+      console.log(`LOG: Entering method '${methodName}'.`)
+      const result = target.call(this, event)
+      console.log(`LOG: Exiting method '${methodName}'.`)
+      return result
+    }
+
+    return replacementMethod
   }
 }
 
@@ -216,36 +298,6 @@ export type BoundedRepoMutation<T extends AnyRepo> = {
 
 export type BoundedRepo<T extends AnyRepo> = BoundedRepoQuery<T> & BoundedRepoMutation<T>
 
-export type QueryContext = Pick<Context, 'query'>
-
-export abstract class Query {
-  query: QueryContext['query']
-  constructor(context: QueryContext) {
-    this.query = context.query
-  }
-  use<T extends AnyRepo>(Ctor: new () => T): BoundedRepoQuery<T> {
-    const boundedRepoQuery = {} as BoundedRepoQuery<T>
-    return boundedRepoQuery
-  }
-  abstract impl(input: Serializable): unknown
-}
-
-export type CommandContext = Pick<Context, 'query' | 'mutation'>
-
-export abstract class Command {
-  query: CommandContext['query']
-  mutation: CommandContext['mutation']
-  constructor(context: CommandContext) {
-    this.query = context.query
-    this.mutation = context.mutation
-  }
-  use<T extends AnyRepo>(Ctor: new () => T): BoundedRepo<T> {
-    const boundedRepo = {} as BoundedRepo<T>
-    return boundedRepo
-  }
-  abstract impl(...args: unknown[]): unknown
-}
-
 type User = {
   id: number
   name: string
@@ -253,9 +305,11 @@ type User = {
 }
 
 class UserRepo extends Repo<User> {
-  key = 'id' as const
+  primaryKey = 'id' as const
   excludes = ['parent'] as const
 }
+
+type UserRepoType = InferRepo<UserRepo>
 
 type Circle = {
   id: number
@@ -273,30 +327,61 @@ type Rect = {
 type Shape = Circle | Rect
 
 class CircleRepo extends Repo<Circle> {
-  key = 'id' as const
+  primaryKey = 'id' as const
 }
 
 class RectRepo extends Repo<Rect> {
-  key = 'id' as const
+  primaryKey = 'id' as const
 }
 
 type Todo = {
   id: number
   content: string
   completed: boolean
+  todoAppId: number
 }
 
 class TodoRepo extends Repo<Todo> {
-  key = 'id' as const
+  primaryKey = 'id' as const
 }
 
 type TodoFilter = 'active' | 'all' | 'completed'
 
-class FilterTodoQuery extends Query {
-  TodoRepo = this.use(TodoRepo)
+class TodoAddedEvent extends Event<Todo> {}
 
-  impl(filter: TodoFilter) {
-    const todos = this.TodoRepo.find((todo) => {
+type TodoAppState = {
+  id: number
+  todos: Todo[]
+  filter: TodoFilter
+  input: string
+}
+
+class TodoAppRepo extends Repo<TodoAppState> {
+  primaryKey = 'id' as const
+  includes = ['filter', 'input'] as const
+}
+
+class TodoAppDomain extends Domain {
+  TodoAppRepo = this.use(TodoAppRepo)
+  TodoListDomain = this.use(TodoListDomain)
+
+  @query()
+  getTodoAppState(todoAppId: number) {
+    const todoAppState = this.TodoAppRepo.find({ id: todoAppId })
+
+    if (!todoAppState) {
+      throw new Error(`TodoAppState not found: ${todoAppId}`)
+    }
+
+    return todoAppState
+  }
+
+  @query()
+  getTodos(todoAppId: number) {
+    const todoAppState = this.getTodoAppState(todoAppId)
+    const filter = todoAppState.filter
+
+    return this.TodoListDomain.getTodos(todoAppId).filter((todo) => {
       if (filter === 'active') {
         return !todo.completed
       }
@@ -306,21 +391,24 @@ class FilterTodoQuery extends Query {
       }
       return true
     })
-
-    return todos
   }
 }
 
-class AddTodoCommand extends Command {
-  TodoRepo = this.use(TodoRepo)
+class TodoListDomain extends Domain {
+  protected TodoRepo = this.use(TodoRepo)
 
-  impl(todoContent: string) {
-    const newTodo = this.TodoRepo.add({
+  @query()
+  getTodos(todoAppId: number) {
+    return this.TodoRepo.findMany((todo) => todo.todoAppId === todoAppId)
+  }
+
+  @command()
+  addTodo(todoAppId: number, todoContent: string) {
+    this.TodoRepo.add({
       id: Math.random(),
       content: todoContent,
       completed: false,
+      todoAppId,
     })
-
-    return newTodo
   }
 }
