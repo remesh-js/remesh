@@ -35,7 +35,7 @@ export const CRUDDomain = Remesh.domain({
     const UpdateFilterPrefixCommand = domain.command({
       name: 'UpdateFilterPrefixCommand',
       impl: ({}, prefix: string) => {
-        return FilterPrefixState().new(prefix)
+        return [FilterPrefixState().new(prefix),SelectedState().new(null)]
       },
     })
 
