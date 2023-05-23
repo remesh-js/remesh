@@ -21,181 +21,53 @@ export type FilterKeyField<T extends object> = keyof {
 
 export type RepoQueryFn<T extends AnyRepo> = (entity: InferRepo<T>) => boolean
 
-export type FindQuery<T extends AnyRepo> = {
-  type: 'FindQuery'
-  Repo: new () => T
-  payload: Partial<InferRepo<T>> | RepoQueryFn<T>
-}
-
-export type FindAllQuery<T extends AnyRepo> = {
-  type: 'FindAllQuery'
-  Repo: new () => T
-}
-
-export type FindManyQuery<T extends AnyRepo> = {
-  type: 'FindManyQuery'
-  Repo: new () => T
-  payload: Partial<InferRepo<T>>[] | RepoQueryFn<T>
-}
-
-export type RepoQuery<T extends AnyRepo> = FindQuery<T> | FindAllQuery<T> | FindManyQuery<T>
-
-export type AddMutation<T extends AnyRepo> = {
-  type: 'AddMutation'
-  Repo: new () => T
-  payload: InferRepo<T>
-}
-
-export type AddManyMutation<T extends AnyRepo> = {
-  type: 'AddManyMutation'
-  Repo: new () => T
-  payload: InferRepo<T>[]
-}
-
 export type UpdateMutationPayload<T extends AnyRepo> = Partial<Omit<InferRepo<T>, T['primaryKey']>> & {
   [key in T['primaryKey']]: InferRepo<T>[T['primaryKey']]
 }
 
 export type RepoUpdateMutationFn<T extends AnyRepo> = (entity: InferRepo<T>) => InferRepo<T>
 
-export type UpdateMutation<T extends AnyRepo> = {
-  type: 'UpdateMutation'
-  Repo: new () => T
-  payload: UpdateMutationPayload<T> | RepoUpdateMutationFn<T>
-}
-
-export type UpdateManyMutation<T extends AnyRepo> = {
-  type: 'UpdateManyMutation'
-  Repo: new () => T
-  payload: UpdateMutationPayload<T>[] | RepoUpdateMutationFn<T>
-}
-
 export type RepoDeleteMutationFn<T extends AnyRepo> = (entity: InferRepo<T>) => boolean
 
-export type DeleteMutation<T extends AnyRepo> = {
-  type: 'DeleteMutation'
-  Repo: new () => T
-  payload: T['__keyType'] | RepoDeleteMutationFn<T>
-}
-
-export type DeleteManyMutation<T extends AnyRepo> = {
-  type: 'DeleteManyMutation'
-  Repo: new () => T
-  payload: T['__keyType'][] | RepoDeleteMutationFn<T>
-}
-
-export type RepoMutation<T extends AnyRepo> =
-  | AddMutation<T>
-  | AddManyMutation<T>
-  | UpdateMutation<T>
-  | UpdateManyMutation<T>
-  | DeleteMutation<T>
-  | DeleteManyMutation<T>
+const repoEventCtorWeakMap = new WeakMap<new () => AnyRepo, new (event: any) => Event<any>>()
 
 export abstract class Repo<T extends object> {
-  static find<R extends AnyRepo>(this: new () => R, payload: FindQuery<R>['payload']): FindQuery<R> {
-    return {
-      type: 'FindQuery',
-      Repo: this,
-      payload,
+  static AddedEvent<T extends AnyRepo>(this: new () => T) {
+    if (repoEventCtorWeakMap.has(this)) {
+      return repoEventCtorWeakMap.get(this)!
     }
+    class AddedEvent extends Event<InferRepo<T>> {}
+    repoEventCtorWeakMap.set(this, AddedEvent)
+    return AddedEvent
   }
-  static findAll<R extends AnyRepo>(this: new () => R): FindAllQuery<R> {
-    return {
-      type: 'FindAllQuery',
-      Repo: this,
+
+  static UpdatedEvent<T extends AnyRepo>(this: new () => T) {
+    if (repoEventCtorWeakMap.has(this)) {
+      return repoEventCtorWeakMap.get(this)!
     }
+    class UpdatedEvent extends Event<InferRepo<T>> {}
+    repoEventCtorWeakMap.set(this, UpdatedEvent)
+    return UpdatedEvent
   }
-  static findMany<R extends AnyRepo>(this: new () => R, payload: FindManyQuery<R>['payload']): FindManyQuery<R> {
-    return {
-      type: 'FindManyQuery',
-      Repo: this,
-      payload,
+
+  static DeletedEvent<T extends AnyRepo>(this: new () => T) {
+    if (repoEventCtorWeakMap.has(this)) {
+      return repoEventCtorWeakMap.get(this)!
     }
+    class DeletedEvent extends Event<InferRepo<T>> {}
+    repoEventCtorWeakMap.set(this, DeletedEvent)
+    return DeletedEvent
   }
-  static add<R extends AnyRepo>(this: new () => R, payload: AddMutation<R>['payload']): AddMutation<R> {
-    return {
-      type: 'AddMutation',
-      Repo: this,
-      payload,
-    }
-  }
-  static addMany<R extends AnyRepo>(this: new () => R, payload: AddManyMutation<R>['payload']): AddManyMutation<R> {
-    return {
-      type: 'AddManyMutation',
-      Repo: this,
-      payload,
-    }
-  }
-  static update<R extends AnyRepo>(this: new () => R, payload: UpdateMutation<R>['payload']): UpdateMutation<R> {
-    return {
-      type: 'UpdateMutation',
-      Repo: this,
-      payload,
-    }
-  }
-  static updateMany<R extends AnyRepo>(
-    this: new () => R,
-    payload: UpdateManyMutation<R>['payload'],
-  ): UpdateManyMutation<R> {
-    return {
-      type: 'UpdateManyMutation',
-      Repo: this,
-      payload,
-    }
-  }
-  static delete<R extends AnyRepo>(this: new () => R, payload: DeleteMutation<R>['payload']): DeleteMutation<R> {
-    return {
-      type: 'DeleteMutation',
-      Repo: this,
-      payload,
-    }
-  }
-  static deleteMany<R extends AnyRepo>(
-    this: new () => R,
-    payload: DeleteManyMutation<R>['payload'],
-  ): DeleteManyMutation<R> {
-    return {
-      type: 'DeleteManyMutation',
-      Repo: this,
-      payload,
-    }
-  }
+
   __type!: {
     [key in Filter<keyof T, this['includes'], this['excludes']> | this['primaryKey']]: key extends keyof T
       ? T[key]
       : never
   }
   abstract primaryKey: FilterKeyField<T>
-  foreignKeys?: readonly (keyof T)[]
   __keyType!: this['primaryKey'] extends keyof T ? T[this['primaryKey']] : never
   includes?: readonly (keyof T)[]
   excludes?: readonly (keyof T)[]
-}
-
-export type FieldDescriptors<T extends object> = {
-  [key in keyof T]: true | FieldDescriptor<T[key]>
-}
-
-export type FieldDescriptor<T> = {
-  isPrimaryKey?: boolean
-  isForeignKey?: boolean
-  isAutoIncrement?: T extends number ? boolean : never
-}
-
-export interface QueryFn {
-  <T extends AnyRepo>(query: FindQuery<T>): T['__type'] | null
-  <T extends AnyRepo>(query: FindAllQuery<T>): T['__type'][]
-  <T extends AnyRepo>(query: FindManyQuery<T>): T['__type'][]
-}
-
-export interface MutationFn {
-  <T extends AnyRepo>(query: AddMutation<T>): T['__type']
-  <T extends AnyRepo>(query: AddManyMutation<T>): T['__type'][]
-  <T extends AnyRepo>(query: UpdateMutation<T>): T['__type'] | null
-  <T extends AnyRepo>(query: UpdateManyMutation<T>): (T['__type'] | null)[]
-  <T extends AnyRepo>(query: DeleteMutation<T>): T['__type'] | null
-  <T extends AnyRepo>(query: DeleteManyMutation<T>): (T['__type'] | null)[]
 }
 
 export interface UserFn {
@@ -204,19 +76,13 @@ export interface UserFn {
 }
 
 export abstract class Domain {
-  protected query: QueryFn
-  protected mutation: MutationFn
   protected use: UserFn
   constructor(context: DomainContext) {
-    this.query = context.query
-    this.mutation = context.mutation
     this.use = context.use
   }
 }
 
 export type DomainContext = {
-  query: QueryFn
-  mutation: MutationFn
   use: UserFn
 }
 
@@ -282,18 +148,18 @@ export const event = <T extends Serializable>(EventCtor: new (event: T) => Event
 }
 
 export type BoundedRepoQuery<T extends AnyRepo> = {
-  find(payload: FindQuery<T>['payload']): T['__type'] | null
+  find(payload: Partial<InferRepo<T>> | RepoQueryFn<T>): T['__type'] | null
   findAll(): T['__type'][]
-  findMany(payload: FindManyQuery<T>['payload']): T['__type'][]
+  findMany(payload: RepoQueryFn<T> | Partial<InferRepo<T>>[]): T['__type'][]
 }
 
 export type BoundedRepoMutation<T extends AnyRepo> = {
-  add(payload: AddMutation<T>['payload']): T['__type']
-  addMany(payload: AddManyMutation<T>['payload']): T['__type'][]
-  update(payload: UpdateMutation<T>['payload']): T['__type'] | null
-  updateMany(payload: UpdateManyMutation<T>['payload']): (T['__type'] | null)[]
-  delete(payload: DeleteMutation<T>['payload']): T['__type'] | null
-  deleteMany(payload: DeleteManyMutation<T>['payload']): (T['__type'] | null)[]
+  add(payload: InferRepo<T>): T['__type']
+  addMany(payload: InferRepo<T>): T['__type'][]
+  update(payload: UpdateMutationPayload<T> | RepoUpdateMutationFn<T>): T['__type'] | null
+  updateMany(payload: RepoUpdateMutationFn<T> | UpdateMutationPayload<T>[]): (T['__type'] | null)[]
+  delete(payload: T['__keyType'] | RepoDeleteMutationFn<T>): T['__type'] | null
+  deleteMany(payload: RepoDeleteMutationFn<T> | T['__keyType'][]): (T['__type'] | null)[]
 }
 
 export type BoundedRepo<T extends AnyRepo> = BoundedRepoQuery<T> & BoundedRepoMutation<T>
@@ -347,8 +213,6 @@ class TodoRepo extends Repo<Todo> {
 
 type TodoFilter = 'active' | 'all' | 'completed'
 
-class TodoAddedEvent extends Event<Todo> {}
-
 type TodoAppState = {
   id: number
   todos: Todo[]
@@ -396,6 +260,11 @@ class TodoAppDomain extends Domain {
 
 class TodoListDomain extends Domain {
   protected TodoRepo = this.use(TodoRepo)
+
+  @event(TodoRepo.AddedEvent())
+  onTodoAdded(event: Todo) {
+    console.log('onTodoAdded', event)
+  }
 
   @query()
   getTodos(todoAppId: number) {

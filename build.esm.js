@@ -6,11 +6,11 @@ const fsSync = require('fs')
 const IMPORT_EXPORT_REGEXP =
   /(import|export)\s+?(?:(?:(?:[\w*\s{},]*)\s+from\s+?)|)(?:(?:".*?")|(?:'.*?'))[\s]*?(?:;|$|)/g
 
-const getStat = (fielname) => {
+const getStat = (filename) => {
   try {
-    return fsSync.statSync(fielname)
+    return fsSync.statSync(filename)
   } catch (_) {
-    return fsSync.statSync(`${fielname}.js`)
+    return fsSync.statSync(`${filename}.js`)
   }
 }
 
