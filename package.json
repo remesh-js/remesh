@@ -1,5 +1,6 @@
 {
   "name": "remesh",
+  "version": "0.0.0",
   "license": "MIT",
   "description": "A DDD framework",
   "author": "https://github.com/Lucifier129",
