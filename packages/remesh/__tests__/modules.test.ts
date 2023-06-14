@@ -429,6 +429,23 @@ describe('modules', () => {
     ])
 
     expect(store.query(domain.query.KeyListQuery())).toEqual(['0', '1', '2', '3'])
+
+    store.send(domain.command.UpdateItemListCommand([{ id: 0, text: 'todo0-update', completed: true }]))
+
+    expect(store.query(domain.query.ItemListQuery())).toEqual([
+      { id: 0, text: 'todo0-update', completed: true },
+      { id: 1, text: 'todo1', completed: false },
+      {
+        id: 2,
+        text: 'todo2',
+        completed: false,
+      },
+      {
+        id: 3,
+        text: 'todo3',
+        completed: false,
+      },
+    ])
   })
 
   it('tree-module', () => {

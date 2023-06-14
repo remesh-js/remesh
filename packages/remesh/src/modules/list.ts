@@ -199,9 +199,8 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
       const oldList = get(ItemListState())
       const newList = [] as T[]
 
-      let isChanged = false
-
       for (const item of oldList) {
+        let isChanged = false
         for (const newItem of newItems) {
           if (options.key(item) === options.key(newItem)) {
             newList.push(newItem)
@@ -214,11 +213,7 @@ export const ListModule = <T>(domain: RemeshDomainContext, options: ListModuleOp
         }
       }
 
-      if (isChanged) {
-        return ItemListState().new(newList)
-      }
-
-      return null
+      return ItemListState().new(newList)
     },
   })
 
