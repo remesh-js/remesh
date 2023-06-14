@@ -6,6 +6,10 @@
     "composite": true,
     "module": "CommonJS"
   },
-  "references": [],
+  "references": [
+    {
+      "path": "../remesh/tsconfig.cjs.json"
+    }
+  ],
   "include": ["src"]
 }

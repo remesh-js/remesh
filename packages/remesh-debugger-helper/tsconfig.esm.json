@@ -7,6 +7,10 @@
     "module": "ES2020",
     "target": "ES2020"
   },
-  "references": [],
+  "references": [
+    {
+      "path": "../remesh/tsconfig.esm.json"
+    }
+  ],
   "include": ["src"]
 }

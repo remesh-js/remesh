@@ -125,7 +125,6 @@ export const RemeshYjs = <T extends SerializableType>(domain: RemeshDomainContex
 
   domain.effect({
     name: `YjsEffect`,
-    inspectable,
     impl: ({ get, fromQuery }) => {
       const send$ = fromQuery(DataForSyncQuery()).pipe(
         map((value) => {

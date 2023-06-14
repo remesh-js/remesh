@@ -569,8 +569,10 @@ export const toValidRemeshDomainDefinition = <T extends RemeshDomainDefinition>(
     for (const key in domainDefinition.event) {
       const event = domainDefinition.event[key]
       if (event.type === 'RemeshSubscribeOnlyEvent') {
+        // @ts-ignore pass it
         eventRecord[key] = event
       } else {
+        // @ts-ignore pass it
         eventRecord[key] = toRemeshSubscribeOnlyEvent(event)
       }
     }

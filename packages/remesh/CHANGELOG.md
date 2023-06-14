@@ -1,5 +1,11 @@
 # remesh
 
+## 4.1.1
+
+### Patch Changes
+
+- fix UpdateItemListCommand
+
 ## 4.1.0
 
 ### Minor Changes

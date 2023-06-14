@@ -87,7 +87,7 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
           send(info.type, {
             ...info,
             domainArg: event.storage.arg,
-          })
+          } as Action)
         } else {
           send(info.type, info)
         }
@@ -123,7 +123,7 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
           send(info.type, {
             ...info,
             queryArg: event.storage.arg,
-          })
+          } as Action)
         } else {
           send(info.type, info)
         }
@@ -144,7 +144,7 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
           send(info.type, {
             ...info,
             commandArg: event.action.arg,
-          })
+          } as Action)
         } else {
           send(info.type, info)
         }
@@ -166,7 +166,7 @@ export const RemeshReduxDevtools = (options?: RemeshReduxDevtoolsOptions) => {
           send(info.type, {
             ...info,
             eventArg: event.action.arg,
-          })
+          } as Action)
         } else {
           send(info.type, info)
         }

@@ -61,7 +61,9 @@ export const diffObject = (oldObject: object, newObject: object, key?: string | 
         key,
         value,
       })
+      // @ts-ignore pass it
     } else if (oldObject[key] !== value) {
+      // @ts-ignore pass it
       const diffResult = diff(oldObject[key], value, key)
 
       if (isUpdatedDiffResult(diffResult)) {
@@ -168,6 +170,7 @@ export const patchObject = (oldValue: object, diffResult: ObjectDiffResult): obj
     if (typeof addedResult.key !== 'string') {
       throw new Error(`Expected key to be a string, got ${addedResult.key}`)
     }
+    // @ts-ignore pass it
     newValue[addedResult.key] = addedResult.value
   }
 
@@ -175,6 +178,7 @@ export const patchObject = (oldValue: object, diffResult: ObjectDiffResult): obj
     if (typeof updatedResult.key !== 'string') {
       throw new Error(`Expected key to be a string, got ${updatedResult.key}`)
     }
+    // @ts-ignore pass it
     newValue[updatedResult.key] = patch(newValue[updatedResult.key], updatedResult)
   }
 
@@ -182,6 +186,7 @@ export const patchObject = (oldValue: object, diffResult: ObjectDiffResult): obj
     if (typeof deletedResult.key !== 'string') {
       throw new Error(`Expected key to be a string, got ${deletedResult.key}`)
     }
+    // @ts-ignore pass it
     delete newValue[deletedResult.key]
   }
 

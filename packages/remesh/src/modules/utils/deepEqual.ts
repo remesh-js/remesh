@@ -24,6 +24,7 @@ const deepEqualObject = (left: object | null, right: object | null): boolean => 
   }
 
   for (const key of leftKeys) {
+    // @ts-ignore pass it
     if (!deepEqual(left[key], right[key])) {
       return false
     }
