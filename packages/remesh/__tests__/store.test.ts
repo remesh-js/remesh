@@ -223,7 +223,7 @@ describe('store', () => {
       },
     })
 
-    const cache = {}
+    const cache: Record<string, any> = {}
     const store2 = RemeshStore({
       name: 'store',
       externs: [

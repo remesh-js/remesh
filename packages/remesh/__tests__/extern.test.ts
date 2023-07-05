@@ -4,7 +4,7 @@ import { map, tap } from 'rxjs'
 describe('extern', () => {
   it('define an extern and use it', () => {
     const memoryCache = (() => {
-      const cache = {}
+      const cache: Record<string, any> = {}
       return {
         get(key: string) {
           return cache[key]
