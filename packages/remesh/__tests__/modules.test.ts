@@ -780,6 +780,8 @@ describe('modules', () => {
       id: number
       content: string
       completed: boolean
+      readonly tags: readonly string[]
+      window?: readonly [number, number]
     }
 
     const TestHistoryDomain = Remesh.domain({
@@ -883,6 +885,7 @@ describe('modules', () => {
         id: 0,
         content: 'todo-0',
         completed: true,
+        tags: ['DDD'],
       }),
     )
 
@@ -891,6 +894,7 @@ describe('modules', () => {
         id: 0,
         content: 'todo-0',
         completed: true,
+        tags: ['DDD'],
       },
     ])
 
@@ -901,6 +905,7 @@ describe('modules', () => {
           id: 0,
           content: 'todo-0',
           completed: true,
+          tags: ['DDD'],
         },
       ],
     ])
@@ -916,6 +921,7 @@ describe('modules', () => {
         id: 1,
         content: 'todo-1',
         completed: false,
+        tags: ['CQRS'],
       }),
     )
 
@@ -924,11 +930,13 @@ describe('modules', () => {
         id: 0,
         content: 'todo-0',
         completed: true,
+        tags: ['DDD'],
       },
       {
         id: 1,
         content: 'todo-1',
         completed: false,
+        tags: ['CQRS'],
       },
     ])
 
@@ -939,6 +947,7 @@ describe('modules', () => {
           id: 0,
           content: 'todo-0',
           completed: true,
+          tags: ['DDD'],
         },
       ],
       [
@@ -946,11 +955,13 @@ describe('modules', () => {
           id: 0,
           content: 'todo-0',
           completed: true,
+          tags: ['DDD'],
         },
         {
           id: 1,
           content: 'todo-1',
           completed: false,
+          tags: ['CQRS'],
         },
       ],
     ])
@@ -968,6 +979,7 @@ describe('modules', () => {
         id: 0,
         content: 'todo-0',
         completed: true,
+        tags: ['DDD'],
       },
     ])
 
@@ -978,6 +990,7 @@ describe('modules', () => {
           id: 0,
           content: 'todo-0',
           completed: true,
+          tags: ['DDD'],
         },
       ],
       [
@@ -985,11 +998,13 @@ describe('modules', () => {
           id: 0,
           content: 'todo-0',
           completed: true,
+          tags: ['DDD'],
         },
         {
           id: 1,
           content: 'todo-1',
           completed: false,
+          tags: ['CQRS'],
         },
       ],
     ])
@@ -1011,6 +1026,7 @@ describe('modules', () => {
           id: 0,
           content: 'todo-0',
           completed: true,
+          tags: ['DDD'],
         },
       ],
       [
@@ -1018,11 +1034,13 @@ describe('modules', () => {
           id: 0,
           content: 'todo-0',
           completed: true,
+          tags: ['DDD'],
         },
         {
           id: 1,
           content: 'todo-1',
           completed: false,
+          tags: ['CQRS'],
         },
       ],
     ])
@@ -1044,6 +1062,7 @@ describe('modules', () => {
           id: 0,
           content: 'todo-0',
           completed: true,
+          tags: ['DDD'],
         },
       ],
       [
@@ -1051,11 +1070,13 @@ describe('modules', () => {
           id: 0,
           content: 'todo-0',
           completed: true,
+          tags: ['DDD'],
         },
         {
           id: 1,
           content: 'todo-1',
           completed: false,
+          tags: ['CQRS'],
         },
       ],
     ])
@@ -1073,6 +1094,7 @@ describe('modules', () => {
         id: 0,
         content: 'todo-0',
         completed: true,
+        tags: ['DDD'],
       },
     ])
 
@@ -1083,6 +1105,7 @@ describe('modules', () => {
           id: 0,
           content: 'todo-0',
           completed: true,
+          tags: ['DDD'],
         },
       ],
       [
@@ -1090,11 +1113,13 @@ describe('modules', () => {
           id: 0,
           content: 'todo-0',
           completed: true,
+          tags: ['DDD'],
         },
         {
           id: 1,
           content: 'todo-1',
           completed: false,
+          tags: ['CQRS'],
         },
       ],
     ])
@@ -1112,11 +1137,13 @@ describe('modules', () => {
         id: 0,
         content: 'todo-0',
         completed: true,
+        tags: ['DDD'],
       },
       {
         id: 1,
         content: 'todo-1',
         completed: false,
+        tags: ['CQRS'],
       },
     ])
 
@@ -1127,6 +1154,7 @@ describe('modules', () => {
           id: 0,
           content: 'todo-0',
           completed: true,
+          tags: ['DDD'],
         },
       ],
       [
@@ -1134,11 +1162,13 @@ describe('modules', () => {
           id: 0,
           content: 'todo-0',
           completed: true,
+          tags: ['DDD'],
         },
         {
           id: 1,
           content: 'todo-1',
           completed: false,
+          tags: ['CQRS'],
         },
       ],
     ])
@@ -1160,6 +1190,7 @@ describe('modules', () => {
           id: 0,
           content: 'todo-0',
           completed: true,
+          tags: ['DDD'],
         },
       ],
       [
@@ -1167,11 +1198,13 @@ describe('modules', () => {
           id: 0,
           content: 'todo-0',
           completed: true,
+          tags: ['DDD'],
         },
         {
           id: 1,
           content: 'todo-1',
           completed: false,
+          tags: ['CQRS'],
         },
       ],
     ])
@@ -1187,6 +1220,7 @@ describe('modules', () => {
         id: 2,
         content: 'todo-2',
         completed: true,
+        tags: ['DDD', 'CQRS'],
       }),
     )
 
@@ -1195,6 +1229,7 @@ describe('modules', () => {
         id: 2,
         content: 'todo-2',
         completed: true,
+        tags: ['DDD', 'CQRS'],
       },
     ])
 
@@ -1205,6 +1240,7 @@ describe('modules', () => {
           id: 2,
           content: 'todo-2',
           completed: true,
+          tags: ['DDD', 'CQRS'],
         },
       ],
     ])
@@ -1222,6 +1258,7 @@ describe('modules', () => {
         id: 2,
         content: 'todo-2',
         completed: true,
+        tags: ['DDD', 'CQRS'],
       },
     ])
 

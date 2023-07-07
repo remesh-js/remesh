@@ -5,11 +5,12 @@ import { DomainConceptName } from './type'
 
 export type SerializablePrimitives = void | undefined | number | string | boolean | null
 
-export type SerializableArray = Serializable[]
+export type ReadonlySerializableArray = readonly Serializable[]
+export type SerializableArray = Serializable[] | ReadonlySerializableArray
 
 export type SerializableObject = { [key: string]: Serializable }
 
-export type Serializable = SerializablePrimitives | SerializableArray | SerializableObject | Serializable[]
+export type Serializable = SerializablePrimitives | SerializableArray | SerializableObject
 
 export type ToType<T> = T extends object | unknown[]
   ? {
