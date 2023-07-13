@@ -8,15 +8,6 @@
   "author": "https://github.com/Lucifier129",
   "main": "cjs/index.js",
   "types": "cjs/index.d.ts",
-  "module": "esm/index.mjs",
-  "exports": {
-    ".": {
-      "types": "./cjs/index.d.ts",
-      "import": "./esm/index.mjs",
-      "require": "./cjs/index.js"
-    },
-    "./package.json": "./package.json"
-  },
   "files": [
     "cjs",
     "esm",

@@ -14,23 +14,7 @@
   "bugs": "https://github.com/remesh-js/remesh/issues",
   "author": "https://github.com/Lucifier129",
   "main": "cjs/index.js",
-  "module": "esm/index.mjs",
   "types": "cjs/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./cjs/index.d.ts",
-      "import": "./esm/index.mjs",
-      "require": "./cjs/index.js"
-    },
-    "./modules/*": {
-      "types": "./cjs/modules/*.d.ts",
-      "import": "./esm/modules/*.mjs",
-      "require": "./cjs/modules/*.js"
-    },
-    "./cjs/*": "./cjs/*",
-    "./esm/*": "./esm/*",
-    "./package.json": "./package.json"
-  },
   "files": [
     "cjs",
     "esm",
