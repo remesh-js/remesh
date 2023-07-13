@@ -1,6 +1,6 @@
 {
   "name": "remesh-yjs",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "description": "Yjs adapter for remesh",
   "homepage": "https://remesh-js.github.io/remesh/dist/index.html",
   "repository": "github:remesh-js/remesh",
@@ -26,7 +26,7 @@
   },
   "devDependencies": {
     "@types/node": "^16.7.2",
-    "remesh": "^4.0.0",
+    "remesh": "^4.2.0",
     "rxjs": "^7.0.0",
     "typescript": "^4.3.2"
   },

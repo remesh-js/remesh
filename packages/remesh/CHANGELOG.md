@@ -1,5 +1,11 @@
 # remesh
 
+## 4.2.0
+
+### Minor Changes
+
+- c0db205: cjs-first, esm opt-in
+
 ## 4.1.1
 
 ### Patch Changes

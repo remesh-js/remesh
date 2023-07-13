@@ -1,5 +1,11 @@
 # remesh-debugger-helper
 
+## 4.1.0
+
+### Minor Changes
+
+- c0db205: cjs-first, esm opt-in
+
 ## 4.0.0
 
 ### Major Changes

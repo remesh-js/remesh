@@ -1,6 +1,6 @@
 {
   "name": "remesh-logger",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "description": "A logger for remesh",
   "homepage": "https://remesh-js.github.io/remesh/dist/index.html",
   "repository": "github:remesh-js/remesh",
@@ -19,11 +19,11 @@
   },
   "dependencies": {
     "tslib": "^2.3.1",
-    "remesh-debugger-helper": "^4.0.0"
+    "remesh-debugger-helper": "^4.1.0"
   },
   "devDependencies": {
     "@types/node": "^16.7.2",
-    "remesh": "^4.0.0",
+    "remesh": "^4.2.0",
     "typescript": "^4.3.2"
   },
   "publishConfig": {

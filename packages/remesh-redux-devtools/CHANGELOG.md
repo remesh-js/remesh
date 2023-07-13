@@ -1,5 +1,16 @@
 # remesh-redux-devtools
 
+## 4.1.0
+
+### Minor Changes
+
+- c0db205: cjs-first, esm opt-in
+
+### Patch Changes
+
+- Updated dependencies [c0db205]
+  - remesh-debugger-helper@4.1.0
+
 ## 4.0.0
 
 ### Major Changes
