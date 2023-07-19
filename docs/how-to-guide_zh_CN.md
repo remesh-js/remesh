@@ -893,9 +893,8 @@ const YourDomain = Remesh.domain({
       name: 'AEvent',
     })
 
-    AQuery.emitted(({ get }, { current, previous }) => {
+    AEvent.emitted(({ get }, eventArg) => {
       // do something when event was emitted
-      return SomeCommand()
     })
   },
 })
