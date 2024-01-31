@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useContext, createContext, ReactNode, useCallback, useMemo } from 'react'
+import { useLayoutEffect, useRef, useContext, createContext, ReactNode, useCallback, useMemo, useEffect } from 'react'
 
 import { useSyncExternalStore } from 'use-sync-external-store/shim'
 
@@ -13,6 +13,16 @@ import {
   Args,
   RemeshSubscribeOnlyEvent,
 } from 'remesh'
+
+const useIsomorphicLayoutEffect =
+  // tslint:disable-next-line: strict-type-predicates
+  typeof window !== 'undefined' &&
+  // tslint:disable-next-line: strict-type-predicates
+  typeof window.document !== 'undefined' &&
+  // tslint:disable-next-line: deprecation & strict-type-predicates
+  typeof window.document.createElement !== 'undefined'
+    ? useLayoutEffect
+    : useEffect
 
 export type RemeshReactContext = {
   remeshStore: RemeshStore
@@ -92,14 +102,14 @@ export const useRemeshQuery = function <T extends Args<Serializable>, U>(queryAc
 
   const queryKey = store.getKey(queryAction)
 
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     return () => {
       subscriptionRef.current?.unsubscribe()
       subscriptionRef.current = null
     }
   }, [store, queryKey])
 
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (subscriptionRef.current !== null) {
       return
     }
@@ -118,11 +128,11 @@ export const useRemeshEvent = function <T extends Args, U>(
   const store = useRemeshStore()
   const callbackRef = useRef(callback)
 
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     callbackRef.current = callback
   })
 
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     const subscription = store.subscribeEvent(Event, (data) => {
       callbackRef.current(data)
     })
@@ -144,21 +154,21 @@ export const useRemeshDomain = function <T extends RemeshDomainDefinition, U ext
   const store = useRemeshStore()
   const domain = store.getDomain(domainAction)
 
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     store.igniteDomain(domainAction)
   }, [store, domainAction])
 
   const domainKey = store.getKey(domainAction)
   const subscriptionRef = useRef<{ unsubscribe: () => void } | null>(null)
 
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     return () => {
       subscriptionRef.current?.unsubscribe()
       subscriptionRef.current = null
     }
   }, [store, domainKey])
 
-  useLayoutEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (subscriptionRef.current !== null) {
       return
     }
