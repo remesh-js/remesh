@@ -291,7 +291,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
     const subject = new Subject<T>()
 
-    const observableMapToImplIfNeed = subject.pipe(
+    const observableMapToImplIfNeeded = subject.pipe(
       map((arg) => {
         if (Event.impl) {
           return Event.impl(eventContext, arg)
@@ -301,7 +301,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
     )
 
     const observable = new Observable<U>((subscriber) => {
-      const subscription = observableMapToImplIfNeed.subscribe(subscriber)
+      const subscription = observableMapToImplIfNeeded.subscribe(subscriber)
       eventStorage.refCount += 1
       return () => {
         eventStorage.refCount -= 1

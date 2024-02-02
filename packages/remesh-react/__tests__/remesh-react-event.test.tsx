@@ -91,7 +91,7 @@ describe('remesh-react-event', () => {
     document.body.removeChild(container)
   })
 
-  it('can subscirbe domain-query via fromQuery and useRemeshQuery at the same time', async () => {
+  it('can subscribe domain-query via fromQuery and useRemeshQuery at the same time', async () => {
     const effectFn = jest.fn()
     const useRemeshEventFn = jest.fn()
 
