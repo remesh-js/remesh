@@ -291,7 +291,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
 
     const subject = new Subject<T>()
 
-    const observable = subject.pipe(
+    const observableMapToImplIfNeed = subject.pipe(
       map((arg) => {
         if (Event.impl) {
           return Event.impl(eventContext, arg)
@@ -299,6 +299,19 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
         return arg as unknown as U
       }),
     )
+
+    const observable = new Observable<U>((subscriber) => {
+      const subscription = observableMapToImplIfNeed.subscribe(subscriber)
+      eventStorage.refCount += 1
+      return () => {
+        eventStorage.refCount -= 1
+        subscription.unsubscribe()
+        if (eventStorage.refCount === 0) {
+          clearEventStorageIfNeeded(eventStorage)
+        }
+      }
+    })
+
     const cachedStorage = eventStorageWeakMap.get(Event)
 
     const eventStorage = Object.assign(cachedStorage ?? {}, {
@@ -1158,22 +1171,7 @@ export const RemeshStore = (options?: RemeshStoreOptions) => {
   ): Subscription => {
     if (Event.type === 'RemeshEvent') {
       const eventStorage = getEventStorage(Event)
-
-      const observable = new Observable<U>((subscriber) => {
-        const subscription = eventStorage.observable.subscribe(subscriber)
-        eventStorage.refCount += 1
-        return () => {
-          eventStorage.refCount -= 1
-          subscription.unsubscribe()
-          if (eventStorage.refCount === 0) {
-            clearEventStorageIfNeeded(eventStorage)
-          }
-        }
-      })
-
-      const subscription = observable.subscribe(subscriber)
-
-      return subscription
+      return eventStorage.observable.subscribe(subscriber)
     } else if (Event.type === 'RemeshSubscribeOnlyEvent') {
       const OriginalEvent = internalToOriginalEvent(Event)
       return subscribeEvent(OriginalEvent, subscriber)
