@@ -1,5 +1,11 @@
 # remesh-react
 
+## 4.1.2
+
+### Patch Changes
+
+- 8449a9c: useIsomorphicLayoutEffect instead of useLayoutEffect
+
 ## 4.1.0
 
 ### Minor Changes

@@ -1,5 +1,11 @@
 # remesh
 
+## 4.2.1
+
+### Patch Changes
+
+- fix: fromEvent should be added to refCount, so it will not be clear to in a wrong way
+
 ## 4.2.0
 
 ### Minor Changes
