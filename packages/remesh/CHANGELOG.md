@@ -1,5 +1,11 @@
 # remesh
 
+## 4.2.2
+
+### Patch Changes
+
+- 89e49de: fix garbage collection in domain.query and domain event
+
 ## 4.2.1
 
 ### Patch Changes
