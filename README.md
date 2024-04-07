@@ -380,7 +380,7 @@ root.render(
 
 **note: from remesh v4.2, esm is not the default, cjs-first now. You still can import remesh/esm to access esm**
 
-remesh v4.0 starts to support esm module output, which may cause errors in your project due to esm/cjs dependencies at this stage. The solution is to disable the esm module or map it to the corresponding cjs module via bundler configuration.
+remesh v4.0 starts to support esm module output, which may cause errors in your project due to esm/cjs dependencies for now. The solution is to disable the esm module or map it to the corresponding cjs module via bundler configuration.
 
 For example, in webpack, you can configure aliases via [resolve.alias](https://webpack.js.org/configuration/resolve/#resolvealias) to
 
