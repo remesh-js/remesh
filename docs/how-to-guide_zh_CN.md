@@ -926,35 +926,35 @@ const YourDomain = Remesh.domain({
         // history list: T[]
         HistoryListQuery: TodoAppHistoryModule.query.HistoryListQuery,
         // can back: boolean
-        CanBackQuery: HistoryListQuery.query.CanBackQuery,
+        CanBackQuery: TodoAppHistoryModule.query.CanBackQuery,
         // can forward: boolean
-        CanForwardQuery: HistoryListQuery.query.CanForwardQuery,
+        CanForwardQuery: TodoAppHistoryModule.query.CanForwardQuery,
         // current index: number | null
-        CurrentIndexQuery: HistoryListQuery.query.CurrentIndexQuery,
+        CurrentIndexQuery: TodoAppHistoryModule.query.CurrentIndexQuery,
         // current state: T | null
-        CurrentStateQuery: HistoryListQuery.query.CurrentStateQuery,
+        CurrentStateQuery: TodoAppHistoryModule.query.CurrentStateQuery,
       },
       command: {
         // go(n), n can be negative, just like history.go(n)
-        GoCommand: HistoryListQuery.command.GoCommand,
+        GoCommand: TodoAppHistoryModule.command.GoCommand,
         // add state to history list
-        AddCommand: HistoryListQuery.command.AddCommand,
+        AddCommand: TodoAppHistoryModule.command.AddCommand,
         // set history list
-        SetCommand: HistoryListQuery.command.SetCommand,
+        SetCommand: TodoAppHistoryModule.command.SetCommand,
         // replace state
-        ReplaceCommand: HistoryListQuery.command.ReplaceCommand,
+        ReplaceCommand: TodoAppHistoryModule.command.ReplaceCommand,
         // back() if possible
-        BackCommand: HistoryListQuery.command.BackCommand,
+        BackCommand: TodoAppHistoryModule.command.BackCommand,
         // forward() if possible
-        ForwardCommand: HistoryListQuery.command.ForwardCommand,
+        ForwardCommand: TodoAppHistoryModule.command.ForwardCommand,
       },
       event: {
         // trigger when back
-        BackEvent: HistoryListQuery.event.BackEvent,
+        BackEvent: TodoAppHistoryModule.event.BackEvent,
         // trigger when forward
-        ForwardEvent: HistoryListQuery.event.ForwardEvent,
+        ForwardEvent: TodoAppHistoryModule.event.ForwardEvent,
         // trigger when go
-        GoEvent: HistoryListQuery.event.GoEvent,
+        GoEvent: TodoAppHistoryModule.event.GoEvent,
       },
     }
   },
